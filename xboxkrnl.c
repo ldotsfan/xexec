@@ -1,118 +1,192 @@
 
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <windef.h>
 #include <winbase.h>
 
 #define SYNC_THREADS        1   /* debugging */
 
 #if SYNC_THREADS
-static pthread_mutex_t      xboxkrnl_mutex_thread = PTHREAD_MUTEX_INITIALIZER;
-# define THREAD_LOCK        pthread_mutex_lock(&xboxkrnl_mutex_thread)
-# define THREAD_UNLOCK      pthread_mutex_unlock(&xboxkrnl_mutex_thread)
+static pthread_mutex_t *    xboxkrnl_thread_mutex = NULL;
+static pthread_mutexattr_t *xboxkrnl_thread_mattr = NULL;
+# define THREAD_LOCK        pthread_mutex_lock(xboxkrnl_thread_mutex)
+# define THREAD_UNLOCK      pthread_mutex_unlock(xboxkrnl_thread_mutex)
 #else
 # define THREAD_LOCK
 # define THREAD_UNLOCK
 #endif
 
 #define NAME(x)             [x] = #x
+#define NAMEB(x,y)          [x] = #y
 
-//#define STUB(x)             debug("stub: %s = %p", #x, (x))
-//#define DUMP(x)             debug("dump: %s = %p", #x, (x))
 #define VAR_IN              0
 #define VAR_OUT             1
 #define STUB                2
 #define DUMP                3
+#define STRING              4
 
-#define DEBUG(x,y)          DEBUG3(x,y,0,0)
+#define STACK_LEVEL_SPACING(x,y) do { \
+            size_t __le = ((x) > 0) ? (x) * 4 : 0; \
+            char *__st = (__le) ? malloc(__le + 1) : NULL; \
+            if (__st) memset(__st, ' ', __le), __st[__le] = 0; \
+            else __st = strdup(""); \
+            *(y) = __st; \
+        } while (0)
+
+#define VARDUMP(x,y)        VARDUMP4(x,y,0,0)
+#define VARDUMPD(x,y)       if (y) VARDUMP4(x,*y,0,0)
 /* value name w/o flags: z = const *char[] name in relation to y; f = 0 */
-#define DEBUG2(x,y,z)       DEBUG3(x,y,z,0)
+#define VARDUMP2(x,y,z)     VARDUMP4(x,y,z,0)
 /* value name w/ flags:  z == const *char[] index masking y;      f = 1 */
-#define DEBUG3(x,y,z,f) do { \
-            unsigned long long v = 0; \
-            if (sizeof(typeof((y))) == 8) memcpy(&v, &(y), 8); \
-            else memcpy(&v, &(y), sizeof(typeof((y)))); \
-            char *c = NULL; \
-            unsigned t = (unsigned)(z); \
-            if (t) t = sizeof((z))/sizeof(char *); \
-            if (!f && t) { /* set c w/o flags */ \
-                if (t) t = (v < t); \
-                if (t) c = ((char **)(z))[v]; \
-            } else if (t) { /* set c w/ flags */ \
-                char *n; \
-                size_t l, len; \
-                typeof(t) i; \
-                for (l = 0, i = 0; i <= t; ++i) { \
-                    if (i == t) { \
-                        if (l) c[l] = 0; \
-                        t = !!c; \
+#define VARDUMP3(x,y,z)     VARDUMP4(x,y,z,1)
+#define VARDUMP4(x,y,z,f) do { \
+            unsigned long long __v = 0; \
+            if (sizeof(typeof((y))) == 8) memcpy(&__v, &(y), 8); \
+            else memcpy(&__v, &(y), sizeof(typeof((y)))); \
+            char *__c = NULL; \
+            unsigned __t = (unsigned)(z); \
+            if (__t) __t = sizeof((z))/sizeof(char *); \
+            if (!(f) && __t) { /* set c w/o flags */ \
+                if (__t) __t = (__v < __t); \
+                if (__t) __c = ((char **)(z))[__v]; \
+            } else if (__t) { /* set c w/ flags */ \
+                char *__n; \
+                size_t __l, __len; \
+                typeof(__t) __i; \
+                for (__l = 0, __i = 0; __i <= __t; ++__i) { \
+                    if (__i >= __t) { \
+                        if (__l) __c[__l] = 0; \
+                        __t = !!__c; \
                         break; \
                     } \
-                    if (l) ++l; \
-                    if ((n = ((char **)(z))[i]) && v & i) { \
-                        len = strlen(n); \
-                        c = realloc(c, l + len + 2); \
-                        strncpy(&c[l], n, len + 2); \
-                        l += len; \
-                        c[l] = '|'; \
+                    if ((__n = ((char **)(z))[__i]) && __v & (1 << __i)) { \
+                        if (__l) ++__l; \
+                        __len = strlen(__n); \
+                        __c = realloc(__c, __l + __len + 2); \
+                        strncpy(&__c[__l], __n, __len + 2); \
+                        __l += __len; \
+                        __c[__l] = '|'; \
                     } \
                 } \
             } \
-            unsigned s = xboxkrnl_stack * 4; \
-            char *st = (s)?malloc(s+1):NULL; \
-            if (st) memset(st, ' ', s), st[s] = 0; \
-            debug("%s%s: *%s = 0x%llx (%llu)%s%s%s", \
-                (st) ? st : "", \
-                ((x) > 1) ? (((x) == STUB)?"stub":"dump") : ((x)?" out":"  in"), \
-                #y, \
-                v, \
-                v, \
-                (c) ? " (" : "", \
-                (c) ?    c : "", \
-                (c) ?  ")" : ""); \
-            if (f && c) free(c); \
+            char *__s; \
+            STACK_LEVEL_SPACING(xboxkrnl_stack, &__s); \
+            if ((x) == STRING) { \
+                debug("%svar:  str: *%s = '%s' [0x%llx] (%llu)", \
+                    __s, \
+                    #y, \
+                    (y), \
+                    __v, \
+                    __v); \
+            } else { \
+                debug("%svar: %s: *%s = 0x%llx (%llu)%s%s%s", \
+                    __s, \
+                    ((x) > 1) ? (((x) == STUB)?"stub":"dump") : ((x)?" out":"  in"), \
+                    #y, \
+                    __v, \
+                    __v, \
+                    (__c) ? " (" : "", \
+                    (__c) ?  __c : "", \
+                    (__c) ?  ")" : ""); \
+            } \
+            free(__s); \
+            if ((f) && __c) free(__c); \
         } while (0)
 
-//#define ENTER debug("enter: --> %s()", __func__)
-//#define LEAVE debug("leave: %s() -->", __func__)
-#define ENTER2(x,y,z) do { \
-            if (z) THREAD_LOCK; \
-            debug("enter%s%s%s: --> %s()", \
-                (y) ? " (" : "", \
-                (y) ?  (y) : "", \
-                (y) ?  ")" : "", \
-                __func__); \
-            if (++(x) & 0x80000000) (x) = 0; \
-        } while (0)
-#define LEAVE2(x,y,z) do { \
-            if (--(x) & 0x80000000) (x) = 0; \
-            debug("leave%s%s%s: <-- %s()", \
-                (y) ? " (" : "", \
-                (y) ?  (y) : "", \
-                (y) ?  ")" : "", \
-                __func__); \
-            if (z) THREAD_UNLOCK; \
-        } while (0)
+static void
+xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix, int lock) {
+    char *s;
+
+    if (lock) THREAD_LOCK;
+
+    STACK_LEVEL_SPACING(*stack, &s);
+    debug("%senter%s%s%s: --> %s()",
+        s,
+        (prefix) ?   " (" : "",
+        (prefix) ? prefix : "",
+        (prefix) ?    ")" : "",
+        func);
+    free(s);
+
+    if (++*stack & 0xc0) *stack = 0;
+}
+
+static void
+xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix, int lock) {
+    char *s;
+
+    if (--*stack & 0xc0) *stack = 0;
+
+    STACK_LEVEL_SPACING(*stack, &s);
+    debug("%sleave%s%s%s: <-- %s()",
+        s,
+        (prefix) ?   " (" : "",
+        (prefix) ? prefix : "",
+        (prefix) ?    ")" : "",
+        func);
+    free(s);
+
+    if (lock) THREAD_UNLOCK;
+}
+
+static void
+xboxkrnl_print(int8_t stack, const char *format, ...) {
+    va_list args;
+    char buf[4096];
+    size_t len;
+    char *s;
+    int ret;
+
+    if (!dbg) return;
+
+    STACK_LEVEL_SPACING(stack, &s);
+    ret = sizeof(buf) - 1;
+    len = strlen(s);
+    strncpy(buf, s, ret);
+    free(s);
+
+    if (len >= (typeof(len))ret) return;
+
+    va_start(args, format);
+    ret = vsnprintf(&buf[len], ret - len, format, args);
+    va_end(args);
+
+    if (ret > 0) {
+        ret += len;
+        buf[ret] = 0;
+        debug(buf, 0);
+    }
+}
 
 #define INT3                __asm__ __volatile__("int3")
 #define STDCALL             __attribute__((__stdcall__))
 #define FASTCALL            __attribute__((__fastcall__))
 
-#define ENTER               ENTER2(xboxkrnl_stack, NULL, 1)
-#define LEAVE               LEAVE2(xboxkrnl_stack, NULL, 1)
-static int                  xboxkrnl_stack = 0;
+static void *               xboxkrnl_mem_contiguous = NULL;
 
-#define ENTER_DPC           ENTER2(xboxkrnl_dpc_stack, "dpc", 0)
-#define LEAVE_DPC           LEAVE2(xboxkrnl_dpc_stack, "dpc", 0)
-#define DPC_SIGNAL          pthread_cond_signal(xboxkrnl_dpc_cond)
-static int                  xboxkrnl_dpc_stack = 0;
+#define ENTER               xboxkrnl_enter(&xboxkrnl_stack, __func__, NULL, 1)
+#define LEAVE               xboxkrnl_leave(&xboxkrnl_stack, __func__, NULL, 1)
+#define PRINT(x,...)        xboxkrnl_print(xboxkrnl_stack, (x), __VA_ARGS__)
+static int8_t               xboxkrnl_stack = 0;
+
+#define ENTER_DPC           xboxkrnl_enter(&xboxkrnl_dpc_stack, __func__, "dpc", 0)
+#define LEAVE_DPC           xboxkrnl_leave(&xboxkrnl_dpc_stack, __func__, "dpc", 0)
+#define PRINT_DPC(x,...)    xboxkrnl_print(xboxkrnl_dpc_stack, (x), __VA_ARGS__)
+static int8_t               xboxkrnl_dpc_stack = 0;
 static pthread_t *          xboxkrnl_dpc_thread = NULL;
 static pthread_mutexattr_t *xboxkrnl_dpc_mattr = NULL;
 static pthread_mutex_t *    xboxkrnl_dpc_mutex = NULL;
 static pthread_cond_t *     xboxkrnl_dpc_cond = NULL;
+#define DPC_SIGNAL          pthread_cond_signal(xboxkrnl_dpc_cond)
 
+/* winnt */
 typedef struct _listentry {
     struct _listentry *     Flink;
     struct _listentry *     Blink;
-} xboxkrnl_listentry;
+} PACKED xboxkrnl_listentry;
 
 #define XBOXKRNL_LISTENTRY_INIT(x) \
         (x)->Flink = (x)->Blink = (x)
@@ -147,19 +221,20 @@ typedef struct {
     void *                  SystemArgument1;
     void *                  SystemArgument2;
     void *                  Lock;
-} xboxkrnl_dpc;
-
+} PACKED xboxkrnl_dpc;
+#if 0
 static xboxkrnl_dpc *       xboxkrnl_dpc_list = NULL;
 static size_t               xboxkrnl_dpc_list_sz = 0;
-
-#define ENTER_EVENT         ENTER2(xboxkrnl_event_stack, "event", 0)
-#define LEAVE_EVENT         LEAVE2(xboxkrnl_event_stack, "event", 0)
-#define EVENT_SIGNAL        pthread_cond_signal(xboxkrnl_event_cond)
-static int                  xboxkrnl_event_stack = 0;
+#endif
+#define ENTER_EVENT         xboxkrnl_enter(&xboxkrnl_event_stack, __func__, "event", 0)
+#define LEAVE_EVENT         xboxkrnl_leave(&xboxkrnl_event_stack, __func__, "event", 0)
+#define PRINT_EVENT(x,...)  xboxkrnl_print(xboxkrnl_event_stack, (x), __VA_ARGS__)
+static int8_t               xboxkrnl_event_stack = 0;
 static pthread_t *          xboxkrnl_event_thread = NULL;
 static pthread_mutexattr_t *xboxkrnl_event_mattr = NULL;
 static pthread_mutex_t *    xboxkrnl_event_mutex = NULL;
 static pthread_cond_t *     xboxkrnl_event_cond = NULL;
+#define EVENT_SIGNAL        pthread_cond_signal(xboxkrnl_event_cond)
 
 typedef struct {
     struct _dispatcherheader {
@@ -169,133 +244,161 @@ typedef struct {
         uint8_t             Inserted;
         int32_t             SignalState;
         xboxkrnl_listentry  WaitListHead;
-    }                       Header;
+    } PACKED                Header;
     uint64_t                DueTime;
     xboxkrnl_listentry      TimerListEntry;
     xboxkrnl_dpc *          Dpc;
     int32_t                 Period;
-} xboxkrnl_timer;
+} PACKED xboxkrnl_timer;
 
-typedef struct {
-    uint32_t                bus;
-    uint32_t                device;
-    uint32_t                function;
-    uint32_t                irq;
+/* pci */
+struct xpci {
+    const uint8_t           bus;
+    const uint8_t           device;
+    const uint8_t           function;
+    const uint8_t           irq;
 
-    char *                  name;
+    const char *            name;
 
-    uint16_t                ioreg_base_0;
-    uint16_t                ioreg_size_0;
-    uint16_t                ioreg_base_1;
-    uint16_t                ioreg_size_1;
-    uint16_t                ioreg_base_2;
-    uint16_t                ioreg_size_2;
-    uint16_t                ioreg_base_3;
-    uint16_t                ioreg_size_3;
-    uint16_t                ioreg_base_4;
-    uint16_t                ioreg_size_4;
+    const uint16_t          ioreg_base_0;
+    const uint16_t          ioreg_size_0;
+    const uint16_t          ioreg_base_1;
+    const uint16_t          ioreg_size_1;
+    const uint16_t          ioreg_base_2;
+    const uint16_t          ioreg_size_2;
+    const uint16_t          ioreg_base_3;
+    const uint16_t          ioreg_size_3;
+    const uint16_t          ioreg_base_4;
+    const uint16_t          ioreg_size_4;
 
-    uint32_t                memreg_base_0;
-    uint32_t                memreg_size_0;
-    uint32_t                memreg_base_1;
-    uint32_t                memreg_size_1;
-    uint32_t                memreg_base_2;
-    uint32_t                memreg_size_2;
-    uint32_t                memreg_base_3;
-    uint32_t                memreg_size_3;
-    uint32_t                memreg_base_4;
-    uint32_t                memreg_size_4;
-} xpci;
+    const uint32_t          memreg_base;
+    const uint32_t          memreg_size;
 
-enum {
-    XPCICFG_HOSTBRIDGE = 0,
-    XPCICFG_LPCBRIDGE,
-    XPCICFG_SMBUS,
-    XPCICFG_USB0,
-    XPCICFG_USB1,
-    XPCICFG_NIC,
-    XPCICFG_APU,
-    XPCICFG_ACI,
-    XPCICFG_IDE,
-    XPCICFG_AGPBRIDGE,
-    XPCICFG_GPU,
-    XPCICFG_INTERNAL
+    void *                  memreg;
+
+    void *                  irq_kinterrupt;
+    uint32_t                irq_connected;
+    uint32_t                irq_level;
+    void *                  irq_isr_routine;
+    void *                  irq_isr_context;
 };
 
-static const xpci const xpcicfg[] = {
+enum {
+    XPCI_HOSTBRIDGE =  0,
+    XPCI_LPCBRIDGE, /* 1 */
+    XPCI_SMBUS,     /* 2 */
+    XPCI_USB0,      /* 3 */
+    XPCI_USB1,      /* 4 */
+    XPCI_NIC,       /* 5 */
+    XPCI_APU,       /* 6 */
+    XPCI_ACI,       /* 7 */
+    XPCI_IDE,       /* 8 */
+    XPCI_AGPBRIDGE, /* 9 */
+    XPCI_GPU,       /* 10 */
+    XPCI_INTERNAL   /* 11 */
+};
+
+static struct xpci xpci[] = {
     {
-        0, 0, 0, -1,                    /* bus, device, function, irq, name */
-        "HOSTBRIDGE",
+        0, 0, 0, -1,                    /* bus, device, function, irq */
+        "HOSTBRIDGE",                   /* name */
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* ioreg 0-4 */
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0    /* memreg 0-4 */
+        0, 0,                           /* memreg */
+        NULL,                           /* mapped memreg */
+        NULL, 0, 0, NULL, NULL          /* irq connection */
     },
     {
         0, 1, 0, -1,
         "LPCBRIDGE",
         0x8000, 0x0100, 0, 0, 0, 0, 0, 0, 0, 0,
-             0,      0, 0, 0, 0, 0, 0, 0, 0, 0
+             0,      0,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 1, 1, -1,
         "SMBUS",
         0, 0, 0xc000, 0x0010, 0xc200, 0x0020, 0, 0, 0, 0,
-        0, 0,      0,      0,      0,      0, 0, 0, 0, 0
+        0, 0,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 2, 0, 1,
         "USB0",
                  0,          0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0xfed00000, 0x00001000, 0, 0, 0, 0, 0, 0, 0, 0
+        0xfed00000, 0x00001000,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 3, 0, 9,
         "USB1",
                  0,          0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0xfed08000, 0x00001000, 0, 0, 0, 0, 0, 0, 0, 0
+        0xfed08000, 0x00001000,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 4, 0, 4,
-        "NIC",
+        "NIC (NVNet)",
                  0,          0, 0xe000, 0x0008, 0, 0, 0, 0, 0, 0,
-        0xfef00000, 0x00000400,      0,      0, 0, 0, 0, 0, 0, 0
+        0xfef00000, 0x00000400,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 5, 0, 5,
         "APU",
                  0,          0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0xfe800000, 0x00080000, 0, 0, 0, 0, 0, 0, 0, 0
+        0xfe800000, 0x00080000,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 6, 0, 6,
-        "ACI",
-        0xd000, 0x0100, 0xd200, 0x0080,          0,          0, 0, 0, 0, 0,
-             0,      0,      0,      0, 0xfec00000, 0x00001000, 0, 0, 0, 0
+        "ACI (AC97)",
+            0xd000,     0x0100, 0xd200, 0x0080, 0, 0, 0, 0, 0, 0,
+        0xfec00000, 0x00001000,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 9, 0, 14,
         "IDE",
         0, 0, 0, 0, 0, 0, 0, 0, 0xff60, 0x0010,
-        0, 0, 0, 0, 0, 0, 0, 0,      0,      0
+        0, 0,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 30, 0, -1,
         "AGPBRIDGE",
-        0,  0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0,  0, 0, 0, 0, 0, 0, 0, 0, 0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         1, 0, 0, 3,
-        "GPU",
+        "GPU (NV2A)",
                  0,          0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0xfd000000, 0x01000000, 0, 0, 0, 0, 0, 0, 0, 0
+        0xfd000000, 0x01000000,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     },
     {
         0, 0, 0, -1,
         NULL,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        0, 0,
+        NULL,
+        NULL, 0, 0, NULL, NULL
     }
 };
+
+/* gpu */
+#include "nv2a.c"
 
 #if 0
 #define XBOXKRNL_FLASH_BASE         0xfffc0000 /* 256 kB rom */
@@ -315,28 +418,172 @@ typedef struct {
     int32_t                 State;
     int32_t                 Protect;
     int32_t                 Type;
-} xboxkrnl_meminfo;
+} PACKED xboxkrnl_meminfo;
 
 typedef struct {
-    uint32_t                Length;
+    uint16_t                Length;
+    uint16_t                MaximumLength;
+    char *                  Buffer;
+} PACKED xboxkrnl_string;
+
+typedef struct {
     void *                  RootDirectory;
-    char *                  ObjectName;
+    xboxkrnl_string *       ObjectName;
     uint32_t                Attributes;
-    void *                  SecurityDescriptor;
-    void *                  SecurityQualityOfService;
-} xboxkrnl_objattr;
+} PACKED xboxkrnl_objattr;
 
 typedef struct {
-    union {
-        int                 Status;
-        void *              Pointer;
-    };
+    int                     Status;
     uint32_t                Information;
-} xboxkrnl_iostatusblk;
+} PACKED xboxkrnl_iostatus;
 
-/* enums & names */
+enum XBOXKRNL_FILE_IO_STATUS {
+    XBOXKRNL_FILE_SUPERSEDED                =  0,
+    XBOXKRNL_FILE_OPENED,                   /* 1 */
+    XBOXKRNL_FILE_CREATED,                  /* 2 */
+    XBOXKRNL_FILE_OVERWRITTEN,              /* 3 */
+    XBOXKRNL_FILE_EXISTS,                   /* 4 */
+    XBOXKRNL_FILE_DOES_NOT_EXIST,           /* 5 */
+};
+
+static const char *const xboxkrnl_file_io_status_name[] = {
+    NAME(XBOXKRNL_FILE_SUPERSEDED),
+    NAME(XBOXKRNL_FILE_OPENED),
+    NAME(XBOXKRNL_FILE_CREATED),
+    NAME(XBOXKRNL_FILE_OVERWRITTEN),
+    NAME(XBOXKRNL_FILE_EXISTS),
+    NAME(XBOXKRNL_FILE_DOES_NOT_EXIST),
+};
+
+enum XBOXKRNL_FILE_OPEN_CREATE {
+    XBOXKRNL_FILE_DIRECTORY_FILE            = 1 << 0,   /* 0x1 */
+    XBOXKRNL_FILE_WRITE_THROUGH             = 1 << 1,   /* 0x2 */
+    XBOXKRNL_FILE_SEQUENTIAL_ONLY           = 1 << 2,   /* 0x4 */
+    XBOXKRNL_FILE_NO_INTERMEDIATE_BUFFERING = 1 << 3,   /* 0x8 */
+    XBOXKRNL_FILE_SYNCHRONOUS_IO_ALERT      = 1 << 4,   /* 0x10 */
+    XBOXKRNL_FILE_SYNCHRONOUS_IO_NONALERT   = 1 << 5,   /* 0x20 */
+    XBOXKRNL_FILE_NON_DIRECTORY_FILE        = 1 << 6,   /* 0x40 */
+    XBOXKRNL_FILE_CREATE_TREE_CONNECTION    = 1 << 7,   /* 0x80 */
+    XBOXKRNL_FILE_COMPLETE_IF_OPLOCKED      = 1 << 8,   /* 0x100 */
+    XBOXKRNL_FILE_NO_EA_KNOWLEDGE           = 1 << 9,   /* 0x200 */
+    XBOXKRNL_FILE_OPEN_FOR_RECOVERY         = 1 << 10,  /* 0x400 */
+    XBOXKRNL_FILE_RANDOM_ACCESS             = 1 << 11,  /* 0x800 */
+    XBOXKRNL_FILE_DELETE_ON_CLOSE           = 1 << 12,  /* 0x1000 */
+    XBOXKRNL_FILE_OPEN_BY_FILE_ID           = 1 << 13,  /* 0x2000 */
+    XBOXKRNL_FILE_OPEN_FOR_BACKUP_INTENT    = 1 << 14,  /* 0x4000 */
+    XBOXKRNL_FILE_NO_COMPRESSION            = 1 << 15,  /* 0x8000 */
+    XBOXKRNL_FILE_RESERVE_OPFILTER          = 1 << 20,  /* 0x100000 */
+    XBOXKRNL_FILE_OPEN_REPARSE_POINT        = 1 << 21,  /* 0x200000 */
+    XBOXKRNL_FILE_OPEN_NO_RECALL            = 1 << 22,  /* 0x400000 */
+    XBOXKRNL_FILE_OPEN_FOR_FREE_SPACE_QUERY = 1 << 23,  /* 0x800000 */
+    XBOXKRNL_FILE_COPY_STRUCTURED_STORAGE   = 0x41,
+    XBOXKRNL_FILE_STRUCTURED_STORAGE        = 0x441,
+    XBOXKRNL_FILE_VALID_OPTION_FLAGS        = 0xffffff,
+    XBOXKRNL_FILE_VALID_SET_FLAGS           = 0x36,
+};
+
+static const char *const xboxkrnl_file_open_create_name[] = {
+    NAMEB(0,  XBOXKRNL_FILE_DIRECTORY_FILE),
+    NAMEB(1,  XBOXKRNL_FILE_WRITE_THROUGH),
+    NAMEB(2,  XBOXKRNL_FILE_SEQUENTIAL_ONLY),
+    NAMEB(3,  XBOXKRNL_FILE_NO_INTERMEDIATE_BUFFERING),
+    NAMEB(4,  XBOXKRNL_FILE_SYNCHRONOUS_IO_ALERT),
+    NAMEB(5,  XBOXKRNL_FILE_SYNCHRONOUS_IO_NONALERT),
+    NAMEB(6,  XBOXKRNL_FILE_NON_DIRECTORY_FILE),
+    NAMEB(7,  XBOXKRNL_FILE_CREATE_TREE_CONNECTION),
+    NAMEB(8,  XBOXKRNL_FILE_COMPLETE_IF_OPLOCKED),
+    NAMEB(9,  XBOXKRNL_FILE_NO_EA_KNOWLEDGE),
+    NAMEB(10, XBOXKRNL_FILE_OPEN_FOR_RECOVERY),
+    NAMEB(11, XBOXKRNL_FILE_RANDOM_ACCESS),
+    NAMEB(12, XBOXKRNL_FILE_DELETE_ON_CLOSE),
+    NAMEB(13, XBOXKRNL_FILE_OPEN_BY_FILE_ID),
+    NAMEB(14, XBOXKRNL_FILE_OPEN_FOR_BACKUP_INTENT),
+    NAMEB(15, XBOXKRNL_FILE_NO_COMPRESSION),
+    NAMEB(20, XBOXKRNL_FILE_RESERVE_OPFILTER),
+    NAMEB(21, XBOXKRNL_FILE_OPEN_REPARSE_POINT),
+    NAMEB(22, XBOXKRNL_FILE_OPEN_NO_RECALL),
+    NAMEB(23, XBOXKRNL_FILE_OPEN_FOR_FREE_SPACE_QUERY),
+};
+
+enum XBOXKRNL_FILE_ACCESS_MASK {
+    XBOXKRNL_FILE_READ_DATA                 = 1 << 0,   /* 0x1 */   /* file & pipe */
+//  XBOXKRNL_FILE_LIST_DIRECTORY            = 1 << 0,   /* 0x1 */   /* directory */
+    XBOXKRNL_FILE_WRITE_DATA                = 1 << 1,   /* 0x2 */   /* file & pipe */
+//  XBOXKRNL_FILE_ADD_FILE                  = 1 << 1,   /* 0x2 */   /* directory */
+    XBOXKRNL_FILE_APPEND_DATA               = 1 << 2,   /* 0x4 */   /* file */
+//  XBOXKRNL_FILE_ADD_SUBDIRECTORY          = 1 << 2,   /* 0x4 */   /* directory */
+//  XBOXKRNL_FILE_CREATE_PIPE_INSTANCE      = 1 << 2,   /* 0x4 */   /* pipe */
+    XBOXKRNL_FILE_READ_EA                   = 1 << 3,   /* 0x8 */   /* file & directory */
+    XBOXKRNL_FILE_WRITE_EA                  = 1 << 4,   /* 0x10 */  /* file & directory */
+    XBOXKRNL_FILE_EXECUTE                   = 1 << 5,   /* 0x20 */  /* file */
+//  XBOXKRNL_FILE_TRAVERSE                  = 1 << 5,   /* 0x20 */  /* directory */
+    XBOXKRNL_FILE_DELETE_CHILD              = 1 << 6,   /* 0x40 */  /* directory */
+    XBOXKRNL_FILE_READ_ATTRIBUTES           = 1 << 7,   /* 0x80 */  /* all */
+    XBOXKRNL_FILE_WRITE_ATTRIBUTES          = 1 << 8,   /* 0x100 */ /* all */
+    XBOXKRNL_DELETE                         = 1 << 16,  /* 0x10000 */
+    XBOXKRNL_READ_CONTROL                   = 1 << 17,  /* 0x20000 */
+    XBOXKRNL_WRITE_DAC                      = 1 << 18,  /* 0x40000 */
+    XBOXKRNL_WRITE_OWNER                    = 1 << 19,  /* 0x80000 */
+    XBOXKRNL_SYNCHRONIZE                    = 1 << 20,  /* 0x100000 */
+    XBOXKRNL_GENERIC_READ                   = 1 << 31,  /* 0x80000000 */
+    XBOXKRNL_GENERIC_WRITE                  = 1 << 30,  /* 0x40000000 */
+    XBOXKRNL_GENERIC_EXECUTE                = 1 << 29,  /* 0x20000000 */
+    XBOXKRNL_GENERIC_ALL                    = 1 << 28,  /* 0x10000000 */
+};
+
+static const char *const xboxkrnl_file_access_mask_name[] = {
+    NAMEB(0,  XBOXKRNL_FILE_READ_DATA),
+//  NAMEB(0,  XBOXKRNL_FILE_LIST_DIRECTORY),
+    NAMEB(1,  XBOXKRNL_FILE_WRITE_DATA),
+//  NAMEB(1,  XBOXKRNL_FILE_ADD_FILE),
+    NAMEB(2,  XBOXKRNL_FILE_APPEND_DATA),
+//  NAMEB(2,  XBOXKRNL_FILE_ADD_SUBDIRECTORY),
+//  NAMEB(2,  XBOXKRNL_FILE_CREATE_PIPE_INSTANCE),
+    NAMEB(3,  XBOXKRNL_FILE_READ_EA),
+    NAMEB(4,  XBOXKRNL_FILE_WRITE_EA),
+    NAMEB(5,  XBOXKRNL_FILE_EXECUTE),
+//  NAMEB(5,  XBOXKRNL_FILE_TRAVERSE),
+    NAMEB(6,  XBOXKRNL_FILE_DELETE_CHILD),
+    NAMEB(7,  XBOXKRNL_FILE_READ_ATTRIBUTES),
+    NAMEB(8,  XBOXKRNL_FILE_WRITE_ATTRIBUTES),
+    NAMEB(16, XBOXKRNL_DELETE),
+    NAMEB(17, XBOXKRNL_READ_CONTROL),
+    NAMEB(18, XBOXKRNL_WRITE_DAC),
+    NAMEB(19, XBOXKRNL_WRITE_OWNER),
+    NAMEB(20, XBOXKRNL_SYNCHRONIZE),
+    NAMEB(31, XBOXKRNL_GENERIC_READ),
+    NAMEB(30, XBOXKRNL_GENERIC_WRITE),
+    NAMEB(29, XBOXKRNL_GENERIC_EXECUTE),
+    NAMEB(28, XBOXKRNL_GENERIC_ALL),
+};
+
+enum XBOXKRNL_FILE_CREATE_DISPOSITION {
+    XBOXKRNL_FILE_SUPERSEDE                 =  0,
+    XBOXKRNL_FILE_OPEN,                     /* 1 */
+    XBOXKRNL_FILE_CREATE,                   /* 2 */
+    XBOXKRNL_FILE_OPEN_IF,                  /* 3 */
+    XBOXKRNL_FILE_OVERWRITE,                /* 4 */
+    XBOXKRNL_FILE_OVERWRITE_IF,             /* 5 */
+};
+
+static const char *const xboxkrnl_file_create_disposition_name[] = {
+    NAME(XBOXKRNL_FILE_SUPERSEDE),
+    NAME(XBOXKRNL_FILE_OPEN),
+    NAME(XBOXKRNL_FILE_CREATE),
+    NAME(XBOXKRNL_FILE_OPEN_IF),
+    NAME(XBOXKRNL_FILE_OVERWRITE),
+    NAME(XBOXKRNL_FILE_OVERWRITE_IF),
+};
+
+typedef struct {
+    char                    path[4096];
+    int                     fd;
+    DIR *                   dir;
+} xboxkrnl_file;
+
+/* enums */
 enum XC_VALUE_INDEX {
-    XC_TIMEZONE_BIAS                = 0,
+    XC_TIMEZONE_BIAS                        = 0,
     XC_TZ_STD_NAME,
     XC_TZ_STD_DATE,
     XC_TZ_STD_BIAS,
@@ -357,23 +604,23 @@ enum XC_VALUE_INDEX {
     XC_DVD_REGION,
 
     /* end of user configurations */
-    XC_MAX_OS                       = 0xff,
+    XC_MAX_OS                               = 0xff,
 
     /* start of factory settings */
     XC_FACTORY_START_INDEX,
-    XC_FACTORY_SERIAL_NUMBER = XC_FACTORY_START_INDEX,
+    XC_FACTORY_SERIAL_NUMBER                = XC_FACTORY_START_INDEX,
     XC_FACTORY_ETHERNET_ADDR,
     XC_FACTORY_ONLINE_KEY,
     XC_FACTORY_AV_REGION,
     XC_FACTORY_GAME_REGION,
 
     /* end of factory settings */
-    XC_MAX_FACTORY                  = 0x1ff,
+    XC_MAX_FACTORY                          = 0x1ff,
 
     /* special value to access the encryption section of the EEPROM
        or to access the entire EEPROM at once */
-    XC_ENCRYPTED_SECTION            = 0xfffe,
-    XC_MAX_ALL                      = 0xffff
+    XC_ENCRYPTED_SECTION                    = 0xfffe,
+    XC_MAX_ALL                              = 0xffff,
 };
 
 static const char *const xboxkrnl_xc_value_name[] = {
@@ -397,7 +644,7 @@ static const char *const xboxkrnl_xc_value_name[] = {
     NAME(XC_MISC_FLAGS),
     NAME(XC_DVD_REGION),
     NAME(XC_MAX_OS),
-//    NAME(XC_FACTORY_START_INDEX),
+//  NAME(XC_FACTORY_START_INDEX),
     NAME(XC_FACTORY_SERIAL_NUMBER),
     NAME(XC_FACTORY_ETHERNET_ADDR),
     NAME(XC_FACTORY_ONLINE_KEY),
@@ -409,13 +656,13 @@ static const char *const xboxkrnl_xc_value_name[] = {
 };
 
 enum XC_LANGUAGE {
-    XC_LANGUAGE_UNKNOWN             = 0,
-    XC_LANGUAGE_ENGLISH             = 1,
-    XC_LANGUAGE_JAPANESE            = 2,
-    XC_LANGUAGE_GERMAN              = 3,
-    XC_LANGUAGE_FRENCH              = 4,
-    XC_LANGUAGE_SPANISH             = 5,
-    XC_LANGUAGE_ITALIAN             = 6,
+    XC_LANGUAGE_UNKNOWN                     = 0,
+    XC_LANGUAGE_ENGLISH                     = 1,
+    XC_LANGUAGE_JAPANESE                    = 2,
+    XC_LANGUAGE_GERMAN                      = 3,
+    XC_LANGUAGE_FRENCH                      = 4,
+    XC_LANGUAGE_SPANISH                     = 5,
+    XC_LANGUAGE_ITALIAN                     = 6,
 };
 
 static const char *const xboxkrnl_xc_language_name[] = {
@@ -429,35 +676,35 @@ static const char *const xboxkrnl_xc_language_name[] = {
 };
 
 enum XC_VIDEO_FLAGS {
-    XC_VIDEO_FLAGS_WIDESCREEN       = 0x00000001,
-    XC_VIDEO_FLAGS_HDTV_720p        = 0x00000002,
-    XC_VIDEO_FLAGS_HDTV_1080i       = 0x00000004,
-    XC_VIDEO_FLAGS_HDTV_480p        = 0x00000008,
-    XC_VIDEO_FLAGS_LETTERBOX        = 0x00000010,
-    XC_VIDEO_FLAGS_PAL_60Hz         = 0x00000040,
+    XC_VIDEO_FLAGS_WIDESCREEN               = 1 << 0,   /* 0x1 */
+    XC_VIDEO_FLAGS_HDTV_720p                = 1 << 1,   /* 0x2 */
+    XC_VIDEO_FLAGS_HDTV_1080i               = 1 << 2,   /* 0x4 */
+    XC_VIDEO_FLAGS_HDTV_480p                = 1 << 3,   /* 0x8 */
+    XC_VIDEO_FLAGS_LETTERBOX                = 1 << 4,   /* 0x10 */
+    XC_VIDEO_FLAGS_PAL_60Hz                 = 1 << 6,   /* 0x40 */
 };
 
 static const char *const xboxkrnl_xc_video_flags_name[] = {
-    NAME(XC_VIDEO_FLAGS_WIDESCREEN),
-    NAME(XC_VIDEO_FLAGS_HDTV_720p),
-    NAME(XC_VIDEO_FLAGS_HDTV_1080i),
-    NAME(XC_VIDEO_FLAGS_HDTV_480p),
-    NAME(XC_VIDEO_FLAGS_LETTERBOX),
-    NAME(XC_VIDEO_FLAGS_PAL_60Hz),
+    NAMEB(0, XC_VIDEO_FLAGS_WIDESCREEN),
+    NAMEB(1, XC_VIDEO_FLAGS_HDTV_720p),
+    NAMEB(2, XC_VIDEO_FLAGS_HDTV_1080i),
+    NAMEB(3, XC_VIDEO_FLAGS_HDTV_480p),
+    NAMEB(4, XC_VIDEO_FLAGS_LETTERBOX),
+    NAMEB(6, XC_VIDEO_FLAGS_PAL_60Hz),
 };
 
-#define XC_AUDIO_FLAGS_BASIC(c)      ((c) & 0x0000ffff)
-#define XC_AUDIO_FLAGS_ENCODED(c)    ((c) & 0xffff0000)
-#define XC_AUDIO_FLAGS_COMBINED(b,e) (XC_AUDIO_FLAGS_BASIC(b) | XC_AUDIO_FLAGS_ENCODED(e))
+#define XC_AUDIO_FLAGS_BASIC(c)             ((c) & 0x0000ffff)
+#define XC_AUDIO_FLAGS_ENCODED(c)           ((c) & 0xffff0000)
+#define XC_AUDIO_FLAGS_COMBINED(b,e)        (XC_AUDIO_FLAGS_BASIC(b) | XC_AUDIO_FLAGS_ENCODED(e))
 
 enum XC_AUDIO_FLAGS {
     /* basic */
-    XC_AUDIO_FLAGS_STEREO           = 0x00000000,
-    XC_AUDIO_FLAGS_MONO             = 0x00000001,
-    XC_AUDIO_FLAGS_SURROUND         = 0x00000002,
+    XC_AUDIO_FLAGS_STEREO                   = 0 << 0,   /* 0x0 */
+    XC_AUDIO_FLAGS_MONO                     = 1 << 0,   /* 0x1 */
+    XC_AUDIO_FLAGS_SURROUND                 = 1 << 1,   /* 0x2 */
     /* encoded */
-    XC_AUDIO_FLAGS_ENABLE_AC3       = 0x00010000,
-    XC_AUDIO_FLAGS_ENABLE_DTS       = 0x00020000,
+    XC_AUDIO_FLAGS_ENABLE_AC3               = 1 << 16,  /* 0x10000 */
+    XC_AUDIO_FLAGS_ENABLE_DTS               = 1 << 17,  /* 0x20000 */
 };
 
 static const char *const xboxkrnl_xc_audio_flags_name[] = {
@@ -469,13 +716,13 @@ static const char *const xboxkrnl_xc_audio_flags_name[] = {
 };
 
 enum XC_PARENTAL_CONTROL {
-    XC_PC_ESRB_ALL                  = 0,
-    XC_PC_ESRB_ADULT                = 1,
-    XC_PC_ESRB_MATURE               = 2,
-    XC_PC_ESRB_TEEN                 = 3,
-    XC_PC_ESRB_EVERYONE             = 4,
-    XC_PC_ESRB_KIDS_TO_ADULTS       = 5,
-    XC_PC_ESRB_EARLY_CHILDHOOD      = 6,
+    XC_PC_ESRB_ALL                          = 0,
+    XC_PC_ESRB_ADULT                        = 1,
+    XC_PC_ESRB_MATURE                       = 2,
+    XC_PC_ESRB_TEEN                         = 3,
+    XC_PC_ESRB_EVERYONE                     = 4,
+    XC_PC_ESRB_KIDS_TO_ADULTS               = 5,
+    XC_PC_ESRB_EARLY_CHILDHOOD              = 6,
 };
 
 static const char *const xboxkrnl_xc_parental_control_name[] = {
@@ -489,20 +736,20 @@ static const char *const xboxkrnl_xc_parental_control_name[] = {
 };
 
 enum XC_MISC_FLAGS {
-    XC_MISC_FLAG_AUTOPOWERDOWN      = 0x00000001,
-    XC_MISC_FLAG_DONT_USE_DST       = 0x00000002,
+    XC_MISC_FLAG_AUTOPOWERDOWN              = 1 << 0,   /* 0x1 */
+    XC_MISC_FLAG_DONT_USE_DST               = 1 << 1,   /* 0x2 */
 };
 
 static const char *const xboxkrnl_xc_misc_flags_name[] = {
-    NAME(XC_MISC_FLAG_AUTOPOWERDOWN),
-    NAME(XC_MISC_FLAG_DONT_USE_DST),
+    NAMEB(0, XC_MISC_FLAG_AUTOPOWERDOWN),
+    NAMEB(1, XC_MISC_FLAG_DONT_USE_DST),
 };
 
 enum XC_FACTORY_AV_REGION {
-    XC_VIDEO_STANDARD_NTSC_M        = 1,
-    XC_VIDEO_STANDARD_NTSC_J        = 2,
-    XC_VIDEO_STANDARD_PAL_I         = 3,
-    XC_VIDEO_STANDARD_PAL_M         = 4,
+    XC_VIDEO_STANDARD_NTSC_M                = 1,
+    XC_VIDEO_STANDARD_NTSC_J                = 2,
+    XC_VIDEO_STANDARD_PAL_I                 = 3,
+    XC_VIDEO_STANDARD_PAL_M                 = 4,
 };
 
 static const char *const xboxkrnl_xc_factory_av_region_name[] = {
@@ -513,27 +760,27 @@ static const char *const xboxkrnl_xc_factory_av_region_name[] = {
 };
 
 enum XC_FACTORY_GAME_REGION {
-    XC_GAME_REGION_NA               = 0x00000001,
-    XC_GAME_REGION_JAPAN            = 0x00000002,
-    XC_GAME_REGION_RESTOFWORLD      = 0x00000004,
-    XC_GAME_REGION_MANUFACTURING    = 0x80000000,
+    XC_GAME_REGION_NA                       = 1 << 0,   /* 0x1 */
+    XC_GAME_REGION_JAPAN                    = 1 << 1,   /* 0x2 */
+    XC_GAME_REGION_RESTOFWORLD              = 1 << 2,   /* 0x4 */
+    XC_GAME_REGION_MANUFACTURING            = 1 << 31,  /* 0x80000000 */
 };
 
 static const char *const xboxkrnl_xc_factory_game_region_name[] = {
-    NAME(XC_GAME_REGION_NA),
-    NAME(XC_GAME_REGION_JAPAN),
-    NAME(XC_GAME_REGION_RESTOFWORLD),
-//    NAME(XC_GAME_REGION_MANUFACTURING),
+    NAMEB(0,  XC_GAME_REGION_NA),
+    NAMEB(1,  XC_GAME_REGION_JAPAN),
+    NAMEB(2,  XC_GAME_REGION_RESTOFWORLD),
+    NAMEB(31, XC_GAME_REGION_MANUFACTURING),
 };
 
 enum XC_AV_PACK {
-    XC_AV_PACK_SCART                = 0,
-    XC_AV_PACK_HDTV                 = 1,
-    XC_AV_PACK_VGA                  = 2,
-    XC_AV_PACK_RFU                  = 3,
-    XC_AV_PACK_SVIDEO               = 4,
-    XC_AV_PACK_STANDARD             = 6,
-    XC_AV_PACK_NONE                 = 7,
+    XC_AV_PACK_SCART                        = 0,
+    XC_AV_PACK_HDTV                         = 1,
+    XC_AV_PACK_VGA                          = 2,
+    XC_AV_PACK_RFU                          = 3,
+    XC_AV_PACK_SVIDEO                       = 4,
+    XC_AV_PACK_STANDARD                     = 6,
+    XC_AV_PACK_NONE                         = 7,
 };
 
 static const char *const xboxkrnl_xc_av_pack_name[] = {
@@ -546,16 +793,16 @@ static const char *const xboxkrnl_xc_av_pack_name[] = {
     NAME(XC_AV_PACK_NONE),
 };
 
-static const unsigned xboxkrnl_os[] = {
-    [XC_LANGUAGE]                   = XC_LANGUAGE_ENGLISH,
-    [XC_VIDEO_FLAGS]                = XC_VIDEO_FLAGS_LETTERBOX,
-    [XC_AUDIO_FLAGS]                = XC_AUDIO_FLAGS_STEREO,
-    [XC_PARENTAL_CONTROL_GAMES]     = XC_PC_ESRB_ALL, // Zapper queries this.
-    [XC_PARENTAL_CONTROL_MOVIES]    = XC_PC_ESRB_ALL, // Xbox Dashboard queries this.
-    [XC_MISC_FLAGS]                 = 0,
-    [XC_FACTORY_AV_REGION]          = XC_VIDEO_STANDARD_NTSC_M,
-    [XC_FACTORY_GAME_REGION]        = /*XC_GAME_REGION_MANUFACTURING | */XC_GAME_REGION_NA,
-    [XC_MAX_OS]                     = 0,
+static const uint32_t xboxkrnl_os[] = {
+    [XC_LANGUAGE]                           = XC_LANGUAGE_ENGLISH,
+    [XC_VIDEO_FLAGS]                        = XC_VIDEO_FLAGS_LETTERBOX,
+    [XC_AUDIO_FLAGS]                        = XC_AUDIO_FLAGS_STEREO,
+    [XC_PARENTAL_CONTROL_GAMES]             = XC_PC_ESRB_ALL, // Zapper queries this.
+    [XC_PARENTAL_CONTROL_MOVIES]            = XC_PC_ESRB_ALL, // Xbox Dashboard queries this.
+    [XC_MISC_FLAGS]                         = 0,
+    [XC_FACTORY_AV_REGION]                  = XC_VIDEO_STANDARD_NTSC_M,
+    [XC_FACTORY_GAME_REGION]                = /*XC_GAME_REGION_MANUFACTURING | */XC_GAME_REGION_NA,
+    [XC_MAX_OS]                             = 0,
 };
 
 static const char *const xboxkrnl_os_name[] = {
@@ -571,7 +818,7 @@ static const char *const xboxkrnl_os_name[] = {
 };
 
 /* suppress warnings */
-#if 1
+#if 0
 void
 xboxkrnl_nullsub() {
     (void)xboxkrnl_xc_value_name;
@@ -588,32 +835,7 @@ xboxkrnl_nullsub() {
 #endif
 
 /* initialization */
-#if 0
-int
-xboxkrnl_init(void **x) {
-    int ret = 1;
-    ENTER;
-
-    if (x) {
-        
-    }
-
-    LEAVE;
-    return ret;
-}
-
-void
-xboxkrnl_release(void *x) {
-    ENTER;
-
-    if (x) {
-        
-    }
-
-    LEAVE;
-}
-#endif
-void *
+static void *
 xboxkrnl_worker(void *arg) {
     if (!arg) {
         ENTER;
@@ -624,17 +846,17 @@ xboxkrnl_worker(void *arg) {
             xboxkrnl_ ## x ## _mutex = calloc(1, sizeof(*xboxkrnl_ ## x ## _mutex)); \
             xboxkrnl_ ## x ## _cond = calloc(1, sizeof(*xboxkrnl_ ## x ## _cond)); \
             \
-            DEBUG(DUMP, xboxkrnl_ ## x ## _thread); \
-            DEBUG(DUMP, xboxkrnl_ ## x ## _mattr); \
-            DEBUG(DUMP, xboxkrnl_ ## x ## _mutex); \
-            DEBUG(DUMP, xboxkrnl_ ## x ## _cond); \
+            VARDUMP(DUMP, xboxkrnl_ ## x ## _thread); \
+            VARDUMP(DUMP, xboxkrnl_ ## x ## _mattr); \
+            VARDUMP(DUMP, xboxkrnl_ ## x ## _mutex); \
+            VARDUMP(DUMP, xboxkrnl_ ## x ## _cond); \
             \
             pthread_mutexattr_init(xboxkrnl_ ## x ## _mattr); \
             pthread_mutexattr_settype(xboxkrnl_ ## x ## _mattr, PTHREAD_MUTEX_RECURSIVE); \
             pthread_mutex_init(xboxkrnl_ ## x ## _mutex, xboxkrnl_ ## x ## _mattr); \
             pthread_cond_init(xboxkrnl_ ## x ## _cond, NULL); \
             \
-            debug("    " "/* starting " #x " thread */"); \
+            PRINT("/* starting " #x " thread */", 0); \
             \
             pthread_create(xboxkrnl_ ## x ## _thread, NULL, xboxkrnl_worker, (y)); \
         } while (0)
@@ -651,7 +873,7 @@ xboxkrnl_worker(void *arg) {
         for (;;) {
             pthread_mutex_lock(xboxkrnl_dpc_mutex);
 
-            debug("    " "/* waiting for deferred procedure routines */");
+            PRINT_DPC("/* waiting for deferred procedure routines */", 0);
 
             pthread_cond_wait(xboxkrnl_dpc_cond, xboxkrnl_dpc_mutex);
 
@@ -666,7 +888,7 @@ xboxkrnl_worker(void *arg) {
         for (;;) {
             pthread_mutex_lock(xboxkrnl_event_mutex);
 
-            debug("    " "/* waiting for event routines */");
+            PRINT_EVENT("/* waiting for event routines */", 0);
 
             pthread_cond_wait(xboxkrnl_event_cond, xboxkrnl_event_mutex);
 
@@ -680,44 +902,163 @@ xboxkrnl_worker(void *arg) {
     return NULL;
 }
 
-int
+static int
 xboxkrnl_init_hw(void) {
-    const uint32_t mem[] = {
-        xpcicfg[XPCICFG_USB0].memreg_base_0,
-        xpcicfg[XPCICFG_USB0].memreg_size_0,
-        0
-    };
-    void *ptr;
-    size_t sz;
-    size_t i;
+    register void *ptr;
+    register size_t sz;
+    register size_t i;
+    ENTER;
 
-    for (i = 0; i < sizeof(mem) / sizeof(*mem) && mem[i];) {
-        ptr = (void *)mem[i++];
-        sz = mem[i++];
-        if (mmap(ptr,
-                sz,
-                PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE | MAP_ANONYMOUS,
-                -1,
-                0) != ptr) {
-            fprintf(stderr, "error: could not mmap hardware emulation @ address %p size %p\n", ptr, (void *)sz);
-            return 1;
+    for (i = 0; i < sizeof(xpci) / sizeof(*xpci) && xpci[i].name; ++i) {
+        if ((ptr = (typeof(ptr))xpci[i].memreg_base)) {
+            sz = xpci[i].memreg_size;
+            PRINT("mmap(): '%s': reserve: address 0x%.08x size 0x%.08x (%lu)", xpci[i].name, ptr, sz, sz);
+            if (mmap(ptr,
+                    sz,
+                    PROT_NONE,
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE,
+                    -1,
+                    0) != ptr) {
+                PRINT("error: mmap(): failed to reserve emulated hardware: address %p size %p (%lu): '%s'",
+                    ptr,
+                    sz,
+                    sz,
+                    strerror(errno));
+                LEAVE;
+                return 1;
+            }
+        }
+    }
+    for (i = 0; i < sizeof(xpci) / sizeof(*xpci) && xpci[i].name; ++i) {
+        if ((ptr = (typeof(ptr))xpci[i].memreg_base)) {
+            sz = xpci[i].memreg_size;
+            if ((ptr = mmap(NULL,
+                    sz,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+                    -1,
+                    0)) == MAP_FAILED) {
+                PRINT("error: mmap(): failed to allocate emulated hardware: size %p (%lu): '%s'",
+                    sz,
+                    sz,
+                    strerror(errno));
+                LEAVE;
+                return 1;
+            }
+            xpci[i].memreg = ptr;
+            PRINT("mmap(): '%s': mapped to address: %p", xpci[i].name, ptr);
         }
     }
 
-    xboxkrnl_worker(NULL);
+    nv2a_init();
 
+    LEAVE;
     return 0;
 }
 
+void
+xboxkrnl_destroy(void/* *x*/) {
+    if (!xboxkrnl_thread_mutex) return;
+
+    pthread_mutex_destroy(xboxkrnl_thread_mutex);
+    xboxkrnl_thread_mutex = NULL;
+    pthread_mutexattr_destroy(xboxkrnl_thread_mattr);
+    xboxkrnl_thread_mattr = NULL;
+}
+
+int
+xboxkrnl_init(void/* **x*/) {
+    int ret = 1;
+
+    if (xboxkrnl_thread_mutex) return ret;
+
+    xboxkrnl_thread_mutex = calloc(1, sizeof(*xboxkrnl_thread_mutex));
+    xboxkrnl_thread_mattr = calloc(1, sizeof(*xboxkrnl_thread_mattr));
+    pthread_mutexattr_init(xboxkrnl_thread_mattr);
+    pthread_mutexattr_settype(xboxkrnl_thread_mattr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(xboxkrnl_thread_mutex, xboxkrnl_thread_mattr);
+
+    ENTER;
+
+    ret = xboxkrnl_init_hw();
+    if (!ret) xboxkrnl_worker(NULL);
+
+    VARDUMP(DUMP, ret);
+    LEAVE;
+    if (ret) xboxkrnl_destroy();
+    return ret;
+}
+
+/* helpers */
+#define XBOXKRNL_PATH_CDROM     "/Device/CdRom0"
+#define XBOXKRNL_PATH_HARDDRIVE "/Device/Harddisk0/partition0"
+#define XBOXKRNL_PATH_DRIVE_E   "/Device/Harddisk0/partition1"
+#define XBOXKRNL_PATH_SYMLINK_D "/\?\?/D:"
+#define XBOXKRNL_PATH_SYMLINK_T "/\?\?/T:"
+#define XBOXKRNL_PATH_SYMLINK_U "/\?\?/U:"
+
+static char *
+xboxkrnl_path_winnt_to_unix(const char *path) {
+    const char *prefix = NULL;
+    char buf[4096];
+    char *tmp;
+    size_t len;
+    size_t i;
+    char *ret = NULL;
+
+    tmp = strdup(path);
+    len = strlen(path);
+
+    for (i = 0; i < len; ++i) if (tmp[i] == '\\') tmp[i] = '/';
+
+    do {
+
+#define XBOXKRNL_PATH_PREFIX(x,y) \
+        if (!strncasecmp(tmp, (x), (i = sizeof((x)) - 1))) { \
+            prefix = (y); \
+            break; \
+        }
+
+        XBOXKRNL_PATH_PREFIX(XBOXKRNL_PATH_CDROM, "D");
+
+        XBOXKRNL_PATH_PREFIX(XBOXKRNL_PATH_HARDDRIVE, "");
+
+        XBOXKRNL_PATH_PREFIX(XBOXKRNL_PATH_DRIVE_E, "E");
+
+        XBOXKRNL_PATH_PREFIX(XBOXKRNL_PATH_SYMLINK_D, "D");
+
+        XBOXKRNL_PATH_PREFIX(XBOXKRNL_PATH_SYMLINK_T, "T");
+
+        XBOXKRNL_PATH_PREFIX(XBOXKRNL_PATH_SYMLINK_U, "U");
+
+#undef XBOXKRNL_PATH_PREFIX
+
+    } while (0);
+
+    if (prefix) {
+        len -= i;
+        memmove(tmp, &tmp[i], len);
+        tmp[len] = 0;
+        i = sizeof(buf) - 1;
+        buf[i] = 0;
+        snprintf(buf, i, "%s%s", prefix, tmp);
+        free(tmp);
+        ret = strdup(buf);
+    } else {
+        ret = tmp;
+    }
+
+    return ret;
+}
+
 /* prototypes */
-STDCALL uint8_t
+static STDCALL uint8_t
 xboxkrnl_KeSetTimerEx( /* 150 (0x096) */
         /* in */       xboxkrnl_timer *Timer,
         /* in */       int64_t DueTime,
         /* in (opt) */ int32_t Period,
         /* in (opt) */ xboxkrnl_dpc *Dpc);
-STDCALL int
+static STDCALL int
 xboxkrnl_PsCreateSystemThreadEx( /* 255 (0x0ff) */
         /* out */       void **ThreadHandle,
         /* in */        size_t ThreadExtensionSize,
@@ -731,7 +1072,7 @@ xboxkrnl_PsCreateSystemThreadEx( /* 255 (0x0ff) */
         /* in (opt) */  void *SystemRoutine);
 
 /* wrappers */
-STDCALL void
+static STDCALL void
 xboxkrnl_AvGetSavedDataAddress() { /* 001 (0x001) */
     ENTER;
 
@@ -740,16 +1081,37 @@ xboxkrnl_AvGetSavedDataAddress() { /* 001 (0x001) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_AvSendTVEncoderOption() { /* 002 (0x002) */
+static STDCALL void
+xboxkrnl_AvSendTVEncoderOption( /* 002 (0x002) */
+        /* in */  void *RegisterBase,
+        /* in */  uint32_t Option,
+        /* in */  uint32_t Param,
+        /* out */ uint32_t *Result) {
     ENTER;
+    VARDUMP(VAR_IN,   RegisterBase);
+    VARDUMP(VAR_IN,   Option);
+    VARDUMP(VAR_IN,   Param);
+    VARDUMP(VAR_OUT,  Result);
+    VARDUMPD(VAR_OUT, Result);
 
-    INT3;
-    
+    switch (Option) {
+    case /* AV_QUERY_AV_CAPABILITIES */ 6:
+        *Result  = XC_AV_PACK_HDTV;
+        *Result |= xboxkrnl_os[XC_FACTORY_AV_REGION] << /* AV_STANDARD_BIT_SHIFT */ 8;
+        *Result |= /* AV_FLAGS_60Hz */ 0x00400000;
+        break;
+    case /* AV_OPTION_FLICKER_FILTER */ 11:
+    case /* AV_OPTION_ENABLE_LUMA_FILTER */ 14:
+        break;
+    default:
+        INT3;
+        break;
+    }
 
+    VARDUMPD(DUMP, Result);
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_AvSetDisplayMode() { /* 003 (0x003) */
     ENTER;
 
@@ -758,7 +1120,7 @@ xboxkrnl_AvSetDisplayMode() { /* 003 (0x003) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_AvSetSavedDataAddress() { /* 004 (0x004) */
     ENTER;
 
@@ -767,7 +1129,7 @@ xboxkrnl_AvSetSavedDataAddress() { /* 004 (0x004) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_DbgBreakPoint() { /* 005 (0x005) */
     ENTER;
 
@@ -776,7 +1138,7 @@ xboxkrnl_DbgBreakPoint() { /* 005 (0x005) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_DbgBreakPointWithStatus() { /* 006 (0x006) */
     ENTER;
 
@@ -785,7 +1147,7 @@ xboxkrnl_DbgBreakPointWithStatus() { /* 006 (0x006) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_DbgPrint() { /* 008 (0x008) */
     ENTER;
 
@@ -794,7 +1156,7 @@ xboxkrnl_DbgPrint() { /* 008 (0x008) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_DbgPrompt() { /* 010 (0x00a) */
     ENTER;
 
@@ -803,7 +1165,7 @@ xboxkrnl_DbgPrompt() { /* 010 (0x00a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExAcquireReadWriteLockExclusive() { /* 012 (0x00c) */
     ENTER;
 
@@ -812,7 +1174,7 @@ xboxkrnl_ExAcquireReadWriteLockExclusive() { /* 012 (0x00c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExAcquireReadWriteLockShared() { /* 013 (0x00d) */
     ENTER;
 
@@ -821,23 +1183,20 @@ xboxkrnl_ExAcquireReadWriteLockShared() { /* 013 (0x00d) */
 
     LEAVE;
 }
-STDCALL void *
+static STDCALL void *
 xboxkrnl_ExAllocatePool( /* 014 (0x00e) */
         /* in */ size_t NumberOfBytes) {
     void *ret;
     ENTER;
-    DEBUG(VAR_IN, NumberOfBytes);
+    VARDUMP(VAR_IN, NumberOfBytes);
 
-    if (!(ret = malloc(NumberOfBytes)) && NumberOfBytes) {
-        debug("error: out of memory", 0);
-        INT3;
-    }
-    DEBUG(DUMP, ret);
+    if (!(ret = malloc(NumberOfBytes)) && NumberOfBytes) INT3;
 
+    VARDUMP(DUMP, ret);
     LEAVE;
     return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExAllocatePoolWithTag() { /* 015 (0x00f) */
     ENTER;
 
@@ -846,7 +1205,8 @@ xboxkrnl_ExAllocatePoolWithTag() { /* 015 (0x00f) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_ExEventObjectType() { /* 016 (0x010) */
     ENTER;
 
@@ -855,17 +1215,32 @@ xboxkrnl_ExEventObjectType() { /* 016 (0x010) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_ExEventObjectType = (void *)0xdeadbeef; /* 016 (0x010) */
+#endif
+static STDCALL void
 xboxkrnl_ExFreePool( /* 017 (0x011) */
         /* in */ void *P) {
     ENTER;
-    DEBUG(VAR_IN, P);
+    VARDUMP(VAR_IN, P);
 
     free(P);
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExInitializeReadWriteLock() { /* 018 (0x012) */
     ENTER;
 
@@ -874,7 +1249,7 @@ xboxkrnl_ExInitializeReadWriteLock() { /* 018 (0x012) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExInterlockedAddLargeInteger() { /* 019 (0x013) */
     ENTER;
 
@@ -883,7 +1258,7 @@ xboxkrnl_ExInterlockedAddLargeInteger() { /* 019 (0x013) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_ExInterlockedAddLargeStatistic() { /* 020 (0x014) */
     ENTER;
 
@@ -892,7 +1267,7 @@ xboxkrnl_ExInterlockedAddLargeStatistic() { /* 020 (0x014) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_ExInterlockedCompareExchange64() { /* 021 (0x015) */
     ENTER;
 
@@ -901,7 +1276,8 @@ xboxkrnl_ExInterlockedCompareExchange64() { /* 021 (0x015) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_ExMutantObjectType() { /* 022 (0x016) */
     ENTER;
 
@@ -910,7 +1286,22 @@ xboxkrnl_ExMutantObjectType() { /* 022 (0x016) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_ExMutantObjectType = (void *)0xdeadbeef; /* 022 (0x016) */
+#endif
+static STDCALL void
 xboxkrnl_ExQueryPoolBlockSize() { /* 023 (0x017) */
     ENTER;
 
@@ -919,21 +1310,21 @@ xboxkrnl_ExQueryPoolBlockSize() { /* 023 (0x017) */
 
     LEAVE;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_ExQueryNonVolatileSetting( /* 024 (0x018) */
-        /* in */  unsigned ValueIndex,
-        /* out */ unsigned *Type,
+        /* in */  uint32_t ValueIndex,
+        /* out */ uint32_t *Type,
         /* out */ void *Value,
-        /* in */  unsigned ValueLength,
-        /* out */ unsigned *ResultLength) {
-    unsigned val = 0;
+        /* in */  uint32_t ValueLength,
+        /* out */ uint32_t *ResultLength) {
+    uint32_t val = 0;
     int ret = 0;
     ENTER;
-    DEBUG2(VAR_IN, ValueIndex, xboxkrnl_os_name);
-    DEBUG(VAR_OUT, Type);
-    DEBUG(VAR_OUT, Value);
-    DEBUG(VAR_IN,  ValueLength);
-    DEBUG(VAR_OUT, ResultLength);
+    VARDUMP2(VAR_IN, ValueIndex, xboxkrnl_os_name);
+    VARDUMP(VAR_OUT, Type);
+    VARDUMP(VAR_OUT, Value);
+    VARDUMP(VAR_IN,  ValueLength);
+    VARDUMP(VAR_OUT, ResultLength);
 
     switch (ValueIndex) {
     case XC_LANGUAGE:
@@ -949,10 +1340,9 @@ xboxkrnl_ExQueryNonVolatileSetting( /* 024 (0x018) */
             break;
         }
         if (ResultLength) *ResultLength = sizeof(val);
-        *Type = REG_DWORD;
+        *Type = REG_DWORD;//FIXME
         val = xboxkrnl_os[ValueIndex];
         *(typeof(val) *)Value = val;
-        DEBUG(DUMP, val);
         break;
     case XC_ENCRYPTED_SECTION:
     case XC_MAX_ALL:
@@ -969,19 +1359,48 @@ xboxkrnl_ExQueryNonVolatileSetting( /* 024 (0x018) */
             *Type = REG_BINARY;
             //TODO eeprom copy from offset 0 length val
 #else
-            ret = 1;INT3;
+            ret = 1;
+            INT3;
 #endif
         }
         break;
     default:
-        ret = 1;INT3;
+        ret = 1;
+        INT3;
+        break;
+    }
+    switch (ValueIndex) {
+    case XC_LANGUAGE:
+        VARDUMP2(DUMP, val, xboxkrnl_xc_language_name);
+        break;
+    case XC_VIDEO_FLAGS:
+        VARDUMP3(DUMP, val, xboxkrnl_xc_video_flags_name);
+        break;
+    case XC_AUDIO_FLAGS:
+        VARDUMP2(DUMP, val, xboxkrnl_xc_audio_flags_name);
+        break;
+    case XC_PARENTAL_CONTROL_GAMES:
+    case XC_PARENTAL_CONTROL_MOVIES:
+        VARDUMP2(DUMP, val, xboxkrnl_xc_parental_control_name);
+        break;
+    case XC_MISC_FLAGS:
+        VARDUMP3(DUMP, val, xboxkrnl_xc_misc_flags_name);
+        break;
+    case XC_FACTORY_AV_REGION:
+        VARDUMP2(DUMP, val, xboxkrnl_xc_factory_av_region_name);
+        break;
+    case XC_FACTORY_GAME_REGION:
+        VARDUMP3(DUMP, val, xboxkrnl_xc_factory_game_region_name);
+        break;
+    default:
+        VARDUMP(DUMP, val);
         break;
     }
 
     LEAVE;
     return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExReadWriteRefurbInfo() { /* 025 (0x019) */
     ENTER;
 
@@ -990,7 +1409,7 @@ xboxkrnl_ExReadWriteRefurbInfo() { /* 025 (0x019) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExRaiseException() { /* 026 (0x01a) */
     ENTER;
 
@@ -999,7 +1418,7 @@ xboxkrnl_ExRaiseException() { /* 026 (0x01a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExRaiseStatus() { /* 027 (0x01b) */
     ENTER;
 
@@ -1008,7 +1427,7 @@ xboxkrnl_ExRaiseStatus() { /* 027 (0x01b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExReleaseReadWriteLock() { /* 028 (0x01c) */
     ENTER;
 
@@ -1017,7 +1436,7 @@ xboxkrnl_ExReleaseReadWriteLock() { /* 028 (0x01c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ExSaveNonVolatileSetting() { /* 029 (0x01d) */
     ENTER;
 
@@ -1026,7 +1445,8 @@ xboxkrnl_ExSaveNonVolatileSetting() { /* 029 (0x01d) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_ExSemaphoreObjectType() { /* 030 (0x01e) */
     ENTER;
 
@@ -1035,7 +1455,23 @@ xboxkrnl_ExSemaphoreObjectType() { /* 030 (0x01e) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_ExSemaphoreObjectType = (void *)0xdeadbeef; /* 030 (0x01e) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_ExTimerObjectType() { /* 031 (0x01f) */
     ENTER;
 
@@ -1044,7 +1480,22 @@ xboxkrnl_ExTimerObjectType() { /* 031 (0x01f) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_ExTimerObjectType = (void *)0xdeadbeef; /* 031 (0x01f) */
+#endif
+static STDCALL void
 xboxkrnl_ExfInterlockedInsertHeadList() { /* 032 (0x020) */
     ENTER;
 
@@ -1053,7 +1504,7 @@ xboxkrnl_ExfInterlockedInsertHeadList() { /* 032 (0x020) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_ExfInterlockedInsertTailList() { /* 033 (0x021) */
     ENTER;
 
@@ -1062,7 +1513,7 @@ xboxkrnl_ExfInterlockedInsertTailList() { /* 033 (0x021) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_ExfInterlockedRemoveHeadList() { /* 034 (0x022) */
     ENTER;
 
@@ -1071,7 +1522,7 @@ xboxkrnl_ExfInterlockedRemoveHeadList() { /* 034 (0x022) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_FscGetCacheSize() { /* 035 (0x023) */
     ENTER;
 
@@ -1080,7 +1531,7 @@ xboxkrnl_FscGetCacheSize() { /* 035 (0x023) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_FscInvalidateIdleBlocks() { /* 036 (0x024) */
     ENTER;
 
@@ -1089,7 +1540,7 @@ xboxkrnl_FscInvalidateIdleBlocks() { /* 036 (0x024) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_FscSetCacheSize() { /* 037 (0x025) */
     ENTER;
 
@@ -1098,7 +1549,8 @@ xboxkrnl_FscSetCacheSize() { /* 037 (0x025) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_HalBootSMCVideoMode() { /* 356 (0x164) */
     ENTER;
 
@@ -1107,7 +1559,11 @@ xboxkrnl_HalBootSMCVideoMode() { /* 356 (0x164) */
 
     LEAVE;
 }
-FASTCALL void
+#else
+static uint32_t
+xboxkrnl_HalBootSMCVideoMode = 0; /* 356 (0x164) */
+#endif
+static FASTCALL void
 xboxkrnl_HalClearSoftwareInterrupt() { /* 038 (0x026) */
     ENTER;
 
@@ -1116,7 +1572,7 @@ xboxkrnl_HalClearSoftwareInterrupt() { /* 038 (0x026) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalDisableSystemInterrupt() { /* 039 (0x027) */
     ENTER;
 
@@ -1125,7 +1581,8 @@ xboxkrnl_HalDisableSystemInterrupt() { /* 039 (0x027) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_HalDiskCachePartitionCount() { /* 040 (0x028) */
     ENTER;
 
@@ -1134,7 +1591,12 @@ xboxkrnl_HalDiskCachePartitionCount() { /* 040 (0x028) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint32_t
+xboxkrnl_HalDiskCachePartitionCount = 0; /* 040 (0x028) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_HalDiskModelNumber() { /* 041 (0x029) */
     ENTER;
 
@@ -1143,7 +1605,12 @@ xboxkrnl_HalDiskModelNumber() { /* 041 (0x029) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static xboxkrnl_string
+xboxkrnl_HalDiskModelNumber = { }; /* 041 (0x029) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_HalDiskSerialNumber() { /* 042 (0x02a) */
     ENTER;
 
@@ -1152,7 +1619,11 @@ xboxkrnl_HalDiskSerialNumber() { /* 042 (0x02a) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static xboxkrnl_string
+xboxkrnl_HalDiskSerialNumber = { }; /* 042 (0x02a) */
+#endif
+static STDCALL void
 xboxkrnl_HalEnableSecureTrayEject() { /* 365 (0x16d) */
     ENTER;
 
@@ -1161,7 +1632,7 @@ xboxkrnl_HalEnableSecureTrayEject() { /* 365 (0x16d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalEnableSystemInterrupt() { /* 043 (0x02b) */
     ENTER;
 
@@ -1170,25 +1641,29 @@ xboxkrnl_HalEnableSystemInterrupt() { /* 043 (0x02b) */
 
     LEAVE;
 }
-STDCALL unsigned
+static STDCALL uint32_t
 xboxkrnl_HalGetInterruptVector( /* 044 (0x02c) */
-        /* in */  unsigned BusInterruptLevel,
-        /* out */ void *Irql) {
-    int i;
+        /* in */  uint32_t BusInterruptLevel,
+        /* out */ uint8_t *Irql) {
+    size_t i;
     ENTER;
-    DEBUG(STUB,BusInterruptLevel);DEBUG(STUB,Irql);
+    VARDUMP(VAR_IN,  BusInterruptLevel);
+    VARDUMP(VAR_OUT, Irql);
+    VARDUMP(VAR_OUT, *Irql);
 
-    for (i = 0; xpcicfg[i].name; ++i) {
-        if (xpcicfg[i].irq == BusInterruptLevel) {
-            debug("    name: '%s'", xpcicfg[i].name);//TODO
+    for (i = 0; xpci[i].name; ++i) {
+        if (xpci[i].irq == BusInterruptLevel) {
+            *Irql = xpci[i].irq;
+            PRINT("name: '%s'", xpci[i].name);
             break;
         }
     }
 
+    VARDUMP(DUMP, *Irql);
     LEAVE;
     return 0;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalInitiateShutdown() { /* 360 (0x168) */
     ENTER;
 
@@ -1197,7 +1672,7 @@ xboxkrnl_HalInitiateShutdown() { /* 360 (0x168) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalIsResetOrShutdownPending() { /* 358 (0x166) */
     ENTER;
 
@@ -1206,7 +1681,7 @@ xboxkrnl_HalIsResetOrShutdownPending() { /* 358 (0x166) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalReadSMBusValue() { /* 045 (0x02d) */
     ENTER;
 
@@ -1215,7 +1690,7 @@ xboxkrnl_HalReadSMBusValue() { /* 045 (0x02d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalReadSMCTrayState() { /* 009 (0x009) */
     ENTER;
 
@@ -1224,25 +1699,36 @@ xboxkrnl_HalReadSMCTrayState() { /* 009 (0x009) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_HalReadWritePCISpace() { /* 046 (0x02e) */
+static STDCALL void
+xboxkrnl_HalReadWritePCISpace( /* 046 (0x02e) */
+        /* in */ uint32_t BusNumber,
+        /* in */ uint32_t SlotNumber,
+        /* in */ uint32_t RegisterNumber,
+        /* in */ void *Buffer,
+        /* in */ uint32_t Length,
+        /* in */ uint8_t WritePCISpace) {
     ENTER;
+    VARDUMP(VAR_IN, BusNumber);
+    VARDUMP(VAR_IN, SlotNumber);
+    VARDUMP(VAR_IN, RegisterNumber);
+    VARDUMP(VAR_IN, Buffer);
+    VARDUMP(VAR_IN, Length);
+    VARDUMP(VAR_IN, WritePCISpace);
 
-    INT3;
-    
+    //TODO interrupt mutex
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalRegisterShutdownNotification( /* 047 (0x02f) */
         /* in */ void *ShutdownRegistration,
         /* in */ int Register) {
     ENTER;
-    DEBUG(STUB,ShutdownRegistration);DEBUG(STUB,Register);
+    VARDUMP(STUB,ShutdownRegistration);VARDUMP(STUB,Register);
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_HalRequestSoftwareInterrupt() { /* 048 (0x030) */
     ENTER;
 
@@ -1251,7 +1737,7 @@ xboxkrnl_HalRequestSoftwareInterrupt() { /* 048 (0x030) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalReturnToFirmware() { /* 049 (0x031) */
     ENTER;
 
@@ -1260,7 +1746,7 @@ xboxkrnl_HalReturnToFirmware() { /* 049 (0x031) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalWriteSMBusValue() { /* 050 (0x032) */
     ENTER;
 
@@ -1269,7 +1755,7 @@ xboxkrnl_HalWriteSMBusValue() { /* 050 (0x032) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_HalWriteSMCScratchRegister() { /* 366 (0x16e) */
     ENTER;
 
@@ -1278,7 +1764,8 @@ xboxkrnl_HalWriteSMCScratchRegister() { /* 366 (0x16e) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_IdexChannelObject() { /* 357 (0x165) */
     ENTER;
 
@@ -1287,7 +1774,35 @@ xboxkrnl_IdexChannelObject() { /* 357 (0x165) */
 
     LEAVE;
 }
-FASTCALL void
+#else
+#if 0
+typedef struct _IDE_CHANNEL_OBJECT {
+    PIDE_INTERRUPT_ROUTINE InterruptRoutine;
+    PIDE_FINISHIO_ROUTINE FinishIoRoutine;
+    PIDE_POLL_RESET_COMPLETE_ROUTINE PollResetCompleteRoutine;
+    PIDE_TIMEOUT_EXPIRED_ROUTINE TimeoutExpiredRoutine;
+    PIDE_START_PACKET_ROUTINE StartPacketRoutine;
+    PIDE_START_NEXT_PACKET_ROUTINE StartNextPacketRoutine;
+    KIRQL InterruptIrql;
+    BOOLEAN ExpectingBusMasterInterrupt;
+    BOOLEAN StartPacketBusy;
+    BOOLEAN StartPacketRequested;
+    UCHAR Timeout;
+    UCHAR IoRetries;
+    UCHAR MaximumIoRetries;
+    PIRP CurrentIrp;
+    KDEVICE_QUEUE DeviceQueue;
+    ULONG PhysicalRegionDescriptorTablePhysical;
+    KDPC TimerDpc;
+    KDPC FinishDpc;
+    KTIMER Timer;
+    KINTERRUPT InterruptObject;
+} IDE_CHANNEL_OBJECT, *PIDE_CHANNEL_OBJECT;
+#endif
+static void *
+xboxkrnl_IdexChannelObject = (void *)0xdeadbeef; /* 357 (0x165) */
+#endif
+static FASTCALL void
 xboxkrnl_InterlockedCompareExchange() { /* 051 (0x033) */
     ENTER;
 
@@ -1296,7 +1811,7 @@ xboxkrnl_InterlockedCompareExchange() { /* 051 (0x033) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_InterlockedDecrement() { /* 052 (0x034) */
     ENTER;
 
@@ -1305,7 +1820,7 @@ xboxkrnl_InterlockedDecrement() { /* 052 (0x034) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_InterlockedIncrement() { /* 053 (0x035) */
     ENTER;
 
@@ -1314,7 +1829,7 @@ xboxkrnl_InterlockedIncrement() { /* 053 (0x035) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_InterlockedExchange() { /* 054 (0x036) */
     ENTER;
 
@@ -1323,7 +1838,7 @@ xboxkrnl_InterlockedExchange() { /* 054 (0x036) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_InterlockedExchangeAdd() { /* 055 (0x037) */
     ENTER;
 
@@ -1332,7 +1847,7 @@ xboxkrnl_InterlockedExchangeAdd() { /* 055 (0x037) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_InterlockedFlushSList() { /* 056 (0x038) */
     ENTER;
 
@@ -1341,7 +1856,7 @@ xboxkrnl_InterlockedFlushSList() { /* 056 (0x038) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_InterlockedPopEntrySList() { /* 057 (0x039) */
     ENTER;
 
@@ -1350,7 +1865,7 @@ xboxkrnl_InterlockedPopEntrySList() { /* 057 (0x039) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_InterlockedPushEntrySList() { /* 058 (0x03a) */
     ENTER;
 
@@ -1359,7 +1874,7 @@ xboxkrnl_InterlockedPushEntrySList() { /* 058 (0x03a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoAllocateIrp() { /* 059 (0x03b) */
     ENTER;
 
@@ -1368,7 +1883,7 @@ xboxkrnl_IoAllocateIrp() { /* 059 (0x03b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoBuildAsynchronousFsdRequest() { /* 060 (0x03c) */
     ENTER;
 
@@ -1377,7 +1892,7 @@ xboxkrnl_IoBuildAsynchronousFsdRequest() { /* 060 (0x03c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoBuildDeviceIoControlRequest() { /* 061 (0x03d) */
     ENTER;
 
@@ -1386,7 +1901,7 @@ xboxkrnl_IoBuildDeviceIoControlRequest() { /* 061 (0x03d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoBuildSynchronousFsdRequest() { /* 062 (0x03e) */
     ENTER;
 
@@ -1395,7 +1910,7 @@ xboxkrnl_IoBuildSynchronousFsdRequest() { /* 062 (0x03e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoCheckShareAccess() { /* 063 (0x03f) */
     ENTER;
 
@@ -1404,7 +1919,8 @@ xboxkrnl_IoCheckShareAccess() { /* 063 (0x03f) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_IoCompletionObjectType() { /* 064 (0x040) */
     ENTER;
 
@@ -1413,7 +1929,22 @@ xboxkrnl_IoCompletionObjectType() { /* 064 (0x040) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_IoCompletionObjectType = (void *)0xdeadbeef; /* 064 (0x040) */
+#endif
+static STDCALL void
 xboxkrnl_IoCreateDevice() { /* 065 (0x041) */
     ENTER;
 
@@ -1422,7 +1953,7 @@ xboxkrnl_IoCreateDevice() { /* 065 (0x041) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoCreateFile() { /* 066 (0x042) */
     ENTER;
 
@@ -1431,16 +1962,48 @@ xboxkrnl_IoCreateFile() { /* 066 (0x042) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_IoCreateSymbolicLink() { /* 067 (0x043) */
+static STDCALL int
+xboxkrnl_IoCreateSymbolicLink( /* 067 (0x043) */
+        /* in */ xboxkrnl_string *SymbolicLinkName,
+        /* in */ xboxkrnl_string *DeviceName) {
+    struct stat st;
+    char *src;
+    char *dest;
+    int ret = -1;
     ENTER;
+    VARDUMP(VAR_IN, SymbolicLinkName);
+    VARDUMP(STRING, SymbolicLinkName->Buffer);
+    VARDUMP(VAR_IN, DeviceName);
+    VARDUMP(STRING, DeviceName->Buffer);
 
-    INT3;
-    
+    src = xboxkrnl_path_winnt_to_unix(DeviceName->Buffer);
+    VARDUMP(STRING, src);
+    dest = xboxkrnl_path_winnt_to_unix(SymbolicLinkName->Buffer);
+    VARDUMP(STRING, dest);
 
+    if (strlen(src) == strlen(dest) && !strncmp(src, dest, strlen(src) + 1)) {
+        ret = 0;
+    } else {
+        if (!lstat(dest, &st) && S_ISLNK(st.st_mode) && unlink(dest) < 0) {
+            PRINT("error: unlink(): '%s'", strerror(errno));
+            INT3;
+        }
+        if (symlink(src, dest) < 0) {
+            PRINT("error: symlink(): '%s'", strerror(errno));
+            INT3;
+        } else {
+            ret = 0;
+        }
+    }
+
+    free(src);
+    free(dest);
+
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoDeleteDevice() { /* 068 (0x044) */
     ENTER;
 
@@ -1449,7 +2012,7 @@ xboxkrnl_IoDeleteDevice() { /* 068 (0x044) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoDeleteSymbolicLink() { /* 069 (0x045) */
     ENTER;
 
@@ -1458,7 +2021,8 @@ xboxkrnl_IoDeleteSymbolicLink() { /* 069 (0x045) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_IoDeviceObjectType() { /* 070 (0x046) */
     ENTER;
 
@@ -1467,7 +2031,22 @@ xboxkrnl_IoDeviceObjectType() { /* 070 (0x046) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_IoDeviceObjectType = (void *)0xdeadbeef; /* 070 (0x046) */
+#endif
+static STDCALL void
 xboxkrnl_IoDismountVolume() { /* 090 (0x05a) */
     ENTER;
 
@@ -1476,7 +2055,7 @@ xboxkrnl_IoDismountVolume() { /* 090 (0x05a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoDismountVolumeByName() { /* 091 (0x05b) */
     ENTER;
 
@@ -1485,7 +2064,8 @@ xboxkrnl_IoDismountVolumeByName() { /* 091 (0x05b) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_IoFileObjectType() { /* 071 (0x047) */
     ENTER;
 
@@ -1494,7 +2074,22 @@ xboxkrnl_IoFileObjectType() { /* 071 (0x047) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_IoFileObjectType = (void *)0xdeadbeef; /* 071 (0x047) */
+#endif
+static STDCALL void
 xboxkrnl_IoFreeIrp() { /* 072 (0x048) */
     ENTER;
 
@@ -1503,7 +2098,7 @@ xboxkrnl_IoFreeIrp() { /* 072 (0x048) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoInitializeIrp() { /* 073 (0x049) */
     ENTER;
 
@@ -1512,7 +2107,7 @@ xboxkrnl_IoInitializeIrp() { /* 073 (0x049) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoInvalidDeviceRequest() { /* 074 (0x04a) */
     ENTER;
 
@@ -1521,7 +2116,7 @@ xboxkrnl_IoInvalidDeviceRequest() { /* 074 (0x04a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoMarkIrpMustComplete() { /* 359 (0x167) */
     ENTER;
 
@@ -1530,7 +2125,7 @@ xboxkrnl_IoMarkIrpMustComplete() { /* 359 (0x167) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoQueryFileInformation() { /* 075 (0x04b) */
     ENTER;
 
@@ -1539,7 +2134,7 @@ xboxkrnl_IoQueryFileInformation() { /* 075 (0x04b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoQueryVolumeInformation() { /* 076 (0x04c) */
     ENTER;
 
@@ -1548,7 +2143,7 @@ xboxkrnl_IoQueryVolumeInformation() { /* 076 (0x04c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoQueueThreadIrp() { /* 077 (0x04d) */
     ENTER;
 
@@ -1557,7 +2152,7 @@ xboxkrnl_IoQueueThreadIrp() { /* 077 (0x04d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoRemoveShareAccess() { /* 078 (0x04e) */
     ENTER;
 
@@ -1566,7 +2161,7 @@ xboxkrnl_IoRemoveShareAccess() { /* 078 (0x04e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoSetIoCompletion() { /* 079 (0x04f) */
     ENTER;
 
@@ -1575,7 +2170,7 @@ xboxkrnl_IoSetIoCompletion() { /* 079 (0x04f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoSetShareAccess() { /* 080 (0x050) */
     ENTER;
 
@@ -1584,7 +2179,7 @@ xboxkrnl_IoSetShareAccess() { /* 080 (0x050) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoStartNextPacket() { /* 081 (0x051) */
     ENTER;
 
@@ -1593,7 +2188,7 @@ xboxkrnl_IoStartNextPacket() { /* 081 (0x051) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoStartNextPacketByKey() { /* 082 (0x052) */
     ENTER;
 
@@ -1602,7 +2197,7 @@ xboxkrnl_IoStartNextPacketByKey() { /* 082 (0x052) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoStartPacket() { /* 083 (0x053) */
     ENTER;
 
@@ -1611,7 +2206,7 @@ xboxkrnl_IoStartPacket() { /* 083 (0x053) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoSynchronousDeviceIoControlRequest() { /* 084 (0x054) */
     ENTER;
 
@@ -1620,7 +2215,7 @@ xboxkrnl_IoSynchronousDeviceIoControlRequest() { /* 084 (0x054) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_IoSynchronousFsdRequest() { /* 085 (0x055) */
     ENTER;
 
@@ -1629,7 +2224,7 @@ xboxkrnl_IoSynchronousFsdRequest() { /* 085 (0x055) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_IofCallDriver() { /* 086 (0x056) */
     ENTER;
 
@@ -1638,7 +2233,7 @@ xboxkrnl_IofCallDriver() { /* 086 (0x056) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_IofCompleteRequest() { /* 087 (0x057) */
     ENTER;
 
@@ -1647,7 +2242,8 @@ xboxkrnl_IofCompleteRequest() { /* 087 (0x057) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_KdDebuggerEnabled() { /* 088 (0x058) */
     ENTER;
 
@@ -1656,7 +2252,12 @@ xboxkrnl_KdDebuggerEnabled() { /* 088 (0x058) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint8_t
+xboxkrnl_KdDebuggerEnabled = 0; /* 088 (0x058) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_KdDebuggerNotPresent() { /* 089 (0x059) */
     ENTER;
 
@@ -1665,7 +2266,11 @@ xboxkrnl_KdDebuggerNotPresent() { /* 089 (0x059) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint8_t
+xboxkrnl_KdDebuggerNotPresent = 0; /* 089 (0x059) */
+#endif
+static STDCALL void
 xboxkrnl_KeAlertResumeThread() { /* 092 (0x05c) */
     ENTER;
 
@@ -1674,7 +2279,7 @@ xboxkrnl_KeAlertResumeThread() { /* 092 (0x05c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeAlertThread() { /* 093 (0x05d) */
     ENTER;
 
@@ -1683,7 +2288,7 @@ xboxkrnl_KeAlertThread() { /* 093 (0x05d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeBoostPriorityThread() { /* 094 (0x05e) */
     ENTER;
 
@@ -1692,7 +2297,7 @@ xboxkrnl_KeBoostPriorityThread() { /* 094 (0x05e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeBugCheck() { /* 095 (0x05f) */
     ENTER;
 
@@ -1701,7 +2306,7 @@ xboxkrnl_KeBugCheck() { /* 095 (0x05f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeBugCheckEx() { /* 096 (0x060) */
     ENTER;
 
@@ -1710,7 +2315,7 @@ xboxkrnl_KeBugCheckEx() { /* 096 (0x060) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeCancelTimer() { /* 097 (0x061) */
     ENTER;
 
@@ -1719,36 +2324,48 @@ xboxkrnl_KeCancelTimer() { /* 097 (0x061) */
 
     LEAVE;
 }
-STDCALL int
+static STDCALL uint8_t
 xboxkrnl_KeConnectInterrupt( /* 098 (0x062) */
         /* in */ void *Interrupt) {
-    int ret = 0;
+    size_t i;
+    uint8_t ret = 0;
     ENTER;
-    DEBUG(STUB,Interrupt);
+    VARDUMP(VAR_IN, Interrupt);
 
+    for (i = 0; xpci[i].name; ++i) {
+        if (xpci[i].irq_kinterrupt == Interrupt) {
+            PRINT("name: '%s'", xpci[i].name);
+            xpci[i].irq_connected = 1;
+            ret = 1;
+            break;
+        }
+    }
+
+    VARDUMP(DUMP, ret);
+    if (!ret) INT3;
     LEAVE;
     return ret;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_KeDelayExecutionThread( /* 099 (0x063) */
         /* in */ char WaitMode,
         /* in */ int Alertable,
-        /* in */ void *Interval) {
+        /* in */ int64_t *Interval) {
     struct timespec tp;
     int64_t nsec;
     ENTER;
-    DEBUG(VAR_IN, WaitMode);
-    DEBUG(VAR_IN, Alertable);
-    DEBUG(VAR_IN, Interval);
+    VARDUMP(VAR_IN, WaitMode);
+    VARDUMP(VAR_IN, Alertable);
+    VARDUMP(VAR_IN, Interval);
 
-    nsec = *(typeof(nsec) *)Interval * 100;
+    nsec = *Interval * 100;
 
     if (nsec < 0) {
         nsec = -nsec;
         tp.tv_sec = nsec / 1000000000;
         tp.tv_nsec = nsec % 1000000000;
-        DEBUG(DUMP, tp.tv_sec);
-        DEBUG(DUMP, tp.tv_nsec);
+        VARDUMP(DUMP, tp.tv_sec);
+        VARDUMP(DUMP, tp.tv_nsec);
         nanosleep(&tp, NULL);
     } else if (nsec > 0) {
         INT3;
@@ -1757,7 +2374,7 @@ xboxkrnl_KeDelayExecutionThread( /* 099 (0x063) */
     LEAVE;
     return 0;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeDisconnectInterrupt() { /* 100 (0x064) */
     ENTER;
 
@@ -1766,7 +2383,7 @@ xboxkrnl_KeDisconnectInterrupt() { /* 100 (0x064) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeEnterCriticalRegion() { /* 101 (0x065) */
     ENTER;
 
@@ -1775,7 +2392,7 @@ xboxkrnl_KeEnterCriticalRegion() { /* 101 (0x065) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeGetCurrentIrql() { /* 103 (0x067) */
     ENTER;
 
@@ -1784,7 +2401,7 @@ xboxkrnl_KeGetCurrentIrql() { /* 103 (0x067) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeGetCurrentThread() { /* 104 (0x068) */
     ENTER;
 
@@ -1793,7 +2410,7 @@ xboxkrnl_KeGetCurrentThread() { /* 104 (0x068) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeApc() { /* 105 (0x069) */
     ENTER;
 
@@ -1802,7 +2419,7 @@ xboxkrnl_KeInitializeApc() { /* 105 (0x069) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeDeviceQueue() { /* 106 (0x06a) */
     ENTER;
 
@@ -1811,15 +2428,15 @@ xboxkrnl_KeInitializeDeviceQueue() { /* 106 (0x06a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeDpc( /* 107 (0x06b) */
         /* in */ xboxkrnl_dpc *Dpc,
         /* in */ void *DeferredRoutine,
         /* in */ void *DeferredContext) {
     ENTER;
-    DEBUG(VAR_IN, Dpc);
-    DEBUG(VAR_IN, DeferredRoutine);
-    DEBUG(VAR_IN, DeferredContext);
+    VARDUMP(VAR_IN, Dpc);
+    VARDUMP(VAR_IN, DeferredRoutine);
+    VARDUMP(VAR_IN, DeferredContext);
 
     memset(Dpc, 0, sizeof(*Dpc));
 
@@ -1829,7 +2446,7 @@ xboxkrnl_KeInitializeDpc( /* 107 (0x06b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeEvent() { /* 108 (0x06c) */
     ENTER;
 
@@ -1838,21 +2455,40 @@ xboxkrnl_KeInitializeEvent() { /* 108 (0x06c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeInterrupt( /* 109 (0x06d) */
         /* in */ void *Interrupt,
         /* in */ void *ServiceRoutine,
         /* in */ void *ServiceContext,
-        /* in */ unsigned Vector,
-        /* in */ unsigned char Irql,
-        /* in */ int InterruptMode,
-        /* in */ int ShareVector) {
+        /* in */ uint32_t Vector,
+        /* in */ uint8_t Irql,
+        /* in */ int32_t InterruptMode,
+        /* in */ int32_t ShareVector) {
+    size_t i;
     ENTER;
-    DEBUG(STUB,Interrupt);DEBUG(STUB,ServiceRoutine);DEBUG(STUB,ServiceContext);DEBUG(STUB,Vector);DEBUG(STUB,Irql);DEBUG(STUB,InterruptMode);DEBUG(STUB,ShareVector);
+    VARDUMP(VAR_IN, Interrupt);
+    VARDUMP(VAR_IN, ServiceRoutine);
+    VARDUMP(VAR_IN, ServiceContext);
+    VARDUMP(VAR_IN, Vector);
+    VARDUMP(VAR_IN, Irql);
+    VARDUMP(VAR_IN, InterruptMode);
+    VARDUMP(VAR_IN, ShareVector);
+
+    for (i = 0; xpci[i].name; ++i) {
+        if (xpci[i].irq == Irql) {
+            PRINT("name: '%s'", xpci[i].name);
+            xpci[i].irq_kinterrupt  = Interrupt;
+            xpci[i].irq_connected   = 0;
+            xpci[i].irq_level       = 0;
+            xpci[i].irq_isr_routine = ServiceRoutine;
+            xpci[i].irq_isr_context = ServiceContext;
+            break;
+        }
+    }
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeMutant() { /* 110 (0x06e) */
     ENTER;
 
@@ -1861,7 +2497,7 @@ xboxkrnl_KeInitializeMutant() { /* 110 (0x06e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeQueue() { /* 111 (0x06f) */
     ENTER;
 
@@ -1870,7 +2506,7 @@ xboxkrnl_KeInitializeQueue() { /* 111 (0x06f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeSemaphore() { /* 112 (0x070) */
     ENTER;
 
@@ -1879,13 +2515,13 @@ xboxkrnl_KeInitializeSemaphore() { /* 112 (0x070) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInitializeTimerEx( /* 113 (0x071) */
         /* in */ xboxkrnl_timer *Timer,
         /* in */ int Type) {
     ENTER;
-    DEBUG(VAR_IN, Timer);
-    DEBUG(VAR_IN, Type);
+    VARDUMP(VAR_IN, Timer);
+    VARDUMP(VAR_IN, Type);
 
     memset(Timer, 0, sizeof(*Timer));
 
@@ -1895,7 +2531,7 @@ xboxkrnl_KeInitializeTimerEx( /* 113 (0x071) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInsertByKeyDeviceQueue() { /* 114 (0x072) */
     ENTER;
 
@@ -1904,7 +2540,7 @@ xboxkrnl_KeInsertByKeyDeviceQueue() { /* 114 (0x072) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInsertDeviceQueue() { /* 115 (0x073) */
     ENTER;
 
@@ -1913,7 +2549,7 @@ xboxkrnl_KeInsertDeviceQueue() { /* 115 (0x073) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInsertHeadQueue() { /* 116 (0x074) */
     ENTER;
 
@@ -1922,7 +2558,7 @@ xboxkrnl_KeInsertHeadQueue() { /* 116 (0x074) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInsertQueue() { /* 117 (0x075) */
     ENTER;
 
@@ -1931,7 +2567,7 @@ xboxkrnl_KeInsertQueue() { /* 117 (0x075) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInsertQueueApc() { /* 118 (0x076) */
     ENTER;
 
@@ -1940,7 +2576,7 @@ xboxkrnl_KeInsertQueueApc() { /* 118 (0x076) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeInsertQueueDpc() { /* 119 (0x077) */
     ENTER;
 
@@ -1949,7 +2585,8 @@ xboxkrnl_KeInsertQueueDpc() { /* 119 (0x077) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_KeInterruptTime() { /* 120 (0x078) */
     ENTER;
 
@@ -1958,7 +2595,18 @@ xboxkrnl_KeInterruptTime() { /* 120 (0x078) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _KSYSTEM_TIME {
+    ULONG LowPart;
+    LONG High1Time;
+    LONG High2Time;
+} KSYSTEM_TIME, *PKSYSTEM_TIME;
+#endif
+static void *
+xboxkrnl_KeInterruptTime = (void *)0xdeadbeef; /* 120 (0x078) */
+#endif
+static STDCALL void
 xboxkrnl_KeIsExecutingDpc() { /* 121 (0x079) */
     ENTER;
 
@@ -1967,7 +2615,7 @@ xboxkrnl_KeIsExecutingDpc() { /* 121 (0x079) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeLeaveCriticalRegion() { /* 122 (0x07a) */
     ENTER;
 
@@ -1976,7 +2624,7 @@ xboxkrnl_KeLeaveCriticalRegion() { /* 122 (0x07a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KePulseEvent() { /* 123 (0x07b) */
     ENTER;
 
@@ -1985,7 +2633,7 @@ xboxkrnl_KePulseEvent() { /* 123 (0x07b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeQueryBasePriorityThread() { /* 124 (0x07c) */
     ENTER;
 
@@ -1994,7 +2642,7 @@ xboxkrnl_KeQueryBasePriorityThread() { /* 124 (0x07c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeQueryInterruptTime() { /* 125 (0x07d) */
     ENTER;
 
@@ -2003,7 +2651,7 @@ xboxkrnl_KeQueryInterruptTime() { /* 125 (0x07d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeQueryPerformanceCounter() { /* 126 (0x07e) */
     ENTER;
 
@@ -2012,7 +2660,7 @@ xboxkrnl_KeQueryPerformanceCounter() { /* 126 (0x07e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeQueryPerformanceFrequency() { /* 127 (0x07f) */
     ENTER;
 
@@ -2021,7 +2669,7 @@ xboxkrnl_KeQueryPerformanceFrequency() { /* 127 (0x07f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeQuerySystemTime() { /* 128 (0x080) */
     ENTER;
 
@@ -2030,17 +2678,14 @@ xboxkrnl_KeQuerySystemTime() { /* 128 (0x080) */
 
     LEAVE;
 }
-STDCALL unsigned char
+static STDCALL uint8_t
 xboxkrnl_KeRaiseIrqlToDpcLevel(void) { /* 129 (0x081) */
-    unsigned char ret = 0;
     ENTER;
 
-    DEBUG(DUMP, ret);
-
     LEAVE;
-    return ret;
+    return 0;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRaiseIrqlToSynchLevel() { /* 130 (0x082) */
     ENTER;
 
@@ -2049,7 +2694,7 @@ xboxkrnl_KeRaiseIrqlToSynchLevel() { /* 130 (0x082) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeReleaseMutant() { /* 131 (0x083) */
     ENTER;
 
@@ -2058,7 +2703,7 @@ xboxkrnl_KeReleaseMutant() { /* 131 (0x083) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeReleaseSemaphore() { /* 132 (0x084) */
     ENTER;
 
@@ -2067,7 +2712,7 @@ xboxkrnl_KeReleaseSemaphore() { /* 132 (0x084) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRemoveByKeyDeviceQueue() { /* 133 (0x085) */
     ENTER;
 
@@ -2076,7 +2721,7 @@ xboxkrnl_KeRemoveByKeyDeviceQueue() { /* 133 (0x085) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRemoveDeviceQueue() { /* 134 (0x086) */
     ENTER;
 
@@ -2085,7 +2730,7 @@ xboxkrnl_KeRemoveDeviceQueue() { /* 134 (0x086) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRemoveEntryDeviceQueue() { /* 135 (0x087) */
     ENTER;
 
@@ -2094,7 +2739,7 @@ xboxkrnl_KeRemoveEntryDeviceQueue() { /* 135 (0x087) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRemoveQueue() { /* 136 (0x088) */
     ENTER;
 
@@ -2103,7 +2748,7 @@ xboxkrnl_KeRemoveQueue() { /* 136 (0x088) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRemoveQueueDpc() { /* 137 (0x089) */
     ENTER;
 
@@ -2112,7 +2757,7 @@ xboxkrnl_KeRemoveQueueDpc() { /* 137 (0x089) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeResetEvent() { /* 138 (0x08a) */
     ENTER;
 
@@ -2121,7 +2766,7 @@ xboxkrnl_KeResetEvent() { /* 138 (0x08a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRestoreFloatingPointState() { /* 139 (0x08b) */
     ENTER;
 
@@ -2130,7 +2775,7 @@ xboxkrnl_KeRestoreFloatingPointState() { /* 139 (0x08b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeResumeThread() { /* 140 (0x08c) */
     ENTER;
 
@@ -2139,7 +2784,7 @@ xboxkrnl_KeResumeThread() { /* 140 (0x08c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeRundownQueue() { /* 141 (0x08d) */
     ENTER;
 
@@ -2148,7 +2793,7 @@ xboxkrnl_KeRundownQueue() { /* 141 (0x08d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSaveFloatingPointState() { /* 142 (0x08e) */
     ENTER;
 
@@ -2157,7 +2802,7 @@ xboxkrnl_KeSaveFloatingPointState() { /* 142 (0x08e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSetBasePriorityThread() { /* 143 (0x08f) */
     ENTER;
 
@@ -2166,7 +2811,7 @@ xboxkrnl_KeSetBasePriorityThread() { /* 143 (0x08f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSetDisableBoostThread() { /* 144 (0x090) */
     ENTER;
 
@@ -2175,7 +2820,7 @@ xboxkrnl_KeSetDisableBoostThread() { /* 144 (0x090) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSetEvent() { /* 145 (0x091) */
     ENTER;
 
@@ -2184,7 +2829,7 @@ xboxkrnl_KeSetEvent() { /* 145 (0x091) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSetEventBoostPriority() { /* 146 (0x092) */
     ENTER;
 
@@ -2193,7 +2838,7 @@ xboxkrnl_KeSetEventBoostPriority() { /* 146 (0x092) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSetPriorityProcess() { /* 147 (0x093) */
     ENTER;
 
@@ -2202,7 +2847,7 @@ xboxkrnl_KeSetPriorityProcess() { /* 147 (0x093) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSetPriorityThread() { /* 148 (0x094) */
     ENTER;
 
@@ -2211,14 +2856,14 @@ xboxkrnl_KeSetPriorityThread() { /* 148 (0x094) */
 
     LEAVE;
 }
-STDCALL uint8_t
+static STDCALL uint8_t
 xboxkrnl_KeSetTimer( /* 149 (0x095) */
         /* in */       xboxkrnl_timer *Timer,
         /* in */       int64_t DueTime,
         /* in (opt) */ xboxkrnl_dpc *Dpc) {
     return xboxkrnl_KeSetTimerEx(Timer, DueTime, 0, Dpc);
 }
-STDCALL uint8_t
+static STDCALL uint8_t
 xboxkrnl_KeSetTimerEx( /* 150 (0x096) */
         /* in */       xboxkrnl_timer *Timer,
         /* in */       int64_t DueTime,
@@ -2226,10 +2871,10 @@ xboxkrnl_KeSetTimerEx( /* 150 (0x096) */
         /* in (opt) */ xboxkrnl_dpc *Dpc) {
     int ret = 0;
     ENTER;
-    DEBUG(VAR_IN, Timer);
-    DEBUG(VAR_IN, DueTime);
-    DEBUG(VAR_IN, Period);
-    DEBUG(VAR_IN, Dpc);
+    VARDUMP(VAR_IN, Timer);
+    VARDUMP(VAR_IN, DueTime);
+    VARDUMP(VAR_IN, Period);
+    VARDUMP(VAR_IN, Dpc);
 
     if (Timer->Header.Inserted) {
         Timer->Header.Inserted = 0;
@@ -2244,17 +2889,17 @@ xboxkrnl_KeSetTimerEx( /* 150 (0x096) */
     LEAVE;
     return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeStallExecutionProcessor( /* 151 (0x097) */
-        /* in */ unsigned MicroSeconds) {
+        /* in */ uint32_t MicroSeconds) {
     ENTER;
-    DEBUG(VAR_IN, MicroSeconds);
+    VARDUMP(VAR_IN, MicroSeconds);
 
     usleep(MicroSeconds);
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSuspendThread() { /* 152 (0x098) */
     ENTER;
 
@@ -2263,7 +2908,7 @@ xboxkrnl_KeSuspendThread() { /* 152 (0x098) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeSynchronizeExecution() { /* 153 (0x099) */
     ENTER;
 
@@ -2272,7 +2917,8 @@ xboxkrnl_KeSynchronizeExecution() { /* 153 (0x099) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_KeSystemTime() { /* 154 (0x09a) */
     ENTER;
 
@@ -2281,7 +2927,18 @@ xboxkrnl_KeSystemTime() { /* 154 (0x09a) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _KSYSTEM_TIME {
+    ULONG LowPart;
+    LONG High1Time;
+    LONG High2Time;
+} KSYSTEM_TIME, *PKSYSTEM_TIME;
+#endif
+static void *
+xboxkrnl_KeSystemTime = (void *)0xdeadbeef; /* 154 (0x09a) */
+#endif
+static STDCALL void
 xboxkrnl_KeTestAlertThread() { /* 155 (0x09b) */
     ENTER;
 
@@ -2290,7 +2947,8 @@ xboxkrnl_KeTestAlertThread() { /* 155 (0x09b) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_KeTickCount() { /* 156 (0x09c) */
     ENTER;
 
@@ -2299,7 +2957,12 @@ xboxkrnl_KeTickCount() { /* 156 (0x09c) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint32_t
+xboxkrnl_KeTickCount = 0; /* 156 (0x09c) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_KeTimeIncrement() { /* 157 (0x09d) */
     ENTER;
 
@@ -2308,7 +2971,11 @@ xboxkrnl_KeTimeIncrement() { /* 157 (0x09d) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint32_t
+xboxkrnl_KeTimeIncrement = 0; /* 157 (0x09d) */
+#endif
+static STDCALL void
 xboxkrnl_KeWaitForMultipleObjects() { /* 158 (0x09e) */
     ENTER;
 
@@ -2317,7 +2984,7 @@ xboxkrnl_KeWaitForMultipleObjects() { /* 158 (0x09e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_KeWaitForSingleObject() { /* 159 (0x09f) */
     ENTER;
 
@@ -2326,7 +2993,7 @@ xboxkrnl_KeWaitForSingleObject() { /* 159 (0x09f) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_KfRaiseIrql() { /* 160 (0x0a0) */
     ENTER;
 
@@ -2335,15 +3002,16 @@ xboxkrnl_KfRaiseIrql() { /* 160 (0x0a0) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_KfLowerIrql( /* 161 (0x0a1) */
-        /* in */ unsigned char NewIrql) {
+        /* in */ uint8_t NewIrql) {
     ENTER;
-    DEBUG(STUB,NewIrql);
+    VARDUMP(VAR_IN, NewIrql);
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_KiBugCheckData() { /* 162 (0x0a2) */
     ENTER;
 
@@ -2352,7 +3020,11 @@ xboxkrnl_KiBugCheckData() { /* 162 (0x0a2) */
 
     LEAVE;
 }
-FASTCALL void
+#else
+static uint32_t *
+xboxkrnl_KiBugCheckData[5] = { }; /* 162 (0x0a2) */
+#endif
+static FASTCALL void
 xboxkrnl_KiUnlockDispatcherDatabase() { /* 163 (0x0a3) */
     ENTER;
 
@@ -2361,7 +3033,8 @@ xboxkrnl_KiUnlockDispatcherDatabase() { /* 163 (0x0a3) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_LaunchDataPage() { /* 164 (0x0a4) */
     ENTER;
 
@@ -2370,32 +3043,96 @@ xboxkrnl_LaunchDataPage() { /* 164 (0x0a4) */
 
     LEAVE;
 }
-STDCALL void *
+#else
+#if 0
+#define MAX_LAUNCH_DATA_SIZE 3072
+
+#define LDT_LAUNCH_DASHBOARD 1
+#define LDT_NONE             0xFFFFFFFF
+
+#define LDF_HAS_BEEN_READ    0x00000001
+
+typedef struct _LAUNCH_DATA_HEADER
+{
+    ULONG dwLaunchDataType;
+    ULONG dwTitleId;
+    CHAR  szLaunchPath[520];
+    ULONG dwFlags;
+} LAUNCH_DATA_HEADER, *PLAUNCH_DATA_HEADER;
+
+typedef struct _LAUNCH_DATA_PAGE
+{
+    LAUNCH_DATA_HEADER Header;
+    UCHAR Pad[PAGE_SIZE - MAX_LAUNCH_DATA_SIZE - sizeof(LAUNCH_DATA_HEADER)];
+    UCHAR LaunchData[MAX_LAUNCH_DATA_SIZE];
+} LAUNCH_DATA_PAGE, *PLAUNCH_DATA_PAGE;
+#endif
+static void *
+xboxkrnl_LaunchDataPage = (void *)0xdeadbeef; /* 164 (0x0a4) */
+#endif
+static STDCALL void *
 xboxkrnl_MmAllocateContiguousMemory( /* 165 (0x0a5) */
         /* in */ size_t NumberOfBytes) {
+    size_t tmp;
     void *ret;
     ENTER;
-    DEBUG(VAR_IN, NumberOfBytes);
+    VARDUMP(VAR_IN, NumberOfBytes);
 
-    if (!(ret = malloc(NumberOfBytes)) && NumberOfBytes) {
-        debug("error: out of memory", 0);
-        INT3;
-    }
-    DEBUG(DUMP, ret);
+    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
 
+    if ((ret = mmap(xboxkrnl_mem_contiguous,
+            NumberOfBytes,
+            PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+            -1,
+            0)) == MAP_FAILED) INT3;
+
+    if ((tmp = NumberOfBytes & PAGEMASK)) tmp = NumberOfBytes + PAGESIZE - tmp;
+    else tmp = NumberOfBytes;
+
+    xboxkrnl_mem_contiguous += tmp;
+
+    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
+    VARDUMP(DUMP, ret);
     LEAVE;
     return ret;
 }
-STDCALL void
-xboxkrnl_MmAllocateContiguousMemoryEx() { /* 166 (0x0a6) */
+static STDCALL void *
+xboxkrnl_MmAllocateContiguousMemoryEx( /* 166 (0x0a6) */
+        /* in */ size_t NumberOfBytes,
+        /* in */ uint32_t LowestAcceptableAddress,
+        /* in */ uint32_t HighestAcceptableAddress,
+        /* in */ uint32_t Alignment,
+        /* in */ uint32_t Protect) {
+    size_t tmp;
+    void *ret;
     ENTER;
+    VARDUMP(VAR_IN, NumberOfBytes);
+    VARDUMP(VAR_IN, LowestAcceptableAddress);
+    VARDUMP(VAR_IN, HighestAcceptableAddress);
+    VARDUMP(VAR_IN, Alignment);
+    VARDUMP(VAR_IN, Protect);
 
-    INT3;
-    
+    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
 
+    if ((ret = mmap(xboxkrnl_mem_contiguous,
+            NumberOfBytes,
+            PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+            -1,
+            0)) == MAP_FAILED) INT3;
+
+    if ((tmp = NumberOfBytes & PAGEMASK)) tmp = NumberOfBytes + PAGESIZE - tmp;
+    else tmp = NumberOfBytes;
+
+    xboxkrnl_mem_contiguous += tmp;
+
+    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmAllocateSystemMemory() { /* 167 (0x0a7) */
     ENTER;
 
@@ -2404,16 +3141,44 @@ xboxkrnl_MmAllocateSystemMemory() { /* 167 (0x0a7) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_MmClaimGpuInstanceMemory() { /* 168 (0x0a8) */
+static STDCALL void *
+xboxkrnl_MmClaimGpuInstanceMemory( /* 168 (0x0a8) */
+        /* in */  size_t NumberOfBytes,
+        /* out */ size_t *NumberOfPaddingBytes) {
+    void *ret = NULL;
+    size_t tmp;
     ENTER;
+    VARDUMP(VAR_IN,  NumberOfBytes);
+    VARDUMP(VAR_OUT, NumberOfPaddingBytes);
+    VARDUMP(VAR_OUT, *NumberOfPaddingBytes);
 
-    INT3;
-    
+    if (NumberOfBytes == ~0U) {
+        ret = xboxkrnl_gpuinstmem + xboxkrnl_gpuinstsz;
+    } else {
+        if (xboxkrnl_gpuinstmem) munmap(xboxkrnl_gpuinstmem, xboxkrnl_gpuinstsz);
+        if ((tmp = NumberOfBytes & PAGEMASK)) NumberOfBytes += PAGESIZE - tmp;
+        if ((ret = mmap(NULL,
+                NumberOfBytes,
+                0,//PROT_READ | PROT_WRITE,//TODO
+                MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+                -1,
+                0)) == MAP_FAILED) INT3;
+        xboxkrnl_gpuinstmem = ret;
+        xboxkrnl_gpuinstsz = NumberOfBytes;
+        ret += NumberOfBytes;
+    }
 
+    *NumberOfPaddingBytes = 0;
+
+    VARDUMP(DUMP, xboxkrnl_gpuinstmem);
+    VARDUMP(DUMP, xboxkrnl_gpuinstsz);
+    VARDUMP(DUMP, NumberOfBytes);
+    VARDUMP(DUMP, *NumberOfPaddingBytes);
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmCreateKernelStack() { /* 169 (0x0a9) */
     ENTER;
 
@@ -2422,7 +3187,7 @@ xboxkrnl_MmCreateKernelStack() { /* 169 (0x0a9) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmDeleteKernelStack() { /* 170 (0x0aa) */
     ENTER;
 
@@ -2431,7 +3196,7 @@ xboxkrnl_MmDeleteKernelStack() { /* 170 (0x0aa) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmFreeContiguousMemory() { /* 171 (0x0ab) */
     ENTER;
 
@@ -2440,7 +3205,7 @@ xboxkrnl_MmFreeContiguousMemory() { /* 171 (0x0ab) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmFreeSystemMemory() { /* 172 (0x0ac) */
     ENTER;
 
@@ -2449,18 +3214,17 @@ xboxkrnl_MmFreeSystemMemory() { /* 172 (0x0ac) */
 
     LEAVE;
 }
-STDCALL void *
+static STDCALL void *
 xboxkrnl_MmGetPhysicalAddress( /* 173 (0x0ad) */
         /* in */ void *BaseAddress) {
     ENTER;
-    DEBUG(VAR_IN, BaseAddress);
-
-    DEBUG(DUMP, BaseAddress);
+    VARDUMP(VAR_IN, BaseAddress);
 
     LEAVE;
     return BaseAddress;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_MmGlobalData() { /* 102 (0x066) */
     ENTER;
 
@@ -2469,7 +3233,23 @@ xboxkrnl_MmGlobalData() { /* 102 (0x066) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _MMGLOBALDATA {
+    PMMPFNREGION RetailPfnRegion;
+    PMMPTERANGE SystemPteRange;
+    PULONG AvailablePages;
+    PFN_COUNT *AllocatedPagesByUsage;
+    PRTL_CRITICAL_SECTION AddressSpaceLock;
+    PMMADDRESS_NODE *VadRoot;
+    PMMADDRESS_NODE *VadHint;
+    PMMADDRESS_NODE *VadFreeHint;
+} MMGLOBALDATA, *PMMGLOBALDATA;
+#endif
+static void *
+xboxkrnl_MmGlobalData = (void *)0xdeadbeef; /* 102 (0x066) */
+#endif
+static STDCALL void
 xboxkrnl_MmIsAddressValid() { /* 174 (0x0ae) */
     ENTER;
 
@@ -2478,17 +3258,17 @@ xboxkrnl_MmIsAddressValid() { /* 174 (0x0ae) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmLockUnlockBufferPages( /* 175 (0x0af) */
         /* in */ void *BaseAddress,
         /* in */ size_t NumberOfBytes,
         /* in */ int UnlockPages) {
     ENTER;
-    DEBUG(STUB,BaseAddress);DEBUG(STUB,NumberOfBytes);DEBUG(STUB,UnlockPages);
+    VARDUMP(STUB,BaseAddress);VARDUMP(STUB,NumberOfBytes);VARDUMP(STUB,UnlockPages);
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmLockUnlockPhysicalPage() { /* 176 (0x0b0) */
     ENTER;
 
@@ -2497,7 +3277,7 @@ xboxkrnl_MmLockUnlockPhysicalPage() { /* 176 (0x0b0) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmMapIoSpace() { /* 177 (0x0b1) */
     ENTER;
 
@@ -2506,7 +3286,7 @@ xboxkrnl_MmMapIoSpace() { /* 177 (0x0b1) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmPersistContiguousMemory() { /* 178 (0x0b2) */
     ENTER;
 
@@ -2515,7 +3295,7 @@ xboxkrnl_MmPersistContiguousMemory() { /* 178 (0x0b2) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmQueryAddressProtect() { /* 179 (0x0b3) */
     ENTER;
 
@@ -2524,7 +3304,7 @@ xboxkrnl_MmQueryAddressProtect() { /* 179 (0x0b3) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmQueryAllocationSize() { /* 180 (0x0b4) */
     ENTER;
 
@@ -2533,7 +3313,7 @@ xboxkrnl_MmQueryAllocationSize() { /* 180 (0x0b4) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmQueryStatistics() { /* 181 (0x0b5) */
     ENTER;
 
@@ -2542,7 +3322,7 @@ xboxkrnl_MmQueryStatistics() { /* 181 (0x0b5) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmSetAddressProtect() { /* 182 (0x0b6) */
     ENTER;
 
@@ -2551,7 +3331,7 @@ xboxkrnl_MmSetAddressProtect() { /* 182 (0x0b6) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmUnmapIoSpace() { /* 183 (0x0b7) */
     ENTER;
 
@@ -2560,43 +3340,50 @@ xboxkrnl_MmUnmapIoSpace() { /* 183 (0x0b7) */
 
     LEAVE;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_NtAllocateVirtualMemory( /* 184 (0x0b8) */
-        /* i/o */ void **BaseAddress,
-        /* in */  uint32_t *ZeroBits,
-        /* i/o */ size_t *RegionSize,
-        /* in */  uint32_t AllocationType,
-        /* in */  uint32_t Protect) {
+        /* i/o */      void **BaseAddress,
+        /* in (opt) */ uint32_t *ZeroBits,
+        /* i/o */      size_t *RegionSize,
+        /* in */       uint32_t AllocationType,
+        /* in */       uint32_t Protect) {
     int flag = 0;
-    int ret = 0;
+    int ret = -1;
     ENTER;
-    DEBUG(VAR_IN, BaseAddress);
-    DEBUG(VAR_IN, ZeroBits);
-    DEBUG(VAR_IN, RegionSize);
-    DEBUG(VAR_IN, AllocationType);
-    DEBUG(VAR_IN, Protect);
-    DEBUG(VAR_OUT, *BaseAddress);
-    DEBUG(VAR_OUT, *RegionSize);
+    VARDUMP(VAR_IN,  BaseAddress);
+    VARDUMP(VAR_OUT, *BaseAddress);
+    VARDUMP(VAR_IN,  ZeroBits);
+    VARDUMPD(VAR_IN, ZeroBits);
+    VARDUMP(VAR_IN,  RegionSize);
+    VARDUMP(VAR_OUT, *RegionSize);
+    VARDUMP(VAR_IN,  AllocationType);
+    VARDUMP(VAR_IN,  Protect);
 
-    if (Protect & /* PAGE_NOCACHE */ 0x200) flag |= MAP_NORESERVE;
-
-    if ((*BaseAddress = mmap(*BaseAddress,
-            *RegionSize,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS | flag,
-            -1,
-            0)) == MAP_FAILED) {
-        *BaseAddress = NULL;
-        ret = -1;
-        INT3;
+    if (AllocationType & /* MEM_RESERVE */ 0x2000) {
+        if (Protect & /* PAGE_NOCACHE */ 0x200) flag |= MAP_NORESERVE;
+        if ((*BaseAddress = mmap(*BaseAddress,
+                *RegionSize,
+                PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS | flag,
+                -1,
+                0)) == MAP_FAILED) {
+            *BaseAddress = NULL;
+        } else {
+            ret = 0;
+        }
+    } else if (AllocationType & /* MEM_COMMIT */ 0x1000) {
+        ret = 0;
     }
 
-    DEBUG(DUMP, *BaseAddress);
-    DEBUG(DUMP, *RegionSize);
+    if (ret) INT3;
+
+    VARDUMP(DUMP, *BaseAddress);
+    VARDUMP(DUMP, *RegionSize);
+    VARDUMP(DUMP, ret);
     LEAVE;
     return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtCancelTimer() { /* 185 (0x0b9) */
     ENTER;
 
@@ -2605,7 +3392,7 @@ xboxkrnl_NtCancelTimer() { /* 185 (0x0b9) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtClearEvent() { /* 186 (0x0ba) */
     ENTER;
 
@@ -2614,16 +3401,24 @@ xboxkrnl_NtClearEvent() { /* 186 (0x0ba) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_NtClose() { /* 187 (0x0bb) */
+static STDCALL int
+xboxkrnl_NtClose( /* 187 (0x0bb) */
+        /* in */ xboxkrnl_file *Handle) {
     ENTER;
+    VARDUMP(VAR_IN, Handle);
 
-    INT3;
-    
+    if (Handle) {
+        VARDUMP(VAR_IN, Handle->fd);
+        VARDUMP(VAR_IN, Handle->dir);
+        if (Handle->fd >= 0) close(Handle->fd);
+        if (Handle->dir) closedir(Handle->dir);
+        free(Handle);
+    }
 
     LEAVE;
+    return 0;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtCreateDirectoryObject() { /* 188 (0x0bc) */
     ENTER;
 
@@ -2632,7 +3427,7 @@ xboxkrnl_NtCreateDirectoryObject() { /* 188 (0x0bc) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtCreateEvent() { /* 189 (0x0bd) */
     ENTER;
 
@@ -2641,16 +3436,153 @@ xboxkrnl_NtCreateEvent() { /* 189 (0x0bd) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_NtCreateFile() { /* 190 (0x0be) */
+static STDCALL int
+xboxkrnl_NtCreateFile( /* 190 (0x0be) */
+        /* out */      xboxkrnl_file **FileHandle,
+        /* in */       uint32_t DesiredAccess,
+        /* in */       xboxkrnl_objattr *ObjectAttributes,
+        /* out */      xboxkrnl_iostatus *IoStatusBlock,
+        /* in (opt) */ int64_t *AllocationSize,
+        /* in */       uint32_t FileAttributes,
+        /* in */       uint32_t ShareAccess,
+        /* in */       uint32_t CreateDisposition,
+        /* in */       uint32_t CreateOptions) {
+    xboxkrnl_file f;
+    struct stat st;
+    char *path;
+//    int ci = 0;
+    int tmp;
+    int ret = -1;
     ENTER;
+    VARDUMP(VAR_OUT, FileHandle);
+    VARDUMP3(VAR_IN, DesiredAccess, xboxkrnl_file_access_mask_name);
+    VARDUMP(VAR_IN,  ObjectAttributes);
+    VARDUMP(VAR_IN,  ObjectAttributes->RootDirectory);
+    VARDUMP(VAR_IN,  ObjectAttributes->ObjectName);
+    VARDUMP(STRING,  ObjectAttributes->ObjectName->Buffer);
+    VARDUMP(VAR_IN,  ObjectAttributes->Attributes);
+    VARDUMP(VAR_OUT, IoStatusBlock);
+    VARDUMP(VAR_OUT, IoStatusBlock->Status);
+    VARDUMP(VAR_OUT, IoStatusBlock->Information);
+    VARDUMP(VAR_IN,  AllocationSize);
+    VARDUMP(VAR_IN,  FileAttributes);
+    VARDUMP(VAR_IN,  ShareAccess);
+    VARDUMP2(VAR_IN, CreateDisposition, xboxkrnl_file_create_disposition_name);
+    VARDUMP3(VAR_IN, CreateOptions, xboxkrnl_file_open_create_name);
 
-    INT3;
-    
+    memset(&f, 0, sizeof(f));
+    f.fd = -1;
 
+    path = xboxkrnl_path_winnt_to_unix(ObjectAttributes->ObjectName->Buffer);
+    VARDUMP(STRING, path);
+    tmp = sizeof(f.path) - 1;
+    f.path[tmp] = 0;
+    strncpy(f.path, path, tmp);
+    free(path);
+    path = f.path;
+#if 0
+    ci = !!(ObjectAttributes->Attributes & /* OBJ_CASE_INSENSITIVE */ 0x40);
+
+#if 0
+CreateDisposition  Action if file exists             Action if file does not exist
+FILE_SUPERSEDE     Replace the file.                 Create the file.
+FILE_CREATE        Return an error.                  Create the file.
+FILE_OPEN          Open the file.                    Return an error.
+FILE_OPEN_IF       Open the file.                    Create the file.
+FILE_OVERWRITE     Open the file, and overwrite it.  Return an error.
+FILE_OVERWRITE_IF  Open the file, and overwrite it.  Create the file.
+#endif
+
+enum XBOXKRNL_FILE_CREATE_DISPOSITION {
+    XBOXKRNL_FILE_SUPERSEDE                 =  0,
+    XBOXKRNL_FILE_OPEN,                     /* 1 */
+    XBOXKRNL_FILE_CREATE,                   /* 2 */
+    XBOXKRNL_FILE_OPEN_IF,                  /* 3 */
+    XBOXKRNL_FILE_OVERWRITE,                /* 4 */
+    XBOXKRNL_FILE_OVERWRITE_IF              /* 5 */
+};
+#endif
+    IoStatusBlock->Information = XBOXKRNL_FILE_DOES_NOT_EXIST;
+
+    do {
+        if ((tmp = stat(path, &st)) < 0 &&
+            (CreateDisposition == XBOXKRNL_FILE_OPEN ||
+            CreateDisposition == XBOXKRNL_FILE_OVERWRITE ||
+            errno != ENOENT)) {
+            PRINT("error: stat(): '%s'", strerror(errno));
+            break;
+        }
+        if (!tmp &&
+            CreateDisposition == XBOXKRNL_FILE_CREATE) {
+            IoStatusBlock->Information = XBOXKRNL_FILE_EXISTS;
+            PRINT("error: file exists", 0);
+            break;
+        }
+        if (!tmp &&
+            CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE &&
+            !S_ISDIR(st.st_mode)) {
+            PRINT("error: not a directory", 0);
+            break;
+        }
+        if (tmp &&
+            CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE &&
+            mkdir(path, 0755) < 0) {
+            PRINT("error: mkdir(): '%s'", strerror(errno));
+            break;
+        }
+        if (CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE &&
+            !(f.dir = opendir(path))) {
+            PRINT("error: opendir(): '%s'", strerror(errno));
+            break;
+        } else if (!(CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE)) {
+            tmp = O_RDWR | O_CREAT;
+            switch (CreateDisposition) {
+            case XBOXKRNL_FILE_OVERWRITE:
+            case XBOXKRNL_FILE_OVERWRITE_IF:
+                tmp |= O_TRUNC;
+                break;
+            }
+            if ((f.fd = open(path, tmp, 0644)) < 0) {
+                PRINT("error: open(): '%s'", strerror(errno));
+                break;
+            }
+        }
+    } while ((ret = 0));
+
+    if (!(IoStatusBlock->Status = ret)) {
+        switch (CreateDisposition) {
+        case XBOXKRNL_FILE_SUPERSEDE:
+            IoStatusBlock->Information = XBOXKRNL_FILE_SUPERSEDED;
+            break;
+        case XBOXKRNL_FILE_OPEN:
+        case XBOXKRNL_FILE_OPEN_IF:
+            IoStatusBlock->Information = XBOXKRNL_FILE_OPENED;
+            break;
+        case XBOXKRNL_FILE_CREATE:
+            IoStatusBlock->Information = XBOXKRNL_FILE_CREATED;
+            break;
+        case XBOXKRNL_FILE_OVERWRITE:
+        case XBOXKRNL_FILE_OVERWRITE_IF:
+            IoStatusBlock->Information = XBOXKRNL_FILE_OVERWRITTEN;
+            break;
+        }
+        if ((*FileHandle = malloc(sizeof(**FileHandle)))) {
+            **FileHandle = f;
+            VARDUMP(DUMP, *FileHandle);
+            VARDUMP(DUMP, (*FileHandle)->fd);
+            VARDUMP(DUMP, (*FileHandle)->dir);
+        } else {
+            INT3;
+        }
+    }
+
+    VARDUMP(DUMP,  IoStatusBlock->Status);
+    VARDUMP2(DUMP, IoStatusBlock->Information, xboxkrnl_file_io_status_name);
+    VARDUMP(DUMP,  ret);
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtCreateIoCompletion() { /* 191 (0x0bf) */
     ENTER;
 
@@ -2659,7 +3591,7 @@ xboxkrnl_NtCreateIoCompletion() { /* 191 (0x0bf) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtCreateMutant() { /* 192 (0x0c0) */
     ENTER;
 
@@ -2668,7 +3600,7 @@ xboxkrnl_NtCreateMutant() { /* 192 (0x0c0) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtCreateSemaphore() { /* 193 (0x0c1) */
     ENTER;
 
@@ -2677,7 +3609,7 @@ xboxkrnl_NtCreateSemaphore() { /* 193 (0x0c1) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtCreateTimer() { /* 194 (0x0c2) */
     ENTER;
 
@@ -2686,7 +3618,7 @@ xboxkrnl_NtCreateTimer() { /* 194 (0x0c2) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtDeleteFile() { /* 195 (0x0c3) */
     ENTER;
 
@@ -2695,7 +3627,7 @@ xboxkrnl_NtDeleteFile() { /* 195 (0x0c3) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtDeviceIoControlFile() { /* 196 (0x0c4) */
     ENTER;
 
@@ -2704,7 +3636,7 @@ xboxkrnl_NtDeviceIoControlFile() { /* 196 (0x0c4) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtDuplicateObject() { /* 197 (0x0c5) */
     ENTER;
 
@@ -2713,7 +3645,7 @@ xboxkrnl_NtDuplicateObject() { /* 197 (0x0c5) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtFlushBuffersFile() { /* 198 (0x0c6) */
     ENTER;
 
@@ -2722,7 +3654,7 @@ xboxkrnl_NtFlushBuffersFile() { /* 198 (0x0c6) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtFreeVirtualMemory() { /* 199 (0x0c7) */
     ENTER;
 
@@ -2731,7 +3663,7 @@ xboxkrnl_NtFreeVirtualMemory() { /* 199 (0x0c7) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtFsControlFile() { /* 200 (0x0c8) */
     ENTER;
 
@@ -2740,7 +3672,7 @@ xboxkrnl_NtFsControlFile() { /* 200 (0x0c8) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtOpenDirectoryObject() { /* 201 (0x0c9) */
     ENTER;
 
@@ -2749,59 +3681,51 @@ xboxkrnl_NtOpenDirectoryObject() { /* 201 (0x0c9) */
 
     LEAVE;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_NtOpenFile( /* 202 (0x0ca) */
-        /* out */ void **FileHandle,
+        /* out */ xboxkrnl_file **FileHandle,
         /* in */  uint32_t DesiredAccess,
         /* in */  xboxkrnl_objattr *ObjectAttributes,
-        /* out */ xboxkrnl_iostatusblk *IoStatusBlock,
+        /* out */ xboxkrnl_iostatus *IoStatusBlock,
         /* in */  uint32_t ShareAccess,
         /* in */  uint32_t OpenOptions) {
-    int ret = 0;
+    char *path;
+    int ret = -1;
     ENTER;
-    DEBUG(VAR_OUT, FileHandle);
-    DEBUG(VAR_IN, DesiredAccess);
-    DEBUG(VAR_IN, ObjectAttributes);
-    DEBUG(VAR_OUT, IoStatusBlock);
-    DEBUG(VAR_IN, ShareAccess);
-    DEBUG(VAR_IN, OpenOptions);
-#if 0
-typedef struct {
-    uint32_t                Length;
-    void *                  RootDirectory;
-    char *                  ObjectName;
-    uint32_t                Attributes;
-    void *                  SecurityDescriptor;
-    void *                  SecurityQualityOfService;
-} xboxkrnl_objattr;
+    VARDUMP(VAR_OUT, FileHandle);
+    VARDUMP3(VAR_IN, DesiredAccess, xboxkrnl_file_access_mask_name);
+    VARDUMP(VAR_IN,  ObjectAttributes);
+    VARDUMP(VAR_IN,  ObjectAttributes->RootDirectory);
+    VARDUMP(VAR_IN,  ObjectAttributes->ObjectName);
+    VARDUMP(STRING,  ObjectAttributes->ObjectName->Buffer);
+    VARDUMP(VAR_IN,  ObjectAttributes->Attributes);
+    VARDUMP(VAR_OUT, IoStatusBlock);
+    VARDUMP(VAR_OUT, IoStatusBlock->Status);
+    VARDUMP(VAR_OUT, IoStatusBlock->Information);
+    VARDUMP(VAR_IN,  ShareAccess);
+    VARDUMP3(VAR_IN, OpenOptions, xboxkrnl_file_open_create_name);
 
-typedef struct {
-    union {
-        int                 Status;
-        void *              Pointer;
-    };
-    uint32_t                Information;
-} xboxkrnl_iostatusblk;
-#endif
-    DEBUG(DUMP, ObjectAttributes->Length);
-    DEBUG(DUMP, ObjectAttributes->RootDirectory);
-    DEBUG(DUMP, ObjectAttributes->ObjectName);
-    DEBUG(DUMP, ObjectAttributes->Attributes);
-    DEBUG(DUMP, ObjectAttributes->SecurityDescriptor);
-    DEBUG(DUMP, ObjectAttributes->SecurityQualityOfService);
-    DEBUG(DUMP, IoStatusBlock->Status);
-    DEBUG(DUMP, IoStatusBlock->Information);
+    path = xboxkrnl_path_winnt_to_unix(ObjectAttributes->ObjectName->Buffer);
+    VARDUMP(STRING, path);
 
-    if (DesiredAccess & /* SYNCHRONIZE */ 0x100000 &&
-        OpenOptions & /* FILE_OPEN_FOR_FREE_SPACE_QUERY */ 0x800000) {
-        
+    if (OpenOptions & XBOXKRNL_FILE_OPEN_FOR_FREE_SPACE_QUERY /* 0x800000 */) {
+        *FileHandle = NULL;
+        VARDUMP(DUMP, *FileHandle);
+        ret = 0;
     }
 
-    INT3;
+    free(path);
+
+    if (!(IoStatusBlock->Status = ret)) IoStatusBlock->Information = XBOXKRNL_FILE_OPENED;
+    else INT3;
+
+    VARDUMP(DUMP,  IoStatusBlock->Status);
+    VARDUMP2(DUMP, IoStatusBlock->Information, xboxkrnl_file_io_status_name);
+    VARDUMP(DUMP,  ret);
     LEAVE;
     return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtOpenSymbolicLinkObject() { /* 203 (0x0cb) */
     ENTER;
 
@@ -2810,7 +3734,7 @@ xboxkrnl_NtOpenSymbolicLinkObject() { /* 203 (0x0cb) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtProtectVirtualMemory() { /* 204 (0x0cc) */
     ENTER;
 
@@ -2819,7 +3743,7 @@ xboxkrnl_NtProtectVirtualMemory() { /* 204 (0x0cc) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtPulseEvent() { /* 205 (0x0cd) */
     ENTER;
 
@@ -2828,7 +3752,7 @@ xboxkrnl_NtPulseEvent() { /* 205 (0x0cd) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueueApcThread() { /* 206 (0x0ce) */
     ENTER;
 
@@ -2837,7 +3761,7 @@ xboxkrnl_NtQueueApcThread() { /* 206 (0x0ce) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueryDirectoryFile() { /* 207 (0x0cf) */
     ENTER;
 
@@ -2846,7 +3770,7 @@ xboxkrnl_NtQueryDirectoryFile() { /* 207 (0x0cf) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueryDirectoryObject() { /* 208 (0x0d0) */
     ENTER;
 
@@ -2855,7 +3779,7 @@ xboxkrnl_NtQueryDirectoryObject() { /* 208 (0x0d0) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueryEvent() { /* 209 (0x0d1) */
     ENTER;
 
@@ -2864,7 +3788,7 @@ xboxkrnl_NtQueryEvent() { /* 209 (0x0d1) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueryFullAttributesFile() { /* 210 (0x0d2) */
     ENTER;
 
@@ -2873,16 +3797,71 @@ xboxkrnl_NtQueryFullAttributesFile() { /* 210 (0x0d2) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_NtQueryInformationFile() { /* 211 (0x0d3) */
+static STDCALL int
+xboxkrnl_NtQueryInformationFile( /* 211 (0x0d3) */
+        /* in */  xboxkrnl_file *FileHandle,
+        /* out */ xboxkrnl_iostatus *IoStatusBlock,
+        /* out */ void *FileInformation,
+        /* in */  uint32_t Length,
+        /* in */  int FileInformationClass) {
+    struct {
+        int64_t     CreationTime;
+        int64_t     LastAccessTime;
+        int64_t     LastWriteTime;
+        int64_t     ChangeTime;
+        int64_t     AllocationSize;
+        int64_t     EndOfFile;
+        uint32_t    FileAttributes;
+    } PACKED *FileNetworkOpenInformation;//FIXME
+    struct stat st;
+    int ret = -1;
     ENTER;
+    VARDUMP(VAR_IN,  FileHandle);
+    VARDUMP(VAR_OUT, IoStatusBlock);
+    VARDUMP(VAR_OUT, IoStatusBlock->Status);
+    VARDUMP(VAR_OUT, IoStatusBlock->Information);
+    VARDUMP(VAR_OUT, FileInformation);
+    VARDUMP(VAR_IN,  Length);
+    VARDUMP(VAR_IN,  FileInformationClass);
 
-    INT3;
-    
+    IoStatusBlock->Information = 0;
 
+    do {
+        if (FileInformationClass == /* FileNetworkOpenInformation */ 34) {
+            FileNetworkOpenInformation = FileInformation;
+            if (fstat(FileHandle->fd, &st) < 0) {
+                PRINT("error: fstat(): '%s'", strerror(errno));
+                break;
+            }
+            FileNetworkOpenInformation->CreationTime    = st.st_ctime;
+            FileNetworkOpenInformation->LastAccessTime  = st.st_atime;
+            FileNetworkOpenInformation->LastWriteTime   = st.st_mtime;
+            FileNetworkOpenInformation->ChangeTime      = st.st_mtime;
+            FileNetworkOpenInformation->AllocationSize  = st.st_size;
+            FileNetworkOpenInformation->EndOfFile       = st.st_size;
+            FileNetworkOpenInformation->FileAttributes  = 0;
+            VARDUMP(DUMP, FileNetworkOpenInformation->CreationTime);
+            VARDUMP(DUMP, FileNetworkOpenInformation->LastAccessTime);
+            VARDUMP(DUMP, FileNetworkOpenInformation->LastWriteTime);
+            VARDUMP(DUMP, FileNetworkOpenInformation->ChangeTime);
+            VARDUMP(DUMP, FileNetworkOpenInformation->AllocationSize);
+            VARDUMP(DUMP, FileNetworkOpenInformation->EndOfFile);
+            VARDUMP(DUMP, FileNetworkOpenInformation->FileAttributes);
+            IoStatusBlock->Information = sizeof(*FileNetworkOpenInformation);
+            ret = 0;
+            break;
+        }
+    } while (0);
+
+    if ((IoStatusBlock->Status = ret)) INT3;
+
+    VARDUMP(DUMP, IoStatusBlock->Status);
+    VARDUMP(DUMP, IoStatusBlock->Information);
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueryIoCompletion() { /* 212 (0x0d4) */
     ENTER;
 
@@ -2891,7 +3870,7 @@ xboxkrnl_NtQueryIoCompletion() { /* 212 (0x0d4) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueryMutant() { /* 213 (0x0d5) */
     ENTER;
 
@@ -2900,7 +3879,7 @@ xboxkrnl_NtQueryMutant() { /* 213 (0x0d5) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQuerySemaphore() { /* 214 (0x0d6) */
     ENTER;
 
@@ -2909,7 +3888,7 @@ xboxkrnl_NtQuerySemaphore() { /* 214 (0x0d6) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQuerySymbolicLinkObject() { /* 215 (0x0d7) */
     ENTER;
 
@@ -2918,7 +3897,7 @@ xboxkrnl_NtQuerySymbolicLinkObject() { /* 215 (0x0d7) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtQueryTimer() { /* 216 (0x0d8) */
     ENTER;
 
@@ -2927,14 +3906,14 @@ xboxkrnl_NtQueryTimer() { /* 216 (0x0d8) */
 
     LEAVE;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_NtQueryVirtualMemory( /* 217 (0x0d9) */
-        /* in */ void *BaseAddress,
+        /* in */  void *BaseAddress,
         /* out */ xboxkrnl_meminfo *MemoryInformation) {
     int ret = -1;
     ENTER;
-    DEBUG(VAR_IN, BaseAddress);
-    DEBUG(VAR_OUT, MemoryInformation);
+    VARDUMP(VAR_IN,  BaseAddress);
+    VARDUMP(VAR_OUT, MemoryInformation);
 
 #if 0
 typedef struct {
@@ -2945,7 +3924,7 @@ typedef struct {
     int32_t                 State;
     int32_t                 Protect;
     int32_t                 Type;
-} xboxkrnl_meminfo;
+} PACKED xboxkrnl_meminfo;
 #define SECTION_QUERY       0x0001
 #define SECTION_MAP_WRITE   0x0002
 #define SECTION_MAP_READ    0x0004
@@ -2990,28 +3969,64 @@ typedef struct {
     MemoryInformation->Protect
     MemoryInformation->Type
 //#if 0
-			Buffer->AllocationBase = BaseAddress;
-			Buffer->AllocationProtect = PAGE_READONLY;
-			Buffer->RegionSize = 64 * 1024;             // size, in bytes, of the region beginning at the base address in which all pages have identical attributes
-			Buffer->State = 4096;                       // MEM_DECOMMIT | PAGE_EXECUTE_WRITECOPY etc
-			Buffer->Protect = PAGE_READONLY;            // One of the flags listed for the AllocationProtect member is specified
-			Buffer->Type = 262144;                      // Specifies the type of pages in the region. (MEM_IMAGE, MEM_MAPPED or MEM_PRIVATE)
+            Buffer->AllocationBase = BaseAddress;
+            Buffer->AllocationProtect = PAGE_READONLY;
+            Buffer->RegionSize = 64 * 1024;             // size, in bytes, of the region beginning at the base address in which all pages have identical attributes
+            Buffer->State = 4096;                       // MEM_DECOMMIT | PAGE_EXECUTE_WRITECOPY etc
+            Buffer->Protect = PAGE_READONLY;            // One of the flags listed for the AllocationProtect member is specified
+            Buffer->Type = 262144;                      // Specifies the type of pages in the region. (MEM_IMAGE, MEM_MAPPED or MEM_PRIVATE)
 #endif
     INT3;//TODO
 
     LEAVE;
     return ret;
 }
-STDCALL void
-xboxkrnl_NtQueryVolumeInformationFile() { /* 218 (0x0da) */
+static STDCALL int
+xboxkrnl_NtQueryVolumeInformationFile( /* 218 (0x0da) */
+        /* in */  void *FileHandle,
+        /* out */ xboxkrnl_iostatus *IoStatusBlock,
+        /* out */ void *FsInformation,
+        /* in */  uint32_t Length,
+        /* in */  int FsInformationClass) {
+    struct {
+        int64_t     TotalAllocationUnits;
+        int64_t     AvailableAllocationUnits;
+        uint32_t    SectorsPerAllocationUnit;
+        uint32_t    BytesPerSector;
+    } PACKED *FileFsSizeInformation;//FIXME
+    size_t sz;
+    int ret = -1;
     ENTER;
+    VARDUMP(VAR_IN,  FileHandle);
+    VARDUMP(VAR_OUT, IoStatusBlock);
+    VARDUMP(VAR_OUT, IoStatusBlock->Status);
+    VARDUMP(VAR_OUT, IoStatusBlock->Information);
+    VARDUMP(VAR_OUT, FsInformation);
+    VARDUMP(VAR_IN,  Length);
+    VARDUMP(VAR_IN,  FsInformationClass);
 
-    INT3;
-    
+    IoStatusBlock->Information = 0;
 
+    if (FsInformationClass == /* FileFsSizeInformation */ 3) {
+        FileFsSizeInformation = FsInformation;
+        FileFsSizeInformation->SectorsPerAllocationUnit = 32;
+        FileFsSizeInformation->BytesPerSector = 512;
+        VARDUMP(DUMP, FileFsSizeInformation->SectorsPerAllocationUnit);
+        VARDUMP(DUMP, FileFsSizeInformation->BytesPerSector);
+        sz = sizeof(*FileFsSizeInformation);
+        ret = 0;
+    }
+
+    if (!(IoStatusBlock->Status = ret)) IoStatusBlock->Information = sz;
+    else INT3;
+
+    VARDUMP(DUMP, IoStatusBlock->Status);
+    VARDUMP(DUMP, IoStatusBlock->Information);
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtReadFile() { /* 219 (0x0db) */
     ENTER;
 
@@ -3020,7 +4035,7 @@ xboxkrnl_NtReadFile() { /* 219 (0x0db) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtReadFileScatter() { /* 220 (0x0dc) */
     ENTER;
 
@@ -3029,7 +4044,7 @@ xboxkrnl_NtReadFileScatter() { /* 220 (0x0dc) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtReleaseMutant() { /* 221 (0x0dd) */
     ENTER;
 
@@ -3038,7 +4053,7 @@ xboxkrnl_NtReleaseMutant() { /* 221 (0x0dd) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtReleaseSemaphore() { /* 222 (0x0de) */
     ENTER;
 
@@ -3047,7 +4062,7 @@ xboxkrnl_NtReleaseSemaphore() { /* 222 (0x0de) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtRemoveIoCompletion() { /* 223 (0x0df) */
     ENTER;
 
@@ -3056,7 +4071,7 @@ xboxkrnl_NtRemoveIoCompletion() { /* 223 (0x0df) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtResumeThread() { /* 224 (0x0e0) */
     ENTER;
 
@@ -3065,7 +4080,7 @@ xboxkrnl_NtResumeThread() { /* 224 (0x0e0) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtSetEvent() { /* 225 (0x0e1) */
     ENTER;
 
@@ -3074,7 +4089,7 @@ xboxkrnl_NtSetEvent() { /* 225 (0x0e1) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtSetInformationFile() { /* 226 (0x0e2) */
     ENTER;
 
@@ -3083,7 +4098,7 @@ xboxkrnl_NtSetInformationFile() { /* 226 (0x0e2) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtSetIoCompletion() { /* 227 (0x0e3) */
     ENTER;
 
@@ -3092,7 +4107,7 @@ xboxkrnl_NtSetIoCompletion() { /* 227 (0x0e3) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtSetSystemTime() { /* 228 (0x0e4) */
     ENTER;
 
@@ -3101,7 +4116,7 @@ xboxkrnl_NtSetSystemTime() { /* 228 (0x0e4) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtSetTimerEx() { /* 229 (0x0e5) */
     ENTER;
 
@@ -3110,7 +4125,7 @@ xboxkrnl_NtSetTimerEx() { /* 229 (0x0e5) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtSignalAndWaitForSingleObjectEx() { /* 230 (0x0e6) */
     ENTER;
 
@@ -3119,7 +4134,7 @@ xboxkrnl_NtSignalAndWaitForSingleObjectEx() { /* 230 (0x0e6) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtSuspendThread() { /* 231 (0x0e7) */
     ENTER;
 
@@ -3128,7 +4143,7 @@ xboxkrnl_NtSuspendThread() { /* 231 (0x0e7) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtUserIoApcDispatcher() { /* 232 (0x0e8) */
     ENTER;
 
@@ -3137,7 +4152,7 @@ xboxkrnl_NtUserIoApcDispatcher() { /* 232 (0x0e8) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtWaitForSingleObject() { /* 233 (0x0e9) */
     ENTER;
 
@@ -3146,7 +4161,7 @@ xboxkrnl_NtWaitForSingleObject() { /* 233 (0x0e9) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtWaitForSingleObjectEx() { /* 234 (0x0ea) */
     ENTER;
 
@@ -3155,7 +4170,7 @@ xboxkrnl_NtWaitForSingleObjectEx() { /* 234 (0x0ea) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtWaitForMultipleObjectsEx() { /* 235 (0x0eb) */
     ENTER;
 
@@ -3164,16 +4179,51 @@ xboxkrnl_NtWaitForMultipleObjectsEx() { /* 235 (0x0eb) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_NtWriteFile() { /* 236 (0x0ec) */
+static STDCALL int
+xboxkrnl_NtWriteFile( /* 236 (0x0ec) */
+        /* in */       xboxkrnl_file *FileHandle,
+        /* in (opt) */ void *Event,
+        /* in (opt) */ void *ApcRoutine,
+        /* in (opt) */ void *ApcContext,
+        /* out */      xboxkrnl_iostatus *IoStatusBlock,
+        /* in */       void *Buffer,
+        /* in */       uint32_t Length,
+        /* in (opt) */ int64_t *ByteOffset) {
+    ssize_t wr;
+    int ret = -1;
     ENTER;
+    VARDUMP(VAR_IN,  FileHandle);
+    VARDUMP(VAR_IN,  Event);
+    VARDUMP(VAR_IN,  ApcRoutine);
+    VARDUMP(VAR_IN,  ApcContext);
+    VARDUMP(VAR_OUT, IoStatusBlock);
+    VARDUMP(VAR_OUT, IoStatusBlock->Status);
+    VARDUMP(VAR_OUT, IoStatusBlock->Information);
+    VARDUMP(VAR_IN,  Buffer);
+    VARDUMP(VAR_IN,  Length);
+    VARDUMP(VAR_IN,  ByteOffset);
 
+    IoStatusBlock->Information = 0;
+
+    do {
+        if (ByteOffset) INT3;
+        if ((wr = write(FileHandle->fd, Buffer, Length)) != (typeof(wr))Length) {
+            PRINT("error: write(): '%s'", (wr < 0) ? strerror(errno) : "short write");
+            break;
+        }
+    } while ((ret = 0));
+
+    if (!(IoStatusBlock->Status = ret)) IoStatusBlock->Information = wr;
+    else INT3;
+
+    VARDUMP(DUMP, IoStatusBlock->Status);
+    VARDUMP(DUMP, IoStatusBlock->Information);
+    VARDUMP(DUMP, ret);
     INT3;
-    
-
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtWriteFileGather() { /* 237 (0x0ed) */
     ENTER;
 
@@ -3182,7 +4232,7 @@ xboxkrnl_NtWriteFileGather() { /* 237 (0x0ed) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_NtYieldExecution() { /* 238 (0x0ee) */
     ENTER;
 
@@ -3191,7 +4241,7 @@ xboxkrnl_NtYieldExecution() { /* 238 (0x0ee) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ObCreateObject() { /* 239 (0x0ef) */
     ENTER;
 
@@ -3200,7 +4250,8 @@ xboxkrnl_ObCreateObject() { /* 239 (0x0ef) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_ObDirectoryObjectType() { /* 240 (0x0f0) */
     ENTER;
 
@@ -3209,7 +4260,22 @@ xboxkrnl_ObDirectoryObjectType() { /* 240 (0x0f0) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_ObDirectoryObjectType = (void *)0xdeadbeef; /* 240 (0x0f0) */
+#endif
+static STDCALL void
 xboxkrnl_ObInsertObject() { /* 241 (0x0f1) */
     ENTER;
 
@@ -3218,7 +4284,7 @@ xboxkrnl_ObInsertObject() { /* 241 (0x0f1) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ObMakeTemporaryObject() { /* 242 (0x0f2) */
     ENTER;
 
@@ -3227,7 +4293,7 @@ xboxkrnl_ObMakeTemporaryObject() { /* 242 (0x0f2) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ObOpenObjectByName() { /* 243 (0x0f3) */
     ENTER;
 
@@ -3236,7 +4302,7 @@ xboxkrnl_ObOpenObjectByName() { /* 243 (0x0f3) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ObOpenObjectByPointer() { /* 244 (0x0f4) */
     ENTER;
 
@@ -3245,7 +4311,8 @@ xboxkrnl_ObOpenObjectByPointer() { /* 244 (0x0f4) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_ObpObjectHandleTable() { /* 245 (0x0f5) */
     ENTER;
 
@@ -3254,7 +4321,25 @@ xboxkrnl_ObpObjectHandleTable() { /* 245 (0x0f5) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+#define OB_HANDLES_PER_TABLE_SHIFT      6
+#define OB_HANDLES_PER_TABLE            (1 << OB_HANDLES_PER_TABLE_SHIFT)
+#define OB_TABLES_PER_SEGMENT           8
+#define OB_HANDLES_PER_SEGMENT          (OB_TABLES_PER_SEGMENT * OB_HANDLES_PER_TABLE)
+
+typedef struct _OBJECT_HANDLE_TABLE {
+    LONG HandleCount;
+    LONG_PTR FirstFreeTableEntry;
+    HANDLE NextHandleNeedingPool;
+    PVOID **RootTable;
+    PVOID *BuiltinRootTable[OB_TABLES_PER_SEGMENT];
+} OBJECT_HANDLE_TABLE, *POBJECT_HANDLE_TABLE;
+#endif
+static void *
+xboxkrnl_ObpObjectHandleTable = (void *)0xdeadbeef; /* 245 (0x0f5) */
+#endif
+static STDCALL void
 xboxkrnl_ObReferenceObjectByHandle() { /* 246 (0x0f6) */
     ENTER;
 
@@ -3263,7 +4348,7 @@ xboxkrnl_ObReferenceObjectByHandle() { /* 246 (0x0f6) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ObReferenceObjectByName() { /* 247 (0x0f7) */
     ENTER;
 
@@ -3272,7 +4357,7 @@ xboxkrnl_ObReferenceObjectByName() { /* 247 (0x0f7) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_ObReferenceObjectByPointer() { /* 248 (0x0f8) */
     ENTER;
 
@@ -3281,7 +4366,8 @@ xboxkrnl_ObReferenceObjectByPointer() { /* 248 (0x0f8) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_ObSymbolicLinkObjectType() { /* 249 (0x0f9) */
     ENTER;
 
@@ -3290,7 +4376,22 @@ xboxkrnl_ObSymbolicLinkObjectType() { /* 249 (0x0f9) */
 
     LEAVE;
 }
-FASTCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_ObSymbolicLinkObjectType = (void *)0xdeadbeef; /* 249 (0x0f9) */
+#endif
+static FASTCALL void
 xboxkrnl_ObfDereferenceObject() { /* 250 (0x0fa) */
     ENTER;
 
@@ -3299,7 +4400,7 @@ xboxkrnl_ObfDereferenceObject() { /* 250 (0x0fa) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_ObfReferenceObject() { /* 251 (0x0fb) */
     ENTER;
 
@@ -3308,7 +4409,7 @@ xboxkrnl_ObfReferenceObject() { /* 251 (0x0fb) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_PhyGetLinkState() { /* 252 (0x0fc) */
     ENTER;
 
@@ -3317,7 +4418,7 @@ xboxkrnl_PhyGetLinkState() { /* 252 (0x0fc) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_PhyInitialize() { /* 253 (0x0fd) */
     ENTER;
 
@@ -3326,18 +4427,14 @@ xboxkrnl_PhyInitialize() { /* 253 (0x0fd) */
 
     LEAVE;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_PsCreateSystemThread( /* 254 (0x0fe) */
         /* out */       void *ThreadHandle,
         /* out (opt) */ void **ThreadId,
         /* in */        void *StartRoutine,
         /* in */        void *StartContext,
         /* in */        int DebuggerThread) {
-    int ret;
-    ENTER;
-
-    INT3;
-    ret = xboxkrnl_PsCreateSystemThreadEx(
+    return xboxkrnl_PsCreateSystemThreadEx(
             ThreadHandle,
             0,
             12288, /* KERNEL_STACK_SIZE */
@@ -3348,11 +4445,8 @@ xboxkrnl_PsCreateSystemThread( /* 254 (0x0fe) */
             0,
             DebuggerThread,
             NULL);
-
-    LEAVE;
-    return ret;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_PsCreateSystemThreadEx( /* 255 (0x0ff) */
         /* out */       void **ThreadHandle,
         /* in */        size_t ThreadExtensionSize,
@@ -3365,24 +4459,24 @@ xboxkrnl_PsCreateSystemThreadEx( /* 255 (0x0ff) */
         /* in */        int DebuggerThread,
         /* in (opt) */  void *SystemRoutine) {
     ENTER;
-    DEBUG(VAR_OUT, ThreadHandle);
-    DEBUG(VAR_IN,  ThreadExtensionSize);
-    DEBUG(VAR_IN,  KernelStackSize);
-    DEBUG(VAR_IN,  TlsDataSize);
-    DEBUG(VAR_OUT, ThreadId);
-    DEBUG(VAR_IN,  StartRoutine);
-    DEBUG(VAR_IN,  StartContext);
-    DEBUG(VAR_IN,  CreateSuspended);
-    DEBUG(VAR_IN,  DebuggerThread);
-    DEBUG(VAR_IN,  SystemRoutine);
+    VARDUMP(VAR_OUT, ThreadHandle);
+    VARDUMP(VAR_IN,  ThreadExtensionSize);
+    VARDUMP(VAR_IN,  KernelStackSize);
+    VARDUMP(VAR_IN,  TlsDataSize);
+    VARDUMP(VAR_OUT, ThreadId);
+    VARDUMP(VAR_IN,  StartRoutine);
+    VARDUMP(VAR_IN,  StartContext);
+    VARDUMP(VAR_IN,  CreateSuspended);
+    VARDUMP(VAR_IN,  DebuggerThread);
+    VARDUMP(VAR_IN,  SystemRoutine);
 
-    debug("    " "/* protected calling thread is system kernel thread */", 0);
+    PRINT("/* protected calling thread is system kernel thread */", 0);
     LEAVE;
     ((void (*)(void *))StartRoutine)(StartContext);
 
     return 0;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_PsQueryStatistics() { /* 256 (0x100) */
     ENTER;
 
@@ -3391,7 +4485,7 @@ xboxkrnl_PsQueryStatistics() { /* 256 (0x100) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_PsSetCreateThreadNotifyRoutine() { /* 257 (0x101) */
     ENTER;
 
@@ -3400,7 +4494,7 @@ xboxkrnl_PsSetCreateThreadNotifyRoutine() { /* 257 (0x101) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_PsTerminateSystemThread() { /* 258 (0x102) */
     ENTER;
 
@@ -3409,7 +4503,8 @@ xboxkrnl_PsTerminateSystemThread() { /* 258 (0x102) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_PsThreadObjectType() { /* 259 (0x103) */
     ENTER;
 
@@ -3418,7 +4513,22 @@ xboxkrnl_PsThreadObjectType() { /* 259 (0x103) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _OBJECT_TYPE {
+    OB_ALLOCATE_METHOD AllocateProcedure;
+    OB_FREE_METHOD FreeProcedure;
+    OB_CLOSE_METHOD CloseProcedure;
+    OB_DELETE_METHOD DeleteProcedure;
+    OB_PARSE_METHOD ParseProcedure;
+    PVOID DefaultObject;
+    ULONG PoolTag;
+} OBJECT_TYPE, *POBJECT_TYPE;
+#endif
+static void *
+xboxkrnl_PsThreadObjectType = (void *)0xdeadbeef; /* 259 (0x103) */
+#endif
+static STDCALL void
 xboxkrnl_RtlAnsiStringToUnicodeString() { /* 260 (0x104) */
     ENTER;
 
@@ -3427,7 +4537,7 @@ xboxkrnl_RtlAnsiStringToUnicodeString() { /* 260 (0x104) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlAppendStringToString() { /* 261 (0x105) */
     ENTER;
 
@@ -3436,7 +4546,7 @@ xboxkrnl_RtlAppendStringToString() { /* 261 (0x105) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlAppendUnicodeStringToString() { /* 262 (0x106) */
     ENTER;
 
@@ -3445,7 +4555,7 @@ xboxkrnl_RtlAppendUnicodeStringToString() { /* 262 (0x106) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlAppendUnicodeToString() { /* 263 (0x107) */
     ENTER;
 
@@ -3454,7 +4564,7 @@ xboxkrnl_RtlAppendUnicodeToString() { /* 263 (0x107) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlAssert() { /* 264 (0x108) */
     ENTER;
 
@@ -3463,7 +4573,7 @@ xboxkrnl_RtlAssert() { /* 264 (0x108) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCaptureContext() { /* 265 (0x109) */
     ENTER;
 
@@ -3472,7 +4582,7 @@ xboxkrnl_RtlCaptureContext() { /* 265 (0x109) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCaptureStackBackTrace() { /* 266 (0x10a) */
     ENTER;
 
@@ -3481,7 +4591,7 @@ xboxkrnl_RtlCaptureStackBackTrace() { /* 266 (0x10a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCharToInteger() { /* 267 (0x10b) */
     ENTER;
 
@@ -3490,7 +4600,7 @@ xboxkrnl_RtlCharToInteger() { /* 267 (0x10b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCompareMemory() { /* 268 (0x10c) */
     ENTER;
 
@@ -3499,7 +4609,7 @@ xboxkrnl_RtlCompareMemory() { /* 268 (0x10c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCompareMemoryUlong() { /* 269 (0x10d) */
     ENTER;
 
@@ -3508,7 +4618,7 @@ xboxkrnl_RtlCompareMemoryUlong() { /* 269 (0x10d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCompareString() { /* 270 (0x10e) */
     ENTER;
 
@@ -3517,7 +4627,7 @@ xboxkrnl_RtlCompareString() { /* 270 (0x10e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCompareUnicodeString() { /* 271 (0x10f) */
     ENTER;
 
@@ -3526,7 +4636,7 @@ xboxkrnl_RtlCompareUnicodeString() { /* 271 (0x10f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCopyString() { /* 272 (0x110) */
     ENTER;
 
@@ -3535,7 +4645,7 @@ xboxkrnl_RtlCopyString() { /* 272 (0x110) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCopyUnicodeString() { /* 273 (0x111) */
     ENTER;
 
@@ -3544,7 +4654,7 @@ xboxkrnl_RtlCopyUnicodeString() { /* 273 (0x111) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlCreateUnicodeString() { /* 274 (0x112) */
     ENTER;
 
@@ -3553,7 +4663,7 @@ xboxkrnl_RtlCreateUnicodeString() { /* 274 (0x112) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlDowncaseUnicodeChar() { /* 275 (0x113) */
     ENTER;
 
@@ -3562,7 +4672,7 @@ xboxkrnl_RtlDowncaseUnicodeChar() { /* 275 (0x113) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlDowncaseUnicodeString() { /* 276 (0x114) */
     ENTER;
 
@@ -3571,16 +4681,18 @@ xboxkrnl_RtlDowncaseUnicodeString() { /* 276 (0x114) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_RtlEnterCriticalSection() { /* 277 (0x115) */
+static STDCALL void
+xboxkrnl_RtlEnterCriticalSection( /* 277 (0x115) */
+        /* in */ pthread_mutex_t **CriticalSection) {
     ENTER;
+    VARDUMP(VAR_IN, CriticalSection);
+    VARDUMP(VAR_IN, *CriticalSection);
 
-    INT3;
-    
+    pthread_mutex_lock(*CriticalSection);
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlEnterCriticalSectionAndRegion() { /* 278 (0x116) */
     ENTER;
 
@@ -3589,16 +4701,30 @@ xboxkrnl_RtlEnterCriticalSectionAndRegion() { /* 278 (0x116) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_RtlEqualString() { /* 279 (0x117) */
+static STDCALL uint8_t
+xboxkrnl_RtlEqualString( /* 279 (0x117) */
+        /* in */ xboxkrnl_string *String1,
+        /* in */ xboxkrnl_string *String2,
+        /* in */ uint8_t CaseInSensitive) {
+    size_t len;
+    uint8_t ret = 0;
     ENTER;
+    VARDUMP(VAR_IN, String1);
+    VARDUMP(STRING, String1->Buffer);
+    VARDUMP(VAR_IN, String2);
+    VARDUMP(STRING, String2->Buffer);
+    VARDUMP(VAR_IN, CaseInSensitive);
 
-    INT3;
-    
+    len = strlen(String1->Buffer) + 1;
 
+    if ((CaseInSensitive && !strncasecmp(String1->Buffer, String2->Buffer, len)) ||
+        (!CaseInSensitive && !strncmp(String1->Buffer, String2->Buffer, len))) ret = 1;
+
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlEqualUnicodeString() { /* 280 (0x118) */
     ENTER;
 
@@ -3607,7 +4733,7 @@ xboxkrnl_RtlEqualUnicodeString() { /* 280 (0x118) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlExtendedIntegerMultiply() { /* 281 (0x119) */
     ENTER;
 
@@ -3616,7 +4742,7 @@ xboxkrnl_RtlExtendedIntegerMultiply() { /* 281 (0x119) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlExtendedLargeIntegerDivide() { /* 282 (0x11a) */
     ENTER;
 
@@ -3625,7 +4751,7 @@ xboxkrnl_RtlExtendedLargeIntegerDivide() { /* 282 (0x11a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlExtendedMagicDivide() { /* 283 (0x11b) */
     ENTER;
 
@@ -3634,7 +4760,7 @@ xboxkrnl_RtlExtendedMagicDivide() { /* 283 (0x11b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlFillMemory() { /* 284 (0x11c) */
     ENTER;
 
@@ -3643,7 +4769,7 @@ xboxkrnl_RtlFillMemory() { /* 284 (0x11c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlFillMemoryUlong() { /* 285 (0x11d) */
     ENTER;
 
@@ -3652,7 +4778,7 @@ xboxkrnl_RtlFillMemoryUlong() { /* 285 (0x11d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlFreeAnsiString() { /* 286 (0x11e) */
     ENTER;
 
@@ -3661,7 +4787,7 @@ xboxkrnl_RtlFreeAnsiString() { /* 286 (0x11e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlFreeUnicodeString() { /* 287 (0x11f) */
     ENTER;
 
@@ -3670,7 +4796,7 @@ xboxkrnl_RtlFreeUnicodeString() { /* 287 (0x11f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlGetCallersAddress() { /* 288 (0x120) */
     ENTER;
 
@@ -3679,16 +4805,29 @@ xboxkrnl_RtlGetCallersAddress() { /* 288 (0x120) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_RtlInitAnsiString() { /* 289 (0x121) */
+static STDCALL void
+xboxkrnl_RtlInitAnsiString( /* 289 (0x121) */
+        /* out */ xboxkrnl_string *DestinationString,
+        /* in */  const char *SourceString) {
     ENTER;
+    VARDUMP(VAR_OUT, DestinationString);
+    VARDUMP(VAR_OUT, DestinationString->Length);
+    VARDUMP(VAR_OUT, DestinationString->MaximumLength);
+    VARDUMP(VAR_OUT, DestinationString->Buffer);
+    VARDUMP(VAR_IN,  SourceString);
+    VARDUMP(STRING,  SourceString);
 
-    INT3;
-    
+    DestinationString->Length = strlen(SourceString);
+    DestinationString->MaximumLength = DestinationString->Length + 1;
+    DestinationString->Buffer = strdup(SourceString);
 
+    VARDUMP(DUMP,   DestinationString->Length);
+    VARDUMP(DUMP,   DestinationString->MaximumLength);
+    VARDUMP(DUMP,   DestinationString->Buffer);
+    VARDUMP(STRING, DestinationString->Buffer);
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlInitUnicodeString() { /* 290 (0x122) */
     ENTER;
 
@@ -3697,20 +4836,20 @@ xboxkrnl_RtlInitUnicodeString() { /* 290 (0x122) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlInitializeCriticalSection( /* 291 (0x123) */
         /* i/o */ pthread_mutex_t **CriticalSection) {
     ENTER;
-    DEBUG(VAR_IN, CriticalSection);
-    DEBUG(DUMP, *CriticalSection);
+    VARDUMP(VAR_IN,  CriticalSection);
+    VARDUMP(VAR_OUT, *CriticalSection);
 
     if (!(*CriticalSection = calloc(1, sizeof(**CriticalSection)))) INT3;
     pthread_mutex_init(*CriticalSection, NULL);
 
-    DEBUG(VAR_OUT, *CriticalSection);
+    VARDUMP(DUMP, *CriticalSection);
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlIntegerToChar() { /* 292 (0x124) */
     ENTER;
 
@@ -3719,7 +4858,7 @@ xboxkrnl_RtlIntegerToChar() { /* 292 (0x124) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlIntegerToUnicodeString() { /* 293 (0x125) */
     ENTER;
 
@@ -3728,16 +4867,18 @@ xboxkrnl_RtlIntegerToUnicodeString() { /* 293 (0x125) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_RtlLeaveCriticalSection() { /* 294 (0x126) */
+static STDCALL void
+xboxkrnl_RtlLeaveCriticalSection( /* 294 (0x126) */
+        /* in */ pthread_mutex_t **CriticalSection) {
     ENTER;
+    VARDUMP(VAR_IN, CriticalSection);
+    VARDUMP(VAR_IN, *CriticalSection);
 
-    INT3;
-    
+    pthread_mutex_unlock(*CriticalSection);
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlLeaveCriticalSectionAndRegion() { /* 295 (0x127) */
     ENTER;
 
@@ -3746,7 +4887,7 @@ xboxkrnl_RtlLeaveCriticalSectionAndRegion() { /* 295 (0x127) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlLowerChar() { /* 296 (0x128) */
     ENTER;
 
@@ -3755,7 +4896,7 @@ xboxkrnl_RtlLowerChar() { /* 296 (0x128) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlMapGenericMask() { /* 297 (0x129) */
     ENTER;
 
@@ -3764,7 +4905,7 @@ xboxkrnl_RtlMapGenericMask() { /* 297 (0x129) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlMoveMemory() { /* 298 (0x12a) */
     ENTER;
 
@@ -3773,7 +4914,7 @@ xboxkrnl_RtlMoveMemory() { /* 298 (0x12a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlMultiByteToUnicodeN() { /* 299 (0x12b) */
     ENTER;
 
@@ -3782,7 +4923,7 @@ xboxkrnl_RtlMultiByteToUnicodeN() { /* 299 (0x12b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlMultiByteToUnicodeSize() { /* 300 (0x12c) */
     ENTER;
 
@@ -3791,20 +4932,20 @@ xboxkrnl_RtlMultiByteToUnicodeSize() { /* 300 (0x12c) */
 
     LEAVE;
 }
-STDCALL int
+static STDCALL int
 xboxkrnl_RtlNtStatusToDosError( /* 301 (0x12d) */
         /* in */ int Status) {
     int ret;
     ENTER;
-    DEBUG(VAR_IN, Status);
+    VARDUMP(VAR_IN, Status);
 
     ret = !!Status;
-    DEBUG(DUMP, ret);
 
+    VARDUMP(DUMP, ret);
     LEAVE;
     return ret;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlRaiseException() { /* 302 (0x12e) */
     ENTER;
 
@@ -3813,7 +4954,7 @@ xboxkrnl_RtlRaiseException() { /* 302 (0x12e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlRaiseStatus() { /* 303 (0x12f) */
     ENTER;
 
@@ -3822,7 +4963,7 @@ xboxkrnl_RtlRaiseStatus() { /* 303 (0x12f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlRip() { /* 352 (0x160) */
     ENTER;
 
@@ -3831,7 +4972,7 @@ xboxkrnl_RtlRip() { /* 352 (0x160) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlSnprintf() { /* 361 (0x169) */
     ENTER;
 
@@ -3840,7 +4981,7 @@ xboxkrnl_RtlSnprintf() { /* 361 (0x169) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlSprintf() { /* 362 (0x16a) */
     ENTER;
 
@@ -3849,7 +4990,7 @@ xboxkrnl_RtlSprintf() { /* 362 (0x16a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlTimeFieldsToTime() { /* 304 (0x130) */
     ENTER;
 
@@ -3858,7 +4999,7 @@ xboxkrnl_RtlTimeFieldsToTime() { /* 304 (0x130) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlTimeToTimeFields() { /* 305 (0x131) */
     ENTER;
 
@@ -3867,7 +5008,7 @@ xboxkrnl_RtlTimeToTimeFields() { /* 305 (0x131) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlTryEnterCriticalSection() { /* 306 (0x132) */
     ENTER;
 
@@ -3876,7 +5017,7 @@ xboxkrnl_RtlTryEnterCriticalSection() { /* 306 (0x132) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_RtlUlongByteSwap() { /* 307 (0x133) */
     ENTER;
 
@@ -3885,7 +5026,7 @@ xboxkrnl_RtlUlongByteSwap() { /* 307 (0x133) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUnicodeStringToAnsiString() { /* 308 (0x134) */
     ENTER;
 
@@ -3894,7 +5035,7 @@ xboxkrnl_RtlUnicodeStringToAnsiString() { /* 308 (0x134) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUnicodeStringToInteger() { /* 309 (0x135) */
     ENTER;
 
@@ -3903,7 +5044,7 @@ xboxkrnl_RtlUnicodeStringToInteger() { /* 309 (0x135) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUnicodeToMultiByteN() { /* 310 (0x136) */
     ENTER;
 
@@ -3912,7 +5053,7 @@ xboxkrnl_RtlUnicodeToMultiByteN() { /* 310 (0x136) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUnicodeToMultiByteSize() { /* 311 (0x137) */
     ENTER;
 
@@ -3921,7 +5062,7 @@ xboxkrnl_RtlUnicodeToMultiByteSize() { /* 311 (0x137) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUnwind() { /* 312 (0x138) */
     ENTER;
 
@@ -3930,7 +5071,7 @@ xboxkrnl_RtlUnwind() { /* 312 (0x138) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUpcaseUnicodeChar() { /* 313 (0x139) */
     ENTER;
 
@@ -3939,7 +5080,7 @@ xboxkrnl_RtlUpcaseUnicodeChar() { /* 313 (0x139) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUpcaseUnicodeString() { /* 314 (0x13a) */
     ENTER;
 
@@ -3948,7 +5089,7 @@ xboxkrnl_RtlUpcaseUnicodeString() { /* 314 (0x13a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUpcaseUnicodeToMultiByteN() { /* 315 (0x13b) */
     ENTER;
 
@@ -3957,7 +5098,7 @@ xboxkrnl_RtlUpcaseUnicodeToMultiByteN() { /* 315 (0x13b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUpperChar() { /* 316 (0x13c) */
     ENTER;
 
@@ -3966,7 +5107,7 @@ xboxkrnl_RtlUpperChar() { /* 316 (0x13c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlUpperString() { /* 317 (0x13d) */
     ENTER;
 
@@ -3975,7 +5116,7 @@ xboxkrnl_RtlUpperString() { /* 317 (0x13d) */
 
     LEAVE;
 }
-FASTCALL void
+static FASTCALL void
 xboxkrnl_RtlUshortByteSwap() { /* 318 (0x13e) */
     ENTER;
 
@@ -3984,7 +5125,7 @@ xboxkrnl_RtlUshortByteSwap() { /* 318 (0x13e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlVsnprintf() { /* 363 (0x16b) */
     ENTER;
 
@@ -3993,7 +5134,7 @@ xboxkrnl_RtlVsnprintf() { /* 363 (0x16b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlVsprintf() { /* 364 (0x16c) */
     ENTER;
 
@@ -4002,7 +5143,7 @@ xboxkrnl_RtlVsprintf() { /* 364 (0x16c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlWalkFrameChain() { /* 319 (0x13f) */
     ENTER;
 
@@ -4011,7 +5152,7 @@ xboxkrnl_RtlWalkFrameChain() { /* 319 (0x13f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_RtlZeroMemory() { /* 320 (0x140) */
     ENTER;
 
@@ -4020,7 +5161,8 @@ xboxkrnl_RtlZeroMemory() { /* 320 (0x140) */
 
     LEAVE;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_XboxAlternateSignatureKeys() { /* 354 (0x162) */
     ENTER;
 
@@ -4029,7 +5171,12 @@ xboxkrnl_XboxAlternateSignatureKeys() { /* 354 (0x162) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint8_t
+xboxkrnl_XboxAlternateSignatureKeys[16][16] = { }; /* 354 (0x162) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_XboxEEPROMKey() { /* 321 (0x141) */
     ENTER;
 
@@ -4038,7 +5185,12 @@ xboxkrnl_XboxEEPROMKey() { /* 321 (0x141) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint8_t
+xboxkrnl_XboxEEPROMKey[16] = { }; /* 321 (0x141) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_XboxHardwareInfo() { /* 322 (0x142) */
     ENTER;
 
@@ -4047,7 +5199,28 @@ xboxkrnl_XboxHardwareInfo() { /* 322 (0x142) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+#define XBOX_HW_FLAG_INTERNAL_USB_HUB   0x00000001
+#define XBOX_HW_FLAG_DEVKIT_KERNEL      0x00000002
+#define XBOX_HW_FLAG_ARCADE             0x00000008
+
+typedef struct _XBOX_HARDWARE_INFO {
+    ULONG Flags;
+    UCHAR GpuRevision;
+    UCHAR McpRevision;
+    UCHAR reserved[2];
+} XBOX_HARDWARE_INFO;
+#endif
+static struct {
+    uint32_t Flags;
+    uint8_t  GpuRevision;
+    uint8_t  McpRevision;
+    uint8_t  reserved[2];
+} xboxkrnl_XboxHardwareInfo = { }; /* 322 (0x142) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_XboxHDKey() { /* 323 (0x143) */
     ENTER;
 
@@ -4056,7 +5229,12 @@ xboxkrnl_XboxHDKey() { /* 323 (0x143) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint8_t
+xboxkrnl_XboxHDKey[16] = { }; /* 323 (0x143) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_XboxLANKey() { /* 353 (0x161) */
     ENTER;
 
@@ -4065,7 +5243,12 @@ xboxkrnl_XboxLANKey() { /* 353 (0x161) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint8_t
+xboxkrnl_XboxLANKey[16] = { }; /* 353 (0x161) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_XboxKrnlVersion() { /* 324 (0x144) */
     ENTER;
 
@@ -4074,7 +5257,20 @@ xboxkrnl_XboxKrnlVersion() { /* 324 (0x144) */
 
     LEAVE;
 }
-STDCALL void
+#else
+#if 0
+typedef struct _XBOX_KRNL_VERSION {
+    USHORT Major;
+    USHORT Minor;
+    USHORT Build;
+    USHORT Qfe;
+} XBOX_KRNL_VERSION, *PXBOX_KRNL_VERSION;
+#endif
+static void *
+xboxkrnl_XboxKrnlVersion = (void *)0xdeadbeef; /* 324 (0x144) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_XboxSignatureKey() { /* 325 (0x145) */
     ENTER;
 
@@ -4083,7 +5279,12 @@ xboxkrnl_XboxSignatureKey() { /* 325 (0x145) */
 
     LEAVE;
 }
-STDCALL void
+#else
+static uint8_t
+xboxkrnl_XboxSignatureKey[16] = { }; /* 325 (0x145) */
+#endif
+#if 0
+static STDCALL void
 xboxkrnl_XeImageFileName() { /* 326 (0x146) */
     ENTER;
 
@@ -4092,16 +5293,21 @@ xboxkrnl_XeImageFileName() { /* 326 (0x146) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_XeLoadSection() { /* 327 (0x147) */
+#else
+static xboxkrnl_string
+xboxkrnl_XeImageFileName = { }; /* 326 (0x146) */
+#endif
+static STDCALL int
+xboxkrnl_XeLoadSection( /* 327 (0x147) */
+        /* in */ void *Section) {
     ENTER;
-
-    INT3;
-    
+    VARDUMP(STUB, Section);
 
     LEAVE;
+    return 0;
 }
-STDCALL void
+#if 0
+static STDCALL void
 xboxkrnl_XePublicKeyData() { /* 355 (0x163) */
     ENTER;
 
@@ -4110,16 +5316,20 @@ xboxkrnl_XePublicKeyData() { /* 355 (0x163) */
 
     LEAVE;
 }
-STDCALL void
-xboxkrnl_XeUnloadSection() { /* 328 (0x148) */
+#else
+static uint8_t
+xboxkrnl_XePublicKeyData[284] = { }; /* 355 (0x163) */
+#endif
+static STDCALL int
+xboxkrnl_XeUnloadSection( /* 328 (0x148) */
+        /* in */ void *Section) {
     ENTER;
-
-    INT3;
-    
+    VARDUMP(STUB, Section);
 
     LEAVE;
+    return 0;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_READ_PORT_BUFFER_UCHAR() { /* 329 (0x149) */
     ENTER;
 
@@ -4128,7 +5338,7 @@ xboxkrnl_READ_PORT_BUFFER_UCHAR() { /* 329 (0x149) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_READ_PORT_BUFFER_USHORT() { /* 330 (0x14a) */
     ENTER;
 
@@ -4137,7 +5347,7 @@ xboxkrnl_READ_PORT_BUFFER_USHORT() { /* 330 (0x14a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_READ_PORT_BUFFER_ULONG() { /* 331 (0x14b) */
     ENTER;
 
@@ -4146,7 +5356,7 @@ xboxkrnl_READ_PORT_BUFFER_ULONG() { /* 331 (0x14b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_WRITE_PORT_BUFFER_UCHAR() { /* 332 (0x14c) */
     ENTER;
 
@@ -4155,7 +5365,7 @@ xboxkrnl_WRITE_PORT_BUFFER_UCHAR() { /* 332 (0x14c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_WRITE_PORT_BUFFER_USHORT() { /* 333 (0x14d) */
     ENTER;
 
@@ -4164,7 +5374,7 @@ xboxkrnl_WRITE_PORT_BUFFER_USHORT() { /* 333 (0x14d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_WRITE_PORT_BUFFER_ULONG() { /* 334 (0x14e) */
     ENTER;
 
@@ -4173,7 +5383,7 @@ xboxkrnl_WRITE_PORT_BUFFER_ULONG() { /* 334 (0x14e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcSHAInit() { /* 335 (0x14f) */
     ENTER;
 
@@ -4182,7 +5392,7 @@ xboxkrnl_XcSHAInit() { /* 335 (0x14f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcSHAUpdate() { /* 336 (0x150) */
     ENTER;
 
@@ -4191,7 +5401,7 @@ xboxkrnl_XcSHAUpdate() { /* 336 (0x150) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcSHAFinal() { /* 337 (0x151) */
     ENTER;
 
@@ -4200,7 +5410,7 @@ xboxkrnl_XcSHAFinal() { /* 337 (0x151) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcRC4Key() { /* 338 (0x152) */
     ENTER;
 
@@ -4209,7 +5419,7 @@ xboxkrnl_XcRC4Key() { /* 338 (0x152) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcRC4Crypt() { /* 339 (0x153) */
     ENTER;
 
@@ -4218,7 +5428,7 @@ xboxkrnl_XcRC4Crypt() { /* 339 (0x153) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcHMAC() { /* 340 (0x154) */
     ENTER;
 
@@ -4227,7 +5437,7 @@ xboxkrnl_XcHMAC() { /* 340 (0x154) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcPKEncPublic() { /* 341 (0x155) */
     ENTER;
 
@@ -4236,7 +5446,7 @@ xboxkrnl_XcPKEncPublic() { /* 341 (0x155) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcPKDecPrivate() { /* 342 (0x156) */
     ENTER;
 
@@ -4245,7 +5455,7 @@ xboxkrnl_XcPKDecPrivate() { /* 342 (0x156) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcPKGetKeyLen() { /* 343 (0x157) */
     ENTER;
 
@@ -4254,7 +5464,7 @@ xboxkrnl_XcPKGetKeyLen() { /* 343 (0x157) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcVerifyPKCS1Signature() { /* 344 (0x158) */
     ENTER;
 
@@ -4263,7 +5473,7 @@ xboxkrnl_XcVerifyPKCS1Signature() { /* 344 (0x158) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcModExp() { /* 345 (0x159) */
     ENTER;
 
@@ -4272,7 +5482,7 @@ xboxkrnl_XcModExp() { /* 345 (0x159) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcDESKeyParity() { /* 346 (0x15a) */
     ENTER;
 
@@ -4281,7 +5491,7 @@ xboxkrnl_XcDESKeyParity() { /* 346 (0x15a) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcKeyTable() { /* 347 (0x15b) */
     ENTER;
 
@@ -4290,7 +5500,7 @@ xboxkrnl_XcKeyTable() { /* 347 (0x15b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcBlockCrypt() { /* 348 (0x15c) */
     ENTER;
 
@@ -4299,7 +5509,7 @@ xboxkrnl_XcBlockCrypt() { /* 348 (0x15c) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcBlockCryptCBC() { /* 349 (0x15d) */
     ENTER;
 
@@ -4308,7 +5518,7 @@ xboxkrnl_XcBlockCryptCBC() { /* 349 (0x15d) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcCryptService() { /* 350 (0x15e) */
     ENTER;
 
@@ -4317,7 +5527,7 @@ xboxkrnl_XcCryptService() { /* 350 (0x15e) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_XcUpdateCrypto() { /* 351 (0x15f) */
     ENTER;
 
@@ -4326,7 +5536,7 @@ xboxkrnl_XcUpdateCrypto() { /* 351 (0x15f) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_DbgLoadImageSymbols() { /* 007 (0x007) */
     ENTER;
 
@@ -4335,7 +5545,7 @@ xboxkrnl_DbgLoadImageSymbols() { /* 007 (0x007) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_DbgUnLoadImageSymbols() { /* 011 (0x00b) */
     ENTER;
 
@@ -4344,7 +5554,7 @@ xboxkrnl_DbgUnLoadImageSymbols() { /* 011 (0x00b) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmDbgAllocateMemory() { /* 374 (0x176) */
     ENTER;
 
@@ -4353,7 +5563,7 @@ xboxkrnl_MmDbgAllocateMemory() { /* 374 (0x176) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmDbgFreeMemory() { /* 375 (0x177) */
     ENTER;
 
@@ -4362,7 +5572,7 @@ xboxkrnl_MmDbgFreeMemory() { /* 375 (0x177) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmDbgQueryAvailablePages() { /* 376 (0x178) */
     ENTER;
 
@@ -4371,7 +5581,7 @@ xboxkrnl_MmDbgQueryAvailablePages() { /* 376 (0x178) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmDbgReleaseAddress() { /* 377 (0x179) */
     ENTER;
 
@@ -4380,7 +5590,7 @@ xboxkrnl_MmDbgReleaseAddress() { /* 377 (0x179) */
 
     LEAVE;
 }
-STDCALL void
+static STDCALL void
 xboxkrnl_MmDbgWriteCheck() { /* 378 (0x17a) */
     ENTER;
 
@@ -4390,379 +5600,447 @@ xboxkrnl_MmDbgWriteCheck() { /* 378 (0x17a) */
     LEAVE;
 }
 
-static const void *xboxkrnl_thunk[] = {
-    /* 001 */ [0x001] = &xboxkrnl_AvGetSavedDataAddress,
-    /* 002 */ [0x002] = &xboxkrnl_AvSendTVEncoderOption,
-    /* 003 */ [0x003] = &xboxkrnl_AvSetDisplayMode,
-    /* 004 */ [0x004] = &xboxkrnl_AvSetSavedDataAddress,
-    /* 005 */ [0x005] = &xboxkrnl_DbgBreakPoint,
-    /* 006 */ [0x006] = &xboxkrnl_DbgBreakPointWithStatus,
-    /* 008 */ [0x008] = &xboxkrnl_DbgPrint,
-    /* 010 */ [0x00a] = &xboxkrnl_DbgPrompt,
-    /* 012 */ [0x00c] = &xboxkrnl_ExAcquireReadWriteLockExclusive,
-    /* 013 */ [0x00d] = &xboxkrnl_ExAcquireReadWriteLockShared,
-    /* 014 */ [0x00e] = &xboxkrnl_ExAllocatePool,
-    /* 015 */ [0x00f] = &xboxkrnl_ExAllocatePoolWithTag,
-    /* 016 */ [0x010] = &xboxkrnl_ExEventObjectType,
-    /* 017 */ [0x011] = &xboxkrnl_ExFreePool,
-    /* 018 */ [0x012] = &xboxkrnl_ExInitializeReadWriteLock,
-    /* 019 */ [0x013] = &xboxkrnl_ExInterlockedAddLargeInteger,
-    /* 020 */ [0x014] = &xboxkrnl_ExInterlockedAddLargeStatistic, /* fastcall */
-    /* 021 */ [0x015] = &xboxkrnl_ExInterlockedCompareExchange64, /* fastcall */
-    /* 022 */ [0x016] = &xboxkrnl_ExMutantObjectType,
-    /* 023 */ [0x017] = &xboxkrnl_ExQueryPoolBlockSize,
-    /* 024 */ [0x018] = &xboxkrnl_ExQueryNonVolatileSetting,
-    /* 025 */ [0x019] = &xboxkrnl_ExReadWriteRefurbInfo,
-    /* 026 */ [0x01a] = &xboxkrnl_ExRaiseException,
-    /* 027 */ [0x01b] = &xboxkrnl_ExRaiseStatus,
-    /* 028 */ [0x01c] = &xboxkrnl_ExReleaseReadWriteLock,
-    /* 029 */ [0x01d] = &xboxkrnl_ExSaveNonVolatileSetting,
-    /* 030 */ [0x01e] = &xboxkrnl_ExSemaphoreObjectType,
-    /* 031 */ [0x01f] = &xboxkrnl_ExTimerObjectType,
-    /* 032 */ [0x020] = &xboxkrnl_ExfInterlockedInsertHeadList,
-    /* 033 */ [0x021] = &xboxkrnl_ExfInterlockedInsertTailList, /* fastcall */
-    /* 034 */ [0x022] = &xboxkrnl_ExfInterlockedRemoveHeadList, /* fastcall */
-    /* 035 */ [0x023] = &xboxkrnl_FscGetCacheSize,
-    /* 036 */ [0x024] = &xboxkrnl_FscInvalidateIdleBlocks,
-    /* 037 */ [0x025] = &xboxkrnl_FscSetCacheSize,
-    /* 356 */ [0x164] = &xboxkrnl_HalBootSMCVideoMode,
-    /* 038 */ [0x026] = &xboxkrnl_HalClearSoftwareInterrupt, /* fastcall */
-    /* 039 */ [0x027] = &xboxkrnl_HalDisableSystemInterrupt,
-    /* 040 */ [0x028] = &xboxkrnl_HalDiskCachePartitionCount,
-    /* 041 */ [0x029] = &xboxkrnl_HalDiskModelNumber,
-    /* 042 */ [0x02a] = &xboxkrnl_HalDiskSerialNumber,
-    /* 365 */ [0x16d] = &xboxkrnl_HalEnableSecureTrayEject,
-    /* 043 */ [0x02b] = &xboxkrnl_HalEnableSystemInterrupt,
-    /* 044 */ [0x02c] = &xboxkrnl_HalGetInterruptVector,
-    /* 360 */ [0x168] = &xboxkrnl_HalInitiateShutdown,
-    /* 358 */ [0x166] = &xboxkrnl_HalIsResetOrShutdownPending,
-    /* 045 */ [0x02d] = &xboxkrnl_HalReadSMBusValue,
-    /* 009 */ [0x009] = &xboxkrnl_HalReadSMCTrayState,
-    /* 046 */ [0x02e] = &xboxkrnl_HalReadWritePCISpace,
-    /* 047 */ [0x02f] = &xboxkrnl_HalRegisterShutdownNotification,
-    /* 048 */ [0x030] = &xboxkrnl_HalRequestSoftwareInterrupt, /* fastcall */
-    /* 049 */ [0x031] = &xboxkrnl_HalReturnToFirmware,
-    /* 050 */ [0x032] = &xboxkrnl_HalWriteSMBusValue,
-    /* 366 */ [0x16e] = &xboxkrnl_HalWriteSMCScratchRegister,
-    /* 357 */ [0x165] = &xboxkrnl_IdexChannelObject,
-    /* 051 */ [0x033] = &xboxkrnl_InterlockedCompareExchange, /* fastcall */
-    /* 052 */ [0x034] = &xboxkrnl_InterlockedDecrement, /* fastcall */
-    /* 053 */ [0x035] = &xboxkrnl_InterlockedIncrement, /* fastcall */
-    /* 054 */ [0x036] = &xboxkrnl_InterlockedExchange, /* fastcall */
-    /* 055 */ [0x037] = &xboxkrnl_InterlockedExchangeAdd, /* fastcall */
-    /* 056 */ [0x038] = &xboxkrnl_InterlockedFlushSList, /* fastcall */
-    /* 057 */ [0x039] = &xboxkrnl_InterlockedPopEntrySList, /* fastcall */
-    /* 058 */ [0x03a] = &xboxkrnl_InterlockedPushEntrySList, /* fastcall */
-    /* 059 */ [0x03b] = &xboxkrnl_IoAllocateIrp,
-    /* 060 */ [0x03c] = &xboxkrnl_IoBuildAsynchronousFsdRequest,
-    /* 061 */ [0x03d] = &xboxkrnl_IoBuildDeviceIoControlRequest,
-    /* 062 */ [0x03e] = &xboxkrnl_IoBuildSynchronousFsdRequest,
-    /* 063 */ [0x03f] = &xboxkrnl_IoCheckShareAccess,
-    /* 064 */ [0x040] = &xboxkrnl_IoCompletionObjectType,
-    /* 065 */ [0x041] = &xboxkrnl_IoCreateDevice,
-    /* 066 */ [0x042] = &xboxkrnl_IoCreateFile,
-    /* 067 */ [0x043] = &xboxkrnl_IoCreateSymbolicLink,
-    /* 068 */ [0x044] = &xboxkrnl_IoDeleteDevice,
-    /* 069 */ [0x045] = &xboxkrnl_IoDeleteSymbolicLink,
-    /* 070 */ [0x046] = &xboxkrnl_IoDeviceObjectType,
-    /* 090 */ [0x05a] = &xboxkrnl_IoDismountVolume,
-    /* 091 */ [0x05b] = &xboxkrnl_IoDismountVolumeByName,
-    /* 071 */ [0x047] = &xboxkrnl_IoFileObjectType,
-    /* 072 */ [0x048] = &xboxkrnl_IoFreeIrp,
-    /* 073 */ [0x049] = &xboxkrnl_IoInitializeIrp,
-    /* 074 */ [0x04a] = &xboxkrnl_IoInvalidDeviceRequest,
-    /* 359 */ [0x167] = &xboxkrnl_IoMarkIrpMustComplete,
-    /* 075 */ [0x04b] = &xboxkrnl_IoQueryFileInformation,
-    /* 076 */ [0x04c] = &xboxkrnl_IoQueryVolumeInformation,
-    /* 077 */ [0x04d] = &xboxkrnl_IoQueueThreadIrp,
-    /* 078 */ [0x04e] = &xboxkrnl_IoRemoveShareAccess,
-    /* 079 */ [0x04f] = &xboxkrnl_IoSetIoCompletion,
-    /* 080 */ [0x050] = &xboxkrnl_IoSetShareAccess,
-    /* 081 */ [0x051] = &xboxkrnl_IoStartNextPacket,
-    /* 082 */ [0x052] = &xboxkrnl_IoStartNextPacketByKey,
-    /* 083 */ [0x053] = &xboxkrnl_IoStartPacket,
-    /* 084 */ [0x054] = &xboxkrnl_IoSynchronousDeviceIoControlRequest,
-    /* 085 */ [0x055] = &xboxkrnl_IoSynchronousFsdRequest,
-    /* 086 */ [0x056] = &xboxkrnl_IofCallDriver, /* fastcall */
-    /* 087 */ [0x057] = &xboxkrnl_IofCompleteRequest, /* fastcall */
-    /* 088 */ [0x058] = &xboxkrnl_KdDebuggerEnabled,
-    /* 089 */ [0x059] = &xboxkrnl_KdDebuggerNotPresent,
-    /* 092 */ [0x05c] = &xboxkrnl_KeAlertResumeThread,
-    /* 093 */ [0x05d] = &xboxkrnl_KeAlertThread,
-    /* 094 */ [0x05e] = &xboxkrnl_KeBoostPriorityThread,
-    /* 095 */ [0x05f] = &xboxkrnl_KeBugCheck,
-    /* 096 */ [0x060] = &xboxkrnl_KeBugCheckEx,
-    /* 097 */ [0x061] = &xboxkrnl_KeCancelTimer,
-    /* 098 */ [0x062] = &xboxkrnl_KeConnectInterrupt,
-    /* 099 */ [0x063] = &xboxkrnl_KeDelayExecutionThread,
-    /* 100 */ [0x064] = &xboxkrnl_KeDisconnectInterrupt,
-    /* 101 */ [0x065] = &xboxkrnl_KeEnterCriticalRegion,
-    /* 103 */ [0x067] = &xboxkrnl_KeGetCurrentIrql,
-    /* 104 */ [0x068] = &xboxkrnl_KeGetCurrentThread,
-    /* 105 */ [0x069] = &xboxkrnl_KeInitializeApc,
-    /* 106 */ [0x06a] = &xboxkrnl_KeInitializeDeviceQueue,
-    /* 107 */ [0x06b] = &xboxkrnl_KeInitializeDpc,
-    /* 108 */ [0x06c] = &xboxkrnl_KeInitializeEvent,
-    /* 109 */ [0x06d] = &xboxkrnl_KeInitializeInterrupt,
-    /* 110 */ [0x06e] = &xboxkrnl_KeInitializeMutant,
-    /* 111 */ [0x06f] = &xboxkrnl_KeInitializeQueue,
-    /* 112 */ [0x070] = &xboxkrnl_KeInitializeSemaphore,
-    /* 113 */ [0x071] = &xboxkrnl_KeInitializeTimerEx,
-    /* 114 */ [0x072] = &xboxkrnl_KeInsertByKeyDeviceQueue,
-    /* 115 */ [0x073] = &xboxkrnl_KeInsertDeviceQueue,
-    /* 116 */ [0x074] = &xboxkrnl_KeInsertHeadQueue,
-    /* 117 */ [0x075] = &xboxkrnl_KeInsertQueue,
-    /* 118 */ [0x076] = &xboxkrnl_KeInsertQueueApc,
-    /* 119 */ [0x077] = &xboxkrnl_KeInsertQueueDpc,
-    /* 120 */ [0x078] = &xboxkrnl_KeInterruptTime,
-    /* 121 */ [0x079] = &xboxkrnl_KeIsExecutingDpc,
-    /* 122 */ [0x07a] = &xboxkrnl_KeLeaveCriticalRegion,
-    /* 123 */ [0x07b] = &xboxkrnl_KePulseEvent,
-    /* 124 */ [0x07c] = &xboxkrnl_KeQueryBasePriorityThread,
-    /* 125 */ [0x07d] = &xboxkrnl_KeQueryInterruptTime,
-    /* 126 */ [0x07e] = &xboxkrnl_KeQueryPerformanceCounter,
-    /* 127 */ [0x07f] = &xboxkrnl_KeQueryPerformanceFrequency,
-    /* 128 */ [0x080] = &xboxkrnl_KeQuerySystemTime,
-    /* 129 */ [0x081] = &xboxkrnl_KeRaiseIrqlToDpcLevel,
-    /* 130 */ [0x082] = &xboxkrnl_KeRaiseIrqlToSynchLevel,
-    /* 131 */ [0x083] = &xboxkrnl_KeReleaseMutant,
-    /* 132 */ [0x084] = &xboxkrnl_KeReleaseSemaphore,
-    /* 133 */ [0x085] = &xboxkrnl_KeRemoveByKeyDeviceQueue,
-    /* 134 */ [0x086] = &xboxkrnl_KeRemoveDeviceQueue,
-    /* 135 */ [0x087] = &xboxkrnl_KeRemoveEntryDeviceQueue,
-    /* 136 */ [0x088] = &xboxkrnl_KeRemoveQueue,
-    /* 137 */ [0x089] = &xboxkrnl_KeRemoveQueueDpc,
-    /* 138 */ [0x08a] = &xboxkrnl_KeResetEvent,
-    /* 139 */ [0x08b] = &xboxkrnl_KeRestoreFloatingPointState,
-    /* 140 */ [0x08c] = &xboxkrnl_KeResumeThread,
-    /* 141 */ [0x08d] = &xboxkrnl_KeRundownQueue,
-    /* 142 */ [0x08e] = &xboxkrnl_KeSaveFloatingPointState,
-    /* 143 */ [0x08f] = &xboxkrnl_KeSetBasePriorityThread,
-    /* 144 */ [0x090] = &xboxkrnl_KeSetDisableBoostThread,
-    /* 145 */ [0x091] = &xboxkrnl_KeSetEvent,
-    /* 146 */ [0x092] = &xboxkrnl_KeSetEventBoostPriority,
-    /* 147 */ [0x093] = &xboxkrnl_KeSetPriorityProcess,
-    /* 148 */ [0x094] = &xboxkrnl_KeSetPriorityThread,
-    /* 149 */ [0x095] = &xboxkrnl_KeSetTimer,
-    /* 150 */ [0x096] = &xboxkrnl_KeSetTimerEx,
-    /* 151 */ [0x097] = &xboxkrnl_KeStallExecutionProcessor,
-    /* 152 */ [0x098] = &xboxkrnl_KeSuspendThread,
-    /* 153 */ [0x099] = &xboxkrnl_KeSynchronizeExecution,
-    /* 154 */ [0x09a] = &xboxkrnl_KeSystemTime,
-    /* 155 */ [0x09b] = &xboxkrnl_KeTestAlertThread,
-    /* 156 */ [0x09c] = &xboxkrnl_KeTickCount,
-    /* 157 */ [0x09d] = &xboxkrnl_KeTimeIncrement,
-    /* 158 */ [0x09e] = &xboxkrnl_KeWaitForMultipleObjects,
-    /* 159 */ [0x09f] = &xboxkrnl_KeWaitForSingleObject,
-    /* 160 */ [0x0a0] = &xboxkrnl_KfRaiseIrql, /* fastcall */
-    /* 161 */ [0x0a1] = &xboxkrnl_KfLowerIrql, /* fastcall */
-    /* 162 */ [0x0a2] = &xboxkrnl_KiBugCheckData,
-    /* 163 */ [0x0a3] = &xboxkrnl_KiUnlockDispatcherDatabase, /* fastcall */
-    /* 164 */ [0x0a4] = &xboxkrnl_LaunchDataPage,
-    /* 165 */ [0x0a5] = &xboxkrnl_MmAllocateContiguousMemory,
-    /* 166 */ [0x0a6] = &xboxkrnl_MmAllocateContiguousMemoryEx,
-    /* 167 */ [0x0a7] = &xboxkrnl_MmAllocateSystemMemory,
-    /* 168 */ [0x0a8] = &xboxkrnl_MmClaimGpuInstanceMemory,
-    /* 169 */ [0x0a9] = &xboxkrnl_MmCreateKernelStack,
-    /* 170 */ [0x0aa] = &xboxkrnl_MmDeleteKernelStack,
-    /* 171 */ [0x0ab] = &xboxkrnl_MmFreeContiguousMemory,
-    /* 172 */ [0x0ac] = &xboxkrnl_MmFreeSystemMemory,
-    /* 173 */ [0x0ad] = &xboxkrnl_MmGetPhysicalAddress,
-    /* 102 */ [0x066] = &xboxkrnl_MmGlobalData,
-    /* 174 */ [0x0ae] = &xboxkrnl_MmIsAddressValid,
-    /* 175 */ [0x0af] = &xboxkrnl_MmLockUnlockBufferPages,
-    /* 176 */ [0x0b0] = &xboxkrnl_MmLockUnlockPhysicalPage,
-    /* 177 */ [0x0b1] = &xboxkrnl_MmMapIoSpace,
-    /* 178 */ [0x0b2] = &xboxkrnl_MmPersistContiguousMemory,
-    /* 179 */ [0x0b3] = &xboxkrnl_MmQueryAddressProtect,
-    /* 180 */ [0x0b4] = &xboxkrnl_MmQueryAllocationSize,
-    /* 181 */ [0x0b5] = &xboxkrnl_MmQueryStatistics,
-    /* 182 */ [0x0b6] = &xboxkrnl_MmSetAddressProtect,
-    /* 183 */ [0x0b7] = &xboxkrnl_MmUnmapIoSpace,
-    /* 184 */ [0x0b8] = &xboxkrnl_NtAllocateVirtualMemory,
-    /* 185 */ [0x0b9] = &xboxkrnl_NtCancelTimer,
-    /* 186 */ [0x0ba] = &xboxkrnl_NtClearEvent,
-    /* 187 */ [0x0bb] = &xboxkrnl_NtClose,
-    /* 188 */ [0x0bc] = &xboxkrnl_NtCreateDirectoryObject,
-    /* 189 */ [0x0bd] = &xboxkrnl_NtCreateEvent,
-    /* 190 */ [0x0be] = &xboxkrnl_NtCreateFile,
-    /* 191 */ [0x0bf] = &xboxkrnl_NtCreateIoCompletion,
-    /* 192 */ [0x0c0] = &xboxkrnl_NtCreateMutant,
-    /* 193 */ [0x0c1] = &xboxkrnl_NtCreateSemaphore,
-    /* 194 */ [0x0c2] = &xboxkrnl_NtCreateTimer,
-    /* 195 */ [0x0c3] = &xboxkrnl_NtDeleteFile,
-    /* 196 */ [0x0c4] = &xboxkrnl_NtDeviceIoControlFile,
-    /* 197 */ [0x0c5] = &xboxkrnl_NtDuplicateObject,
-    /* 198 */ [0x0c6] = &xboxkrnl_NtFlushBuffersFile,
-    /* 199 */ [0x0c7] = &xboxkrnl_NtFreeVirtualMemory,
-    /* 200 */ [0x0c8] = &xboxkrnl_NtFsControlFile,
-    /* 201 */ [0x0c9] = &xboxkrnl_NtOpenDirectoryObject,
-    /* 202 */ [0x0ca] = &xboxkrnl_NtOpenFile,
-    /* 203 */ [0x0cb] = &xboxkrnl_NtOpenSymbolicLinkObject,
-    /* 204 */ [0x0cc] = &xboxkrnl_NtProtectVirtualMemory,
-    /* 205 */ [0x0cd] = &xboxkrnl_NtPulseEvent,
-    /* 206 */ [0x0ce] = &xboxkrnl_NtQueueApcThread,
-    /* 207 */ [0x0cf] = &xboxkrnl_NtQueryDirectoryFile,
-    /* 208 */ [0x0d0] = &xboxkrnl_NtQueryDirectoryObject,
-    /* 209 */ [0x0d1] = &xboxkrnl_NtQueryEvent,
-    /* 210 */ [0x0d2] = &xboxkrnl_NtQueryFullAttributesFile,
-    /* 211 */ [0x0d3] = &xboxkrnl_NtQueryInformationFile,
-    /* 212 */ [0x0d4] = &xboxkrnl_NtQueryIoCompletion,
-    /* 213 */ [0x0d5] = &xboxkrnl_NtQueryMutant,
-    /* 214 */ [0x0d6] = &xboxkrnl_NtQuerySemaphore,
-    /* 215 */ [0x0d7] = &xboxkrnl_NtQuerySymbolicLinkObject,
-    /* 216 */ [0x0d8] = &xboxkrnl_NtQueryTimer,
-    /* 217 */ [0x0d9] = &xboxkrnl_NtQueryVirtualMemory,
-    /* 218 */ [0x0da] = &xboxkrnl_NtQueryVolumeInformationFile,
-    /* 219 */ [0x0db] = &xboxkrnl_NtReadFile,
-    /* 220 */ [0x0dc] = &xboxkrnl_NtReadFileScatter,
-    /* 221 */ [0x0dd] = &xboxkrnl_NtReleaseMutant,
-    /* 222 */ [0x0de] = &xboxkrnl_NtReleaseSemaphore,
-    /* 223 */ [0x0df] = &xboxkrnl_NtRemoveIoCompletion,
-    /* 224 */ [0x0e0] = &xboxkrnl_NtResumeThread,
-    /* 225 */ [0x0e1] = &xboxkrnl_NtSetEvent,
-    /* 226 */ [0x0e2] = &xboxkrnl_NtSetInformationFile,
-    /* 227 */ [0x0e3] = &xboxkrnl_NtSetIoCompletion,
-    /* 228 */ [0x0e4] = &xboxkrnl_NtSetSystemTime,
-    /* 229 */ [0x0e5] = &xboxkrnl_NtSetTimerEx,
-    /* 230 */ [0x0e6] = &xboxkrnl_NtSignalAndWaitForSingleObjectEx,
-    /* 231 */ [0x0e7] = &xboxkrnl_NtSuspendThread,
-    /* 232 */ [0x0e8] = &xboxkrnl_NtUserIoApcDispatcher,
-    /* 233 */ [0x0e9] = &xboxkrnl_NtWaitForSingleObject,
-    /* 234 */ [0x0ea] = &xboxkrnl_NtWaitForSingleObjectEx,
-    /* 235 */ [0x0eb] = &xboxkrnl_NtWaitForMultipleObjectsEx,
-    /* 236 */ [0x0ec] = &xboxkrnl_NtWriteFile,
-    /* 237 */ [0x0ed] = &xboxkrnl_NtWriteFileGather,
-    /* 238 */ [0x0ee] = &xboxkrnl_NtYieldExecution,
-    /* 239 */ [0x0ef] = &xboxkrnl_ObCreateObject,
-    /* 240 */ [0x0f0] = &xboxkrnl_ObDirectoryObjectType,
-    /* 241 */ [0x0f1] = &xboxkrnl_ObInsertObject,
-    /* 242 */ [0x0f2] = &xboxkrnl_ObMakeTemporaryObject,
-    /* 243 */ [0x0f3] = &xboxkrnl_ObOpenObjectByName,
-    /* 244 */ [0x0f4] = &xboxkrnl_ObOpenObjectByPointer,
-    /* 245 */ [0x0f5] = &xboxkrnl_ObpObjectHandleTable,
-    /* 246 */ [0x0f6] = &xboxkrnl_ObReferenceObjectByHandle,
-    /* 247 */ [0x0f7] = &xboxkrnl_ObReferenceObjectByName,
-    /* 248 */ [0x0f8] = &xboxkrnl_ObReferenceObjectByPointer,
-    /* 249 */ [0x0f9] = &xboxkrnl_ObSymbolicLinkObjectType,
-    /* 250 */ [0x0fa] = &xboxkrnl_ObfDereferenceObject, /* fastcall */
-    /* 251 */ [0x0fb] = &xboxkrnl_ObfReferenceObject, /* fastcall */
-    /* 252 */ [0x0fc] = &xboxkrnl_PhyGetLinkState,
-    /* 253 */ [0x0fd] = &xboxkrnl_PhyInitialize,
-    /* 254 */ [0x0fe] = &xboxkrnl_PsCreateSystemThread,
-    /* 255 */ [0x0ff] = &xboxkrnl_PsCreateSystemThreadEx,
-    /* 256 */ [0x100] = &xboxkrnl_PsQueryStatistics,
-    /* 257 */ [0x101] = &xboxkrnl_PsSetCreateThreadNotifyRoutine,
-    /* 258 */ [0x102] = &xboxkrnl_PsTerminateSystemThread,
-    /* 259 */ [0x103] = &xboxkrnl_PsThreadObjectType,
-    /* 260 */ [0x104] = &xboxkrnl_RtlAnsiStringToUnicodeString,
-    /* 261 */ [0x105] = &xboxkrnl_RtlAppendStringToString,
-    /* 262 */ [0x106] = &xboxkrnl_RtlAppendUnicodeStringToString,
-    /* 263 */ [0x107] = &xboxkrnl_RtlAppendUnicodeToString,
-    /* 264 */ [0x108] = &xboxkrnl_RtlAssert,
-    /* 265 */ [0x109] = &xboxkrnl_RtlCaptureContext,
-    /* 266 */ [0x10a] = &xboxkrnl_RtlCaptureStackBackTrace,
-    /* 267 */ [0x10b] = &xboxkrnl_RtlCharToInteger,
-    /* 268 */ [0x10c] = &xboxkrnl_RtlCompareMemory,
-    /* 269 */ [0x10d] = &xboxkrnl_RtlCompareMemoryUlong,
-    /* 270 */ [0x10e] = &xboxkrnl_RtlCompareString,
-    /* 271 */ [0x10f] = &xboxkrnl_RtlCompareUnicodeString,
-    /* 272 */ [0x110] = &xboxkrnl_RtlCopyString,
-    /* 273 */ [0x111] = &xboxkrnl_RtlCopyUnicodeString,
-    /* 274 */ [0x112] = &xboxkrnl_RtlCreateUnicodeString,
-    /* 275 */ [0x113] = &xboxkrnl_RtlDowncaseUnicodeChar,
-    /* 276 */ [0x114] = &xboxkrnl_RtlDowncaseUnicodeString,
-    /* 277 */ [0x115] = &xboxkrnl_RtlEnterCriticalSection,
-    /* 278 */ [0x116] = &xboxkrnl_RtlEnterCriticalSectionAndRegion,
-    /* 279 */ [0x117] = &xboxkrnl_RtlEqualString,
-    /* 280 */ [0x118] = &xboxkrnl_RtlEqualUnicodeString,
-    /* 281 */ [0x119] = &xboxkrnl_RtlExtendedIntegerMultiply,
-    /* 282 */ [0x11a] = &xboxkrnl_RtlExtendedLargeIntegerDivide,
-    /* 283 */ [0x11b] = &xboxkrnl_RtlExtendedMagicDivide,
-    /* 284 */ [0x11c] = &xboxkrnl_RtlFillMemory,
-    /* 285 */ [0x11d] = &xboxkrnl_RtlFillMemoryUlong,
-    /* 286 */ [0x11e] = &xboxkrnl_RtlFreeAnsiString,
-    /* 287 */ [0x11f] = &xboxkrnl_RtlFreeUnicodeString,
-    /* 288 */ [0x120] = &xboxkrnl_RtlGetCallersAddress,
-    /* 289 */ [0x121] = &xboxkrnl_RtlInitAnsiString,
-    /* 290 */ [0x122] = &xboxkrnl_RtlInitUnicodeString,
-    /* 291 */ [0x123] = &xboxkrnl_RtlInitializeCriticalSection,
-    /* 292 */ [0x124] = &xboxkrnl_RtlIntegerToChar,
-    /* 293 */ [0x125] = &xboxkrnl_RtlIntegerToUnicodeString,
-    /* 294 */ [0x126] = &xboxkrnl_RtlLeaveCriticalSection,
-    /* 295 */ [0x127] = &xboxkrnl_RtlLeaveCriticalSectionAndRegion,
-    /* 296 */ [0x128] = &xboxkrnl_RtlLowerChar,
-    /* 297 */ [0x129] = &xboxkrnl_RtlMapGenericMask,
-    /* 298 */ [0x12a] = &xboxkrnl_RtlMoveMemory,
-    /* 299 */ [0x12b] = &xboxkrnl_RtlMultiByteToUnicodeN,
-    /* 300 */ [0x12c] = &xboxkrnl_RtlMultiByteToUnicodeSize,
-    /* 301 */ [0x12d] = &xboxkrnl_RtlNtStatusToDosError,
-    /* 302 */ [0x12e] = &xboxkrnl_RtlRaiseException,
-    /* 303 */ [0x12f] = &xboxkrnl_RtlRaiseStatus,
-    /* 352 */ [0x160] = &xboxkrnl_RtlRip,
-    /* 361 */ [0x169] = &xboxkrnl_RtlSnprintf,
-    /* 362 */ [0x16a] = &xboxkrnl_RtlSprintf,
-    /* 304 */ [0x130] = &xboxkrnl_RtlTimeFieldsToTime,
-    /* 305 */ [0x131] = &xboxkrnl_RtlTimeToTimeFields,
-    /* 306 */ [0x132] = &xboxkrnl_RtlTryEnterCriticalSection,
-    /* 307 */ [0x133] = &xboxkrnl_RtlUlongByteSwap, /* fastcall */
-    /* 308 */ [0x134] = &xboxkrnl_RtlUnicodeStringToAnsiString,
-    /* 309 */ [0x135] = &xboxkrnl_RtlUnicodeStringToInteger,
-    /* 310 */ [0x136] = &xboxkrnl_RtlUnicodeToMultiByteN,
-    /* 311 */ [0x137] = &xboxkrnl_RtlUnicodeToMultiByteSize,
-    /* 312 */ [0x138] = &xboxkrnl_RtlUnwind,
-    /* 313 */ [0x139] = &xboxkrnl_RtlUpcaseUnicodeChar,
-    /* 314 */ [0x13a] = &xboxkrnl_RtlUpcaseUnicodeString,
-    /* 315 */ [0x13b] = &xboxkrnl_RtlUpcaseUnicodeToMultiByteN,
-    /* 316 */ [0x13c] = &xboxkrnl_RtlUpperChar,
-    /* 317 */ [0x13d] = &xboxkrnl_RtlUpperString,
-    /* 318 */ [0x13e] = &xboxkrnl_RtlUshortByteSwap, /* fastcall */
-    /* 363 */ [0x16b] = &xboxkrnl_RtlVsnprintf,
-    /* 364 */ [0x16c] = &xboxkrnl_RtlVsprintf,
-    /* 319 */ [0x13f] = &xboxkrnl_RtlWalkFrameChain,
-    /* 320 */ [0x140] = &xboxkrnl_RtlZeroMemory,
-    /* 354 */ [0x162] = &xboxkrnl_XboxAlternateSignatureKeys,
-    /* 321 */ [0x141] = &xboxkrnl_XboxEEPROMKey,
-    /* 322 */ [0x142] = &xboxkrnl_XboxHardwareInfo,
-    /* 323 */ [0x143] = &xboxkrnl_XboxHDKey,
-    /* 353 */ [0x161] = &xboxkrnl_XboxLANKey,
-    /* 324 */ [0x144] = &xboxkrnl_XboxKrnlVersion,
-    /* 325 */ [0x145] = &xboxkrnl_XboxSignatureKey,
-    /* 326 */ [0x146] = &xboxkrnl_XeImageFileName,
-    /* 327 */ [0x147] = &xboxkrnl_XeLoadSection,
-    /* 355 */ [0x163] = &xboxkrnl_XePublicKeyData,
-    /* 328 */ [0x148] = &xboxkrnl_XeUnloadSection,
-    /* 329 */ [0x149] = &xboxkrnl_READ_PORT_BUFFER_UCHAR,
-    /* 330 */ [0x14a] = &xboxkrnl_READ_PORT_BUFFER_USHORT,
-    /* 331 */ [0x14b] = &xboxkrnl_READ_PORT_BUFFER_ULONG,
-    /* 332 */ [0x14c] = &xboxkrnl_WRITE_PORT_BUFFER_UCHAR,
-    /* 333 */ [0x14d] = &xboxkrnl_WRITE_PORT_BUFFER_USHORT,
-    /* 334 */ [0x14e] = &xboxkrnl_WRITE_PORT_BUFFER_ULONG,
-    /* 335 */ [0x14f] = &xboxkrnl_XcSHAInit,
-    /* 336 */ [0x150] = &xboxkrnl_XcSHAUpdate,
-    /* 337 */ [0x151] = &xboxkrnl_XcSHAFinal,
-    /* 338 */ [0x152] = &xboxkrnl_XcRC4Key,
-    /* 339 */ [0x153] = &xboxkrnl_XcRC4Crypt,
-    /* 340 */ [0x154] = &xboxkrnl_XcHMAC,
-    /* 341 */ [0x155] = &xboxkrnl_XcPKEncPublic,
-    /* 342 */ [0x156] = &xboxkrnl_XcPKDecPrivate,
-    /* 343 */ [0x157] = &xboxkrnl_XcPKGetKeyLen,
-    /* 344 */ [0x158] = &xboxkrnl_XcVerifyPKCS1Signature,
-    /* 345 */ [0x159] = &xboxkrnl_XcModExp,
-    /* 346 */ [0x15a] = &xboxkrnl_XcDESKeyParity,
-    /* 347 */ [0x15b] = &xboxkrnl_XcKeyTable,
-    /* 348 */ [0x15c] = &xboxkrnl_XcBlockCrypt,
-    /* 349 */ [0x15d] = &xboxkrnl_XcBlockCryptCBC,
-    /* 350 */ [0x15e] = &xboxkrnl_XcCryptService,
-    /* 351 */ [0x15f] = &xboxkrnl_XcUpdateCrypto,
+static const void *const xboxkrnl_thunk[] = {
+    /* 001 */ [0x001] = &xboxkrnl_AvGetSavedDataAddress,                /* stdcall */
+    /* 002 */ [0x002] = &xboxkrnl_AvSendTVEncoderOption,                /* stdcall */
+    /* 003 */ [0x003] = &xboxkrnl_AvSetDisplayMode,                     /* stdcall */
+    /* 004 */ [0x004] = &xboxkrnl_AvSetSavedDataAddress,                /* stdcall */
+    /* 005 */ [0x005] = &xboxkrnl_DbgBreakPoint,                        /* stdcall */
+    /* 006 */ [0x006] = &xboxkrnl_DbgBreakPointWithStatus,              /* stdcall */
+    /* 008 */ [0x008] = &xboxkrnl_DbgPrint,                             /* stdcall */
+    /* 010 */ [0x00a] = &xboxkrnl_DbgPrompt,                            /* stdcall */
+    /* 012 */ [0x00c] = &xboxkrnl_ExAcquireReadWriteLockExclusive,      /* stdcall */
+    /* 013 */ [0x00d] = &xboxkrnl_ExAcquireReadWriteLockShared,         /* stdcall */
+    /* 014 */ [0x00e] = &xboxkrnl_ExAllocatePool,                       /* stdcall */
+    /* 015 */ [0x00f] = &xboxkrnl_ExAllocatePoolWithTag,                /* stdcall */
+#if 0
+    /* 016 */ [0x010] = &xboxkrnl_ExEventObjectType,                    /* variable */
+#endif
+    /* 017 */ [0x011] = &xboxkrnl_ExFreePool,                           /* stdcall */
+    /* 018 */ [0x012] = &xboxkrnl_ExInitializeReadWriteLock,            /* stdcall */
+    /* 019 */ [0x013] = &xboxkrnl_ExInterlockedAddLargeInteger,         /* stdcall */
+    /* 020 */ [0x014] = &xboxkrnl_ExInterlockedAddLargeStatistic,       /* fastcall */
+    /* 021 */ [0x015] = &xboxkrnl_ExInterlockedCompareExchange64,       /* fastcall */
+#if 0
+    /* 022 */ [0x016] = &xboxkrnl_ExMutantObjectType,                   /* variable */
+#endif
+    /* 023 */ [0x017] = &xboxkrnl_ExQueryPoolBlockSize,                 /* stdcall */
+    /* 024 */ [0x018] = &xboxkrnl_ExQueryNonVolatileSetting,            /* stdcall */
+    /* 025 */ [0x019] = &xboxkrnl_ExReadWriteRefurbInfo,                /* stdcall */
+    /* 026 */ [0x01a] = &xboxkrnl_ExRaiseException,                     /* stdcall */
+    /* 027 */ [0x01b] = &xboxkrnl_ExRaiseStatus,                        /* stdcall */
+    /* 028 */ [0x01c] = &xboxkrnl_ExReleaseReadWriteLock,               /* stdcall */
+    /* 029 */ [0x01d] = &xboxkrnl_ExSaveNonVolatileSetting,             /* stdcall */
+#if 0
+    /* 030 */ [0x01e] = &xboxkrnl_ExSemaphoreObjectType,                /* variable */
+#endif
+#if 0
+    /* 031 */ [0x01f] = &xboxkrnl_ExTimerObjectType,                    /* variable */
+#endif
+    /* 032 */ [0x020] = &xboxkrnl_ExfInterlockedInsertHeadList,         /* stdcall */
+    /* 033 */ [0x021] = &xboxkrnl_ExfInterlockedInsertTailList,         /* fastcall */
+    /* 034 */ [0x022] = &xboxkrnl_ExfInterlockedRemoveHeadList,         /* fastcall */
+    /* 035 */ [0x023] = &xboxkrnl_FscGetCacheSize,                      /* stdcall */
+    /* 036 */ [0x024] = &xboxkrnl_FscInvalidateIdleBlocks,              /* stdcall */
+    /* 037 */ [0x025] = &xboxkrnl_FscSetCacheSize,                      /* stdcall */
+#if 0
+    /* 356 */ [0x164] = &xboxkrnl_HalBootSMCVideoMode,                  /* variable */
+#endif
+    /* 038 */ [0x026] = &xboxkrnl_HalClearSoftwareInterrupt,            /* fastcall */
+    /* 039 */ [0x027] = &xboxkrnl_HalDisableSystemInterrupt,            /* stdcall */
+#if 0
+    /* 040 */ [0x028] = &xboxkrnl_HalDiskCachePartitionCount,           /* variable */
+#endif
+#if 0
+    /* 041 */ [0x029] = &xboxkrnl_HalDiskModelNumber,                   /* variable */
+#endif
+#if 0
+    /* 042 */ [0x02a] = &xboxkrnl_HalDiskSerialNumber,                  /* variable */
+#endif
+    /* 365 */ [0x16d] = &xboxkrnl_HalEnableSecureTrayEject,             /* stdcall */
+    /* 043 */ [0x02b] = &xboxkrnl_HalEnableSystemInterrupt,             /* stdcall */
+    /* 044 */ [0x02c] = &xboxkrnl_HalGetInterruptVector,                /* stdcall */
+    /* 360 */ [0x168] = &xboxkrnl_HalInitiateShutdown,                  /* stdcall */
+    /* 358 */ [0x166] = &xboxkrnl_HalIsResetOrShutdownPending,          /* stdcall */
+    /* 045 */ [0x02d] = &xboxkrnl_HalReadSMBusValue,                    /* stdcall */
+    /* 009 */ [0x009] = &xboxkrnl_HalReadSMCTrayState,                  /* stdcall */
+    /* 046 */ [0x02e] = &xboxkrnl_HalReadWritePCISpace,                 /* stdcall */
+    /* 047 */ [0x02f] = &xboxkrnl_HalRegisterShutdownNotification,      /* stdcall */
+    /* 048 */ [0x030] = &xboxkrnl_HalRequestSoftwareInterrupt,          /* fastcall */
+    /* 049 */ [0x031] = &xboxkrnl_HalReturnToFirmware,                  /* stdcall */
+    /* 050 */ [0x032] = &xboxkrnl_HalWriteSMBusValue,                   /* stdcall */
+    /* 366 */ [0x16e] = &xboxkrnl_HalWriteSMCScratchRegister,           /* stdcall */
+#if 0
+    /* 357 */ [0x165] = &xboxkrnl_IdexChannelObject,                    /* variable */
+#endif
+    /* 051 */ [0x033] = &xboxkrnl_InterlockedCompareExchange,           /* fastcall */
+    /* 052 */ [0x034] = &xboxkrnl_InterlockedDecrement,                 /* fastcall */
+    /* 053 */ [0x035] = &xboxkrnl_InterlockedIncrement,                 /* fastcall */
+    /* 054 */ [0x036] = &xboxkrnl_InterlockedExchange,                  /* fastcall */
+    /* 055 */ [0x037] = &xboxkrnl_InterlockedExchangeAdd,               /* fastcall */
+    /* 056 */ [0x038] = &xboxkrnl_InterlockedFlushSList,                /* fastcall */
+    /* 057 */ [0x039] = &xboxkrnl_InterlockedPopEntrySList,             /* fastcall */
+    /* 058 */ [0x03a] = &xboxkrnl_InterlockedPushEntrySList,            /* fastcall */
+    /* 059 */ [0x03b] = &xboxkrnl_IoAllocateIrp,                        /* stdcall */
+    /* 060 */ [0x03c] = &xboxkrnl_IoBuildAsynchronousFsdRequest,        /* stdcall */
+    /* 061 */ [0x03d] = &xboxkrnl_IoBuildDeviceIoControlRequest,        /* stdcall */
+    /* 062 */ [0x03e] = &xboxkrnl_IoBuildSynchronousFsdRequest,         /* stdcall */
+    /* 063 */ [0x03f] = &xboxkrnl_IoCheckShareAccess,                   /* stdcall */
+#if 0
+    /* 064 */ [0x040] = &xboxkrnl_IoCompletionObjectType,               /* variable */
+#endif
+    /* 065 */ [0x041] = &xboxkrnl_IoCreateDevice,                       /* stdcall */
+    /* 066 */ [0x042] = &xboxkrnl_IoCreateFile,                         /* stdcall */
+    /* 067 */ [0x043] = &xboxkrnl_IoCreateSymbolicLink,                 /* stdcall */
+    /* 068 */ [0x044] = &xboxkrnl_IoDeleteDevice,                       /* stdcall */
+    /* 069 */ [0x045] = &xboxkrnl_IoDeleteSymbolicLink,                 /* stdcall */
+#if 0
+    /* 070 */ [0x046] = &xboxkrnl_IoDeviceObjectType,                   /* variable */
+#endif
+    /* 090 */ [0x05a] = &xboxkrnl_IoDismountVolume,                     /* stdcall */
+    /* 091 */ [0x05b] = &xboxkrnl_IoDismountVolumeByName,               /* stdcall */
+#if 0
+    /* 071 */ [0x047] = &xboxkrnl_IoFileObjectType,                     /* variable */
+#endif
+    /* 072 */ [0x048] = &xboxkrnl_IoFreeIrp,                            /* stdcall */
+    /* 073 */ [0x049] = &xboxkrnl_IoInitializeIrp,                      /* stdcall */
+    /* 074 */ [0x04a] = &xboxkrnl_IoInvalidDeviceRequest,               /* stdcall */
+    /* 359 */ [0x167] = &xboxkrnl_IoMarkIrpMustComplete,                /* stdcall */
+    /* 075 */ [0x04b] = &xboxkrnl_IoQueryFileInformation,               /* stdcall */
+    /* 076 */ [0x04c] = &xboxkrnl_IoQueryVolumeInformation,             /* stdcall */
+    /* 077 */ [0x04d] = &xboxkrnl_IoQueueThreadIrp,                     /* stdcall */
+    /* 078 */ [0x04e] = &xboxkrnl_IoRemoveShareAccess,                  /* stdcall */
+    /* 079 */ [0x04f] = &xboxkrnl_IoSetIoCompletion,                    /* stdcall */
+    /* 080 */ [0x050] = &xboxkrnl_IoSetShareAccess,                     /* stdcall */
+    /* 081 */ [0x051] = &xboxkrnl_IoStartNextPacket,                    /* stdcall */
+    /* 082 */ [0x052] = &xboxkrnl_IoStartNextPacketByKey,               /* stdcall */
+    /* 083 */ [0x053] = &xboxkrnl_IoStartPacket,                        /* stdcall */
+    /* 084 */ [0x054] = &xboxkrnl_IoSynchronousDeviceIoControlRequest,  /* stdcall */
+    /* 085 */ [0x055] = &xboxkrnl_IoSynchronousFsdRequest,              /* stdcall */
+    /* 086 */ [0x056] = &xboxkrnl_IofCallDriver,                        /* fastcall */
+    /* 087 */ [0x057] = &xboxkrnl_IofCompleteRequest,                   /* fastcall */
+#if 0
+    /* 088 */ [0x058] = &xboxkrnl_KdDebuggerEnabled,                    /* variable */
+#endif
+#if 0
+    /* 089 */ [0x059] = &xboxkrnl_KdDebuggerNotPresent,                 /* variable */
+#endif
+    /* 092 */ [0x05c] = &xboxkrnl_KeAlertResumeThread,                  /* stdcall */
+    /* 093 */ [0x05d] = &xboxkrnl_KeAlertThread,                        /* stdcall */
+    /* 094 */ [0x05e] = &xboxkrnl_KeBoostPriorityThread,                /* stdcall */
+    /* 095 */ [0x05f] = &xboxkrnl_KeBugCheck,                           /* stdcall */
+    /* 096 */ [0x060] = &xboxkrnl_KeBugCheckEx,                         /* stdcall */
+    /* 097 */ [0x061] = &xboxkrnl_KeCancelTimer,                        /* stdcall */
+    /* 098 */ [0x062] = &xboxkrnl_KeConnectInterrupt,                   /* stdcall */
+    /* 099 */ [0x063] = &xboxkrnl_KeDelayExecutionThread,               /* stdcall */
+    /* 100 */ [0x064] = &xboxkrnl_KeDisconnectInterrupt,                /* stdcall */
+    /* 101 */ [0x065] = &xboxkrnl_KeEnterCriticalRegion,                /* stdcall */
+    /* 103 */ [0x067] = &xboxkrnl_KeGetCurrentIrql,                     /* stdcall */
+    /* 104 */ [0x068] = &xboxkrnl_KeGetCurrentThread,                   /* stdcall */
+    /* 105 */ [0x069] = &xboxkrnl_KeInitializeApc,                      /* stdcall */
+    /* 106 */ [0x06a] = &xboxkrnl_KeInitializeDeviceQueue,              /* stdcall */
+    /* 107 */ [0x06b] = &xboxkrnl_KeInitializeDpc,                      /* stdcall */
+    /* 108 */ [0x06c] = &xboxkrnl_KeInitializeEvent,                    /* stdcall */
+    /* 109 */ [0x06d] = &xboxkrnl_KeInitializeInterrupt,                /* stdcall */
+    /* 110 */ [0x06e] = &xboxkrnl_KeInitializeMutant,                   /* stdcall */
+    /* 111 */ [0x06f] = &xboxkrnl_KeInitializeQueue,                    /* stdcall */
+    /* 112 */ [0x070] = &xboxkrnl_KeInitializeSemaphore,                /* stdcall */
+    /* 113 */ [0x071] = &xboxkrnl_KeInitializeTimerEx,                  /* stdcall */
+    /* 114 */ [0x072] = &xboxkrnl_KeInsertByKeyDeviceQueue,             /* stdcall */
+    /* 115 */ [0x073] = &xboxkrnl_KeInsertDeviceQueue,                  /* stdcall */
+    /* 116 */ [0x074] = &xboxkrnl_KeInsertHeadQueue,                    /* stdcall */
+    /* 117 */ [0x075] = &xboxkrnl_KeInsertQueue,                        /* stdcall */
+    /* 118 */ [0x076] = &xboxkrnl_KeInsertQueueApc,                     /* stdcall */
+    /* 119 */ [0x077] = &xboxkrnl_KeInsertQueueDpc,                     /* stdcall */
+#if 0
+    /* 120 */ [0x078] = &xboxkrnl_KeInterruptTime,                      /* variable */
+#endif
+    /* 121 */ [0x079] = &xboxkrnl_KeIsExecutingDpc,                     /* stdcall */
+    /* 122 */ [0x07a] = &xboxkrnl_KeLeaveCriticalRegion,                /* stdcall */
+    /* 123 */ [0x07b] = &xboxkrnl_KePulseEvent,                         /* stdcall */
+    /* 124 */ [0x07c] = &xboxkrnl_KeQueryBasePriorityThread,            /* stdcall */
+    /* 125 */ [0x07d] = &xboxkrnl_KeQueryInterruptTime,                 /* stdcall */
+    /* 126 */ [0x07e] = &xboxkrnl_KeQueryPerformanceCounter,            /* stdcall */
+    /* 127 */ [0x07f] = &xboxkrnl_KeQueryPerformanceFrequency,          /* stdcall */
+    /* 128 */ [0x080] = &xboxkrnl_KeQuerySystemTime,                    /* stdcall */
+    /* 129 */ [0x081] = &xboxkrnl_KeRaiseIrqlToDpcLevel,                /* stdcall */
+    /* 130 */ [0x082] = &xboxkrnl_KeRaiseIrqlToSynchLevel,              /* stdcall */
+    /* 131 */ [0x083] = &xboxkrnl_KeReleaseMutant,                      /* stdcall */
+    /* 132 */ [0x084] = &xboxkrnl_KeReleaseSemaphore,                   /* stdcall */
+    /* 133 */ [0x085] = &xboxkrnl_KeRemoveByKeyDeviceQueue,             /* stdcall */
+    /* 134 */ [0x086] = &xboxkrnl_KeRemoveDeviceQueue,                  /* stdcall */
+    /* 135 */ [0x087] = &xboxkrnl_KeRemoveEntryDeviceQueue,             /* stdcall */
+    /* 136 */ [0x088] = &xboxkrnl_KeRemoveQueue,                        /* stdcall */
+    /* 137 */ [0x089] = &xboxkrnl_KeRemoveQueueDpc,                     /* stdcall */
+    /* 138 */ [0x08a] = &xboxkrnl_KeResetEvent,                         /* stdcall */
+    /* 139 */ [0x08b] = &xboxkrnl_KeRestoreFloatingPointState,          /* stdcall */
+    /* 140 */ [0x08c] = &xboxkrnl_KeResumeThread,                       /* stdcall */
+    /* 141 */ [0x08d] = &xboxkrnl_KeRundownQueue,                       /* stdcall */
+    /* 142 */ [0x08e] = &xboxkrnl_KeSaveFloatingPointState,             /* stdcall */
+    /* 143 */ [0x08f] = &xboxkrnl_KeSetBasePriorityThread,              /* stdcall */
+    /* 144 */ [0x090] = &xboxkrnl_KeSetDisableBoostThread,              /* stdcall */
+    /* 145 */ [0x091] = &xboxkrnl_KeSetEvent,                           /* stdcall */
+    /* 146 */ [0x092] = &xboxkrnl_KeSetEventBoostPriority,              /* stdcall */
+    /* 147 */ [0x093] = &xboxkrnl_KeSetPriorityProcess,                 /* stdcall */
+    /* 148 */ [0x094] = &xboxkrnl_KeSetPriorityThread,                  /* stdcall */
+    /* 149 */ [0x095] = &xboxkrnl_KeSetTimer,                           /* stdcall */
+    /* 150 */ [0x096] = &xboxkrnl_KeSetTimerEx,                         /* stdcall */
+    /* 151 */ [0x097] = &xboxkrnl_KeStallExecutionProcessor,            /* stdcall */
+    /* 152 */ [0x098] = &xboxkrnl_KeSuspendThread,                      /* stdcall */
+    /* 153 */ [0x099] = &xboxkrnl_KeSynchronizeExecution,               /* stdcall */
+#if 0
+    /* 154 */ [0x09a] = &xboxkrnl_KeSystemTime,                         /* variable */
+#endif
+    /* 155 */ [0x09b] = &xboxkrnl_KeTestAlertThread,                    /* stdcall */
+#if 0
+    /* 156 */ [0x09c] = &xboxkrnl_KeTickCount,                          /* variable */
+#endif
+#if 0
+    /* 157 */ [0x09d] = &xboxkrnl_KeTimeIncrement,                      /* variable */
+#endif
+    /* 158 */ [0x09e] = &xboxkrnl_KeWaitForMultipleObjects,             /* stdcall */
+    /* 159 */ [0x09f] = &xboxkrnl_KeWaitForSingleObject,                /* stdcall */
+    /* 160 */ [0x0a0] = &xboxkrnl_KfRaiseIrql,                          /* fastcall */
+    /* 161 */ [0x0a1] = &xboxkrnl_KfLowerIrql,                          /* fastcall */
+#if 0
+    /* 162 */ [0x0a2] = &xboxkrnl_KiBugCheckData,                       /* variable */
+#endif
+    /* 163 */ [0x0a3] = &xboxkrnl_KiUnlockDispatcherDatabase,           /* fastcall */
+#if 0
+    /* 164 */ [0x0a4] = &xboxkrnl_LaunchDataPage,                       /* variable */
+#endif
+    /* 165 */ [0x0a5] = &xboxkrnl_MmAllocateContiguousMemory,           /* stdcall */
+    /* 166 */ [0x0a6] = &xboxkrnl_MmAllocateContiguousMemoryEx,         /* stdcall */
+    /* 167 */ [0x0a7] = &xboxkrnl_MmAllocateSystemMemory,               /* stdcall */
+    /* 168 */ [0x0a8] = &xboxkrnl_MmClaimGpuInstanceMemory,             /* stdcall */
+    /* 169 */ [0x0a9] = &xboxkrnl_MmCreateKernelStack,                  /* stdcall */
+    /* 170 */ [0x0aa] = &xboxkrnl_MmDeleteKernelStack,                  /* stdcall */
+    /* 171 */ [0x0ab] = &xboxkrnl_MmFreeContiguousMemory,               /* stdcall */
+    /* 172 */ [0x0ac] = &xboxkrnl_MmFreeSystemMemory,                   /* stdcall */
+    /* 173 */ [0x0ad] = &xboxkrnl_MmGetPhysicalAddress,                 /* stdcall */
+#if 0
+    /* 102 */ [0x066] = &xboxkrnl_MmGlobalData,                         /* variable */
+#endif
+    /* 174 */ [0x0ae] = &xboxkrnl_MmIsAddressValid,                     /* stdcall */
+    /* 175 */ [0x0af] = &xboxkrnl_MmLockUnlockBufferPages,              /* stdcall */
+    /* 176 */ [0x0b0] = &xboxkrnl_MmLockUnlockPhysicalPage,             /* stdcall */
+    /* 177 */ [0x0b1] = &xboxkrnl_MmMapIoSpace,                         /* stdcall */
+    /* 178 */ [0x0b2] = &xboxkrnl_MmPersistContiguousMemory,            /* stdcall */
+    /* 179 */ [0x0b3] = &xboxkrnl_MmQueryAddressProtect,                /* stdcall */
+    /* 180 */ [0x0b4] = &xboxkrnl_MmQueryAllocationSize,                /* stdcall */
+    /* 181 */ [0x0b5] = &xboxkrnl_MmQueryStatistics,                    /* stdcall */
+    /* 182 */ [0x0b6] = &xboxkrnl_MmSetAddressProtect,                  /* stdcall */
+    /* 183 */ [0x0b7] = &xboxkrnl_MmUnmapIoSpace,                       /* stdcall */
+    /* 184 */ [0x0b8] = &xboxkrnl_NtAllocateVirtualMemory,              /* stdcall */
+    /* 185 */ [0x0b9] = &xboxkrnl_NtCancelTimer,                        /* stdcall */
+    /* 186 */ [0x0ba] = &xboxkrnl_NtClearEvent,                         /* stdcall */
+    /* 187 */ [0x0bb] = &xboxkrnl_NtClose,                              /* stdcall */
+    /* 188 */ [0x0bc] = &xboxkrnl_NtCreateDirectoryObject,              /* stdcall */
+    /* 189 */ [0x0bd] = &xboxkrnl_NtCreateEvent,                        /* stdcall */
+    /* 190 */ [0x0be] = &xboxkrnl_NtCreateFile,                         /* stdcall */
+    /* 191 */ [0x0bf] = &xboxkrnl_NtCreateIoCompletion,                 /* stdcall */
+    /* 192 */ [0x0c0] = &xboxkrnl_NtCreateMutant,                       /* stdcall */
+    /* 193 */ [0x0c1] = &xboxkrnl_NtCreateSemaphore,                    /* stdcall */
+    /* 194 */ [0x0c2] = &xboxkrnl_NtCreateTimer,                        /* stdcall */
+    /* 195 */ [0x0c3] = &xboxkrnl_NtDeleteFile,                         /* stdcall */
+    /* 196 */ [0x0c4] = &xboxkrnl_NtDeviceIoControlFile,                /* stdcall */
+    /* 197 */ [0x0c5] = &xboxkrnl_NtDuplicateObject,                    /* stdcall */
+    /* 198 */ [0x0c6] = &xboxkrnl_NtFlushBuffersFile,                   /* stdcall */
+    /* 199 */ [0x0c7] = &xboxkrnl_NtFreeVirtualMemory,                  /* stdcall */
+    /* 200 */ [0x0c8] = &xboxkrnl_NtFsControlFile,                      /* stdcall */
+    /* 201 */ [0x0c9] = &xboxkrnl_NtOpenDirectoryObject,                /* stdcall */
+    /* 202 */ [0x0ca] = &xboxkrnl_NtOpenFile,                           /* stdcall */
+    /* 203 */ [0x0cb] = &xboxkrnl_NtOpenSymbolicLinkObject,             /* stdcall */
+    /* 204 */ [0x0cc] = &xboxkrnl_NtProtectVirtualMemory,               /* stdcall */
+    /* 205 */ [0x0cd] = &xboxkrnl_NtPulseEvent,                         /* stdcall */
+    /* 206 */ [0x0ce] = &xboxkrnl_NtQueueApcThread,                     /* stdcall */
+    /* 207 */ [0x0cf] = &xboxkrnl_NtQueryDirectoryFile,                 /* stdcall */
+    /* 208 */ [0x0d0] = &xboxkrnl_NtQueryDirectoryObject,               /* stdcall */
+    /* 209 */ [0x0d1] = &xboxkrnl_NtQueryEvent,                         /* stdcall */
+    /* 210 */ [0x0d2] = &xboxkrnl_NtQueryFullAttributesFile,            /* stdcall */
+    /* 211 */ [0x0d3] = &xboxkrnl_NtQueryInformationFile,               /* stdcall */
+    /* 212 */ [0x0d4] = &xboxkrnl_NtQueryIoCompletion,                  /* stdcall */
+    /* 213 */ [0x0d5] = &xboxkrnl_NtQueryMutant,                        /* stdcall */
+    /* 214 */ [0x0d6] = &xboxkrnl_NtQuerySemaphore,                     /* stdcall */
+    /* 215 */ [0x0d7] = &xboxkrnl_NtQuerySymbolicLinkObject,            /* stdcall */
+    /* 216 */ [0x0d8] = &xboxkrnl_NtQueryTimer,                         /* stdcall */
+    /* 217 */ [0x0d9] = &xboxkrnl_NtQueryVirtualMemory,                 /* stdcall */
+    /* 218 */ [0x0da] = &xboxkrnl_NtQueryVolumeInformationFile,         /* stdcall */
+    /* 219 */ [0x0db] = &xboxkrnl_NtReadFile,                           /* stdcall */
+    /* 220 */ [0x0dc] = &xboxkrnl_NtReadFileScatter,                    /* stdcall */
+    /* 221 */ [0x0dd] = &xboxkrnl_NtReleaseMutant,                      /* stdcall */
+    /* 222 */ [0x0de] = &xboxkrnl_NtReleaseSemaphore,                   /* stdcall */
+    /* 223 */ [0x0df] = &xboxkrnl_NtRemoveIoCompletion,                 /* stdcall */
+    /* 224 */ [0x0e0] = &xboxkrnl_NtResumeThread,                       /* stdcall */
+    /* 225 */ [0x0e1] = &xboxkrnl_NtSetEvent,                           /* stdcall */
+    /* 226 */ [0x0e2] = &xboxkrnl_NtSetInformationFile,                 /* stdcall */
+    /* 227 */ [0x0e3] = &xboxkrnl_NtSetIoCompletion,                    /* stdcall */
+    /* 228 */ [0x0e4] = &xboxkrnl_NtSetSystemTime,                      /* stdcall */
+    /* 229 */ [0x0e5] = &xboxkrnl_NtSetTimerEx,                         /* stdcall */
+    /* 230 */ [0x0e6] = &xboxkrnl_NtSignalAndWaitForSingleObjectEx,     /* stdcall */
+    /* 231 */ [0x0e7] = &xboxkrnl_NtSuspendThread,                      /* stdcall */
+    /* 232 */ [0x0e8] = &xboxkrnl_NtUserIoApcDispatcher,                /* stdcall */
+    /* 233 */ [0x0e9] = &xboxkrnl_NtWaitForSingleObject,                /* stdcall */
+    /* 234 */ [0x0ea] = &xboxkrnl_NtWaitForSingleObjectEx,              /* stdcall */
+    /* 235 */ [0x0eb] = &xboxkrnl_NtWaitForMultipleObjectsEx,           /* stdcall */
+    /* 236 */ [0x0ec] = &xboxkrnl_NtWriteFile,                          /* stdcall */
+    /* 237 */ [0x0ed] = &xboxkrnl_NtWriteFileGather,                    /* stdcall */
+    /* 238 */ [0x0ee] = &xboxkrnl_NtYieldExecution,                     /* stdcall */
+    /* 239 */ [0x0ef] = &xboxkrnl_ObCreateObject,                       /* stdcall */
+#if 0
+    /* 240 */ [0x0f0] = &xboxkrnl_ObDirectoryObjectType,                /* variable */
+#endif
+    /* 241 */ [0x0f1] = &xboxkrnl_ObInsertObject,                       /* stdcall */
+    /* 242 */ [0x0f2] = &xboxkrnl_ObMakeTemporaryObject,                /* stdcall */
+    /* 243 */ [0x0f3] = &xboxkrnl_ObOpenObjectByName,                   /* stdcall */
+    /* 244 */ [0x0f4] = &xboxkrnl_ObOpenObjectByPointer,                /* stdcall */
+#if 0
+    /* 245 */ [0x0f5] = &xboxkrnl_ObpObjectHandleTable,                 /* variable */
+#endif
+    /* 246 */ [0x0f6] = &xboxkrnl_ObReferenceObjectByHandle,            /* stdcall */
+    /* 247 */ [0x0f7] = &xboxkrnl_ObReferenceObjectByName,              /* stdcall */
+    /* 248 */ [0x0f8] = &xboxkrnl_ObReferenceObjectByPointer,           /* stdcall */
+#if 0
+    /* 249 */ [0x0f9] = &xboxkrnl_ObSymbolicLinkObjectType,             /* variable */
+#endif
+    /* 250 */ [0x0fa] = &xboxkrnl_ObfDereferenceObject,                 /* fastcall */
+    /* 251 */ [0x0fb] = &xboxkrnl_ObfReferenceObject,                   /* fastcall */
+    /* 252 */ [0x0fc] = &xboxkrnl_PhyGetLinkState,                      /* stdcall */
+    /* 253 */ [0x0fd] = &xboxkrnl_PhyInitialize,                        /* stdcall */
+    /* 254 */ [0x0fe] = &xboxkrnl_PsCreateSystemThread,                 /* stdcall */
+    /* 255 */ [0x0ff] = &xboxkrnl_PsCreateSystemThreadEx,               /* stdcall */
+    /* 256 */ [0x100] = &xboxkrnl_PsQueryStatistics,                    /* stdcall */
+    /* 257 */ [0x101] = &xboxkrnl_PsSetCreateThreadNotifyRoutine,       /* stdcall */
+    /* 258 */ [0x102] = &xboxkrnl_PsTerminateSystemThread,              /* stdcall */
+#if 0
+    /* 259 */ [0x103] = &xboxkrnl_PsThreadObjectType,                   /* variable */
+#endif
+    /* 260 */ [0x104] = &xboxkrnl_RtlAnsiStringToUnicodeString,         /* stdcall */
+    /* 261 */ [0x105] = &xboxkrnl_RtlAppendStringToString,              /* stdcall */
+    /* 262 */ [0x106] = &xboxkrnl_RtlAppendUnicodeStringToString,       /* stdcall */
+    /* 263 */ [0x107] = &xboxkrnl_RtlAppendUnicodeToString,             /* stdcall */
+    /* 264 */ [0x108] = &xboxkrnl_RtlAssert,                            /* stdcall */
+    /* 265 */ [0x109] = &xboxkrnl_RtlCaptureContext,                    /* stdcall */
+    /* 266 */ [0x10a] = &xboxkrnl_RtlCaptureStackBackTrace,             /* stdcall */
+    /* 267 */ [0x10b] = &xboxkrnl_RtlCharToInteger,                     /* stdcall */
+    /* 268 */ [0x10c] = &xboxkrnl_RtlCompareMemory,                     /* stdcall */
+    /* 269 */ [0x10d] = &xboxkrnl_RtlCompareMemoryUlong,                /* stdcall */
+    /* 270 */ [0x10e] = &xboxkrnl_RtlCompareString,                     /* stdcall */
+    /* 271 */ [0x10f] = &xboxkrnl_RtlCompareUnicodeString,              /* stdcall */
+    /* 272 */ [0x110] = &xboxkrnl_RtlCopyString,                        /* stdcall */
+    /* 273 */ [0x111] = &xboxkrnl_RtlCopyUnicodeString,                 /* stdcall */
+    /* 274 */ [0x112] = &xboxkrnl_RtlCreateUnicodeString,               /* stdcall */
+    /* 275 */ [0x113] = &xboxkrnl_RtlDowncaseUnicodeChar,               /* stdcall */
+    /* 276 */ [0x114] = &xboxkrnl_RtlDowncaseUnicodeString,             /* stdcall */
+    /* 277 */ [0x115] = &xboxkrnl_RtlEnterCriticalSection,              /* stdcall */
+    /* 278 */ [0x116] = &xboxkrnl_RtlEnterCriticalSectionAndRegion,     /* stdcall */
+    /* 279 */ [0x117] = &xboxkrnl_RtlEqualString,                       /* stdcall */
+    /* 280 */ [0x118] = &xboxkrnl_RtlEqualUnicodeString,                /* stdcall */
+    /* 281 */ [0x119] = &xboxkrnl_RtlExtendedIntegerMultiply,           /* stdcall */
+    /* 282 */ [0x11a] = &xboxkrnl_RtlExtendedLargeIntegerDivide,        /* stdcall */
+    /* 283 */ [0x11b] = &xboxkrnl_RtlExtendedMagicDivide,               /* stdcall */
+    /* 284 */ [0x11c] = &xboxkrnl_RtlFillMemory,                        /* stdcall */
+    /* 285 */ [0x11d] = &xboxkrnl_RtlFillMemoryUlong,                   /* stdcall */
+    /* 286 */ [0x11e] = &xboxkrnl_RtlFreeAnsiString,                    /* stdcall */
+    /* 287 */ [0x11f] = &xboxkrnl_RtlFreeUnicodeString,                 /* stdcall */
+    /* 288 */ [0x120] = &xboxkrnl_RtlGetCallersAddress,                 /* stdcall */
+    /* 289 */ [0x121] = &xboxkrnl_RtlInitAnsiString,                    /* stdcall */
+    /* 290 */ [0x122] = &xboxkrnl_RtlInitUnicodeString,                 /* stdcall */
+    /* 291 */ [0x123] = &xboxkrnl_RtlInitializeCriticalSection,         /* stdcall */
+    /* 292 */ [0x124] = &xboxkrnl_RtlIntegerToChar,                     /* stdcall */
+    /* 293 */ [0x125] = &xboxkrnl_RtlIntegerToUnicodeString,            /* stdcall */
+    /* 294 */ [0x126] = &xboxkrnl_RtlLeaveCriticalSection,              /* stdcall */
+    /* 295 */ [0x127] = &xboxkrnl_RtlLeaveCriticalSectionAndRegion,     /* stdcall */
+    /* 296 */ [0x128] = &xboxkrnl_RtlLowerChar,                         /* stdcall */
+    /* 297 */ [0x129] = &xboxkrnl_RtlMapGenericMask,                    /* stdcall */
+    /* 298 */ [0x12a] = &xboxkrnl_RtlMoveMemory,                        /* stdcall */
+    /* 299 */ [0x12b] = &xboxkrnl_RtlMultiByteToUnicodeN,               /* stdcall */
+    /* 300 */ [0x12c] = &xboxkrnl_RtlMultiByteToUnicodeSize,            /* stdcall */
+    /* 301 */ [0x12d] = &xboxkrnl_RtlNtStatusToDosError,                /* stdcall */
+    /* 302 */ [0x12e] = &xboxkrnl_RtlRaiseException,                    /* stdcall */
+    /* 303 */ [0x12f] = &xboxkrnl_RtlRaiseStatus,                       /* stdcall */
+    /* 352 */ [0x160] = &xboxkrnl_RtlRip,                               /* stdcall */
+    /* 361 */ [0x169] = &xboxkrnl_RtlSnprintf,                          /* stdcall */
+    /* 362 */ [0x16a] = &xboxkrnl_RtlSprintf,                           /* stdcall */
+    /* 304 */ [0x130] = &xboxkrnl_RtlTimeFieldsToTime,                  /* stdcall */
+    /* 305 */ [0x131] = &xboxkrnl_RtlTimeToTimeFields,                  /* stdcall */
+    /* 306 */ [0x132] = &xboxkrnl_RtlTryEnterCriticalSection,           /* stdcall */
+    /* 307 */ [0x133] = &xboxkrnl_RtlUlongByteSwap,                     /* fastcall */
+    /* 308 */ [0x134] = &xboxkrnl_RtlUnicodeStringToAnsiString,         /* stdcall */
+    /* 309 */ [0x135] = &xboxkrnl_RtlUnicodeStringToInteger,            /* stdcall */
+    /* 310 */ [0x136] = &xboxkrnl_RtlUnicodeToMultiByteN,               /* stdcall */
+    /* 311 */ [0x137] = &xboxkrnl_RtlUnicodeToMultiByteSize,            /* stdcall */
+    /* 312 */ [0x138] = &xboxkrnl_RtlUnwind,                            /* stdcall */
+    /* 313 */ [0x139] = &xboxkrnl_RtlUpcaseUnicodeChar,                 /* stdcall */
+    /* 314 */ [0x13a] = &xboxkrnl_RtlUpcaseUnicodeString,               /* stdcall */
+    /* 315 */ [0x13b] = &xboxkrnl_RtlUpcaseUnicodeToMultiByteN,         /* stdcall */
+    /* 316 */ [0x13c] = &xboxkrnl_RtlUpperChar,                         /* stdcall */
+    /* 317 */ [0x13d] = &xboxkrnl_RtlUpperString,                       /* stdcall */
+    /* 318 */ [0x13e] = &xboxkrnl_RtlUshortByteSwap,                    /* fastcall */
+    /* 363 */ [0x16b] = &xboxkrnl_RtlVsnprintf,                         /* stdcall */
+    /* 364 */ [0x16c] = &xboxkrnl_RtlVsprintf,                          /* stdcall */
+    /* 319 */ [0x13f] = &xboxkrnl_RtlWalkFrameChain,                    /* stdcall */
+    /* 320 */ [0x140] = &xboxkrnl_RtlZeroMemory,                        /* stdcall */
+#if 0
+    /* 354 */ [0x162] = &xboxkrnl_XboxAlternateSignatureKeys,           /* variable */
+#endif
+#if 0
+    /* 321 */ [0x141] = &xboxkrnl_XboxEEPROMKey,                        /* variable */
+#endif
+#if 1
+    /* 322 */ [0x142] = &xboxkrnl_XboxHardwareInfo,                     /* variable */
+#endif
+#if 0
+    /* 323 */ [0x143] = &xboxkrnl_XboxHDKey,                            /* variable */
+#endif
+#if 0
+    /* 353 */ [0x161] = &xboxkrnl_XboxLANKey,                           /* variable */
+#endif
+#if 0
+    /* 324 */ [0x144] = &xboxkrnl_XboxKrnlVersion,                      /* variable */
+#endif
+#if 0
+    /* 325 */ [0x145] = &xboxkrnl_XboxSignatureKey,                     /* variable */
+#endif
+#if 0
+    /* 326 */ [0x146] = &xboxkrnl_XeImageFileName,                      /* variable */
+#endif
+    /* 327 */ [0x147] = &xboxkrnl_XeLoadSection,                        /* stdcall */
+#if 0
+    /* 355 */ [0x163] = &xboxkrnl_XePublicKeyData,                      /* variable */
+#endif
+    /* 328 */ [0x148] = &xboxkrnl_XeUnloadSection,                      /* stdcall */
+    /* 329 */ [0x149] = &xboxkrnl_READ_PORT_BUFFER_UCHAR,               /* stdcall */
+    /* 330 */ [0x14a] = &xboxkrnl_READ_PORT_BUFFER_USHORT,              /* stdcall */
+    /* 331 */ [0x14b] = &xboxkrnl_READ_PORT_BUFFER_ULONG,               /* stdcall */
+    /* 332 */ [0x14c] = &xboxkrnl_WRITE_PORT_BUFFER_UCHAR,              /* stdcall */
+    /* 333 */ [0x14d] = &xboxkrnl_WRITE_PORT_BUFFER_USHORT,             /* stdcall */
+    /* 334 */ [0x14e] = &xboxkrnl_WRITE_PORT_BUFFER_ULONG,              /* stdcall */
+    /* 335 */ [0x14f] = &xboxkrnl_XcSHAInit,                            /* stdcall */
+    /* 336 */ [0x150] = &xboxkrnl_XcSHAUpdate,                          /* stdcall */
+    /* 337 */ [0x151] = &xboxkrnl_XcSHAFinal,                           /* stdcall */
+    /* 338 */ [0x152] = &xboxkrnl_XcRC4Key,                             /* stdcall */
+    /* 339 */ [0x153] = &xboxkrnl_XcRC4Crypt,                           /* stdcall */
+    /* 340 */ [0x154] = &xboxkrnl_XcHMAC,                               /* stdcall */
+    /* 341 */ [0x155] = &xboxkrnl_XcPKEncPublic,                        /* stdcall */
+    /* 342 */ [0x156] = &xboxkrnl_XcPKDecPrivate,                       /* stdcall */
+    /* 343 */ [0x157] = &xboxkrnl_XcPKGetKeyLen,                        /* stdcall */
+    /* 344 */ [0x158] = &xboxkrnl_XcVerifyPKCS1Signature,               /* stdcall */
+    /* 345 */ [0x159] = &xboxkrnl_XcModExp,                             /* stdcall */
+    /* 346 */ [0x15a] = &xboxkrnl_XcDESKeyParity,                       /* stdcall */
+    /* 347 */ [0x15b] = &xboxkrnl_XcKeyTable,                           /* stdcall */
+    /* 348 */ [0x15c] = &xboxkrnl_XcBlockCrypt,                         /* stdcall */
+    /* 349 */ [0x15d] = &xboxkrnl_XcBlockCryptCBC,                      /* stdcall */
+    /* 350 */ [0x15e] = &xboxkrnl_XcCryptService,                       /* stdcall */
+    /* 351 */ [0x15f] = &xboxkrnl_XcUpdateCrypto,                       /* stdcall */
     /* devkit */
-    /* 007 */ [0x007] = &xboxkrnl_DbgLoadImageSymbols,
-    /* 011 */ [0x00b] = &xboxkrnl_DbgUnLoadImageSymbols,
-    /* 374 */ [0x176] = &xboxkrnl_MmDbgAllocateMemory,
-    /* 375 */ [0x177] = &xboxkrnl_MmDbgFreeMemory,
-    /* 376 */ [0x178] = &xboxkrnl_MmDbgQueryAvailablePages,
-    /* 377 */ [0x179] = &xboxkrnl_MmDbgReleaseAddress,
-    /* 378 */ [0x17a] = &xboxkrnl_MmDbgWriteCheck,
+    /* 007 */ [0x007] = &xboxkrnl_DbgLoadImageSymbols,                  /* stdcall */
+    /* 011 */ [0x00b] = &xboxkrnl_DbgUnLoadImageSymbols,                /* stdcall */
+    /* 374 */ [0x176] = &xboxkrnl_MmDbgAllocateMemory,                  /* stdcall */
+    /* 375 */ [0x177] = &xboxkrnl_MmDbgFreeMemory,                      /* stdcall */
+    /* 376 */ [0x178] = &xboxkrnl_MmDbgQueryAvailablePages,             /* stdcall */
+    /* 377 */ [0x179] = &xboxkrnl_MmDbgReleaseAddress,                  /* stdcall */
+    /* 378 */ [0x17a] = &xboxkrnl_MmDbgWriteCheck,                      /* stdcall */
 };
 
 static const char *const xboxkrnl_thunk_name[] = {
@@ -5140,6 +6418,28 @@ static const char *const xboxkrnl_thunk_name[] = {
     /* 378 */ [0x17a] = "MmDbgWriteCheck",
 };
 
-#undef ENTER
-#undef LEAVE
+static size_t
+xboxkrnl_thunk_resolve(register const void **k) {
+    register size_t i;
+    register uint32_t t;
+    ENTER;
+
+    PRINT("/* resolving kernel thunk table ordinals @ %p */", k);
+
+    for (i = 0; k[i]; ++i) {
+        t = ((typeof(t) *)k)[i] & 0x1ff;
+        k[i] = xboxkrnl_thunk[t];
+        PRINT("thunk: %03u (0x%03x): *%p <- %p %s()",
+            t,
+            t,
+            &k[i],
+            k[i],
+            xboxkrnl_thunk_name[t]);
+    }
+
+    PRINT("/* resolved %zu ordinals in kernel thunk table */", i);
+
+    LEAVE;
+    return i;
+}
 
