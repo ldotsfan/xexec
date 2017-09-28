@@ -4219,7 +4219,7 @@ xboxkrnl_NtWriteFile( /* 236 (0x0ec) */
     VARDUMP(DUMP, IoStatusBlock->Status);
     VARDUMP(DUMP, IoStatusBlock->Information);
     VARDUMP(DUMP, ret);
-    INT3;
+INT3;//XXX
     LEAVE;
     return ret;
 }

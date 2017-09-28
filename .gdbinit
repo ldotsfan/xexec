@@ -1,0 +1,1 @@
+ha SIGSEGV nostop noprint

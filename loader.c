@@ -2516,7 +2516,7 @@ C7 87 0C 18 00 00 00 F8 00 00   // mov     dword ptr [edi+180Ch], 0F800h
     PRINT("si_addr  \t= %p", info->si_addr);
     for (i = 0; i < NGREG; ++i) {
         n = (i < sizeof(greg_names) / sizeof(*greg_names)) ? greg_names[i] : NULL;
-        if (n) PRINT("%s  \t= 0x%.08x",
+        if (n) PRINT("%s\t= 0x%.08x",
                 n,
                 uc->uc_mcontext.gregs[i]);
         else PRINT("reg[%02i] \t= 0x%.08x",

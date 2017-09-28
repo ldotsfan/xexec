@@ -125,6 +125,9 @@ nv2a_pfifo_cache_dequeue(register nv2a_pfifo_cache *c) {
         free(*q);
         *q = (**q).next;
         ret = 1;
+    } else {
+        PRINT_NV2A("%s: CACHEQ: no commands in queue",
+            xpci[XPCI_GPU].name);
     }
 
     CACHEQ_UNLOCK;
@@ -469,7 +472,7 @@ nv2a_pfifo_ramht_lookup(register void *p, register uint32_t handle, register nv2
     register uint32_t hash;
     register void *ptr;
     ENTER_NV2A;
-PRINT("handle:%u",handle);//XXX
+PRINT("ramht_lookup: handle:%u / 0x%x",handle,handle);//XXX
     bits = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, RAMHT, SIZE) + 12;
     size = 1 << bits;
 
@@ -481,7 +484,7 @@ PRINT("handle:%u",handle);//XXX
     ptr += hash << 3;
 
     *r = *(typeof(r))ptr;
-PRINT("handle:%u | context:0x%.08x | pg param:0x%.04x | engine:%u | chid:%u | valid:%u | reg:%p", r->handle,r->context,r->instance << 4,r->engine,r->chid,r->valid,ptr-NV2A_REGADDR(p, NV_PRAMIN, BASE));//XXX
+PRINT("ramht_lookup: handle:%u | context:0x%.08x | pg param:0x%.04x | engine:%u | chid:%u | valid:%u | reg:%p", r->handle,r->context,r->instance << 4,r->engine,r->chid,r->valid,ptr-NV2A_REGADDR(p, NV_PRAMIN, BASE));//XXX
     LEAVE_NV2A;
     return r->valid;
 }
@@ -489,17 +492,17 @@ PRINT("handle:%u | context:0x%.08x | pg param:0x%.04x | engine:%u | chid:%u | va
 static void
 nv2a_pfifo_puller(register void *p) {
     register uint32_t param;
-    nv2a_pfifo_ramht r;
     nv2a_pfifo_cache c;
+    nv2a_pfifo_ramht r;
     ENTER_NV2A;
 
 //    glo_set_current(d->pgraph.gl_context);
 
     while (nv2a_pfifo_cache_dequeue(&c)) {
-        if (c.method == /* NV_SET_OBJECT */ 0 || (c.method >= 0x180 && c.method < 0x200)) {
 PRINT("pg method:0x%.03x | subchannel:0x%.03x | param:0x%.03x",c.method,c.subchannel,c.param);//XXX
-            if (!nv2a_pfifo_ramht_lookup(p, c.param, &r) ||
-                r.chid != NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID)) INT3;
+        if (c.method == /* NV_SET_OBJECT */ 0 || (c.method >= 0x180 && c.method <= 0x200)) {
+            if (!nv2a_pfifo_ramht_lookup(p, c.param, &r)) continue;
+            if (r.chid != NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID)) INT3;
         }
         if (c.method == /* NV_SET_OBJECT */ 0) {
             switch (r.engine) {
@@ -523,7 +526,7 @@ PRINT("pg method:0x%.03x | subchannel:0x%.03x | param:0x%.03x",c.method,c.subcha
             state->last_engine = entry.engine;
 #endif
         } else if (c.method >= 0x100) {
-            if (c.method >= 0x180 && c.method < 0x200) {
+            if (c.method >= 0x180 && c.method <= 0x200) {
                 /* methods that take objects */
                 param = r.instance << 4;
             } else {
@@ -615,8 +618,8 @@ nv2a_pfifo_pusher(register void *p) {
     dcount  = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_DCOUNT);
 
     PRINT_NV2A("pb DMA pusher:  run: "
-        "limit 0x%.08x, "
-        "dma_get 0x%.08x < dma_put 0x%.08x",
+        "limit: 0x%.08x | "
+        "get: 0x%.08x < put: 0x%.08x",
         limit,
         *dma,
         *put);
@@ -697,8 +700,8 @@ PRINT("    param:0x%.08x | method:0x%.03hx | subchannel:0x%.02hx | method_count:
     }
 
     PRINT_NV2A("pb DMA pusher: done: "
-        "limit 0x%.08x, "
-        "dma_get 0x%.08x < dma_put 0x%.08x",
+        "limit: 0x%.08x | "
+        "get: 0x%.08x < put: 0x%.08x",
         limit,
         *dma,
         *put);
