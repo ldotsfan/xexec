@@ -3,7 +3,7 @@
 
 all:
 	gcc -m32 -g -Wall -Wextra \
-		-Wno-unused-variable -Wno-unused-but-set-variable \
+		-Wno-unused-variable -Wno-unused-but-set-variable -Wno-pointer-to-int-cast \
 		-I/usr/local/include/wine/windows \
 		loader.c -o loader \
 		-pthread

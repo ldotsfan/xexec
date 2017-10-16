@@ -21,6 +21,7 @@ static pthread_mutexattr_t *xboxkrnl_thread_mattr = NULL;
 
 #define NAME(x)             [x] = #x
 #define NAMEB(x,y)          [x] = #y
+#define NAMER(x)            [x/4] = #x
 
 #define VAR_IN              0
 #define VAR_OUT             1
@@ -30,32 +31,32 @@ static pthread_mutexattr_t *xboxkrnl_thread_mattr = NULL;
 
 #define STACK_LEVEL_SPACING(x,y) do { \
             size_t __le = ((x) > 0) ? (x) * 4 : 0; \
-            char *__st = (__le) ? malloc(__le + 1) : NULL; \
+            register char *__st = (__le) ? malloc(__le + 1) : NULL; \
             if (__st) memset(__st, ' ', __le), __st[__le] = 0; \
             else __st = strdup(""); \
             *(y) = __st; \
         } while (0)
 
-#define VARDUMP(x,y)        VARDUMP4(x,y,0,0)
-#define VARDUMPD(x,y)       if (y) VARDUMP4(x,*y,0,0)
-/* value name w/o flags: z = const *char[] name in relation to y; f = 0 */
-#define VARDUMP2(x,y,z)     VARDUMP4(x,y,z,0)
-/* value name w/ flags:  z == const *char[] index masking y;      f = 1 */
-#define VARDUMP3(x,y,z)     VARDUMP4(x,y,z,1)
-#define VARDUMP4(x,y,z,f) do { \
-            unsigned long long __v = 0; \
-            if (sizeof(typeof((y))) == 8) memcpy(&__v, &(y), 8); \
-            else memcpy(&__v, &(y), sizeof(typeof((y)))); \
-            char *__c = NULL; \
-            unsigned __t = (unsigned)(z); \
-            if (__t) __t = sizeof((z))/sizeof(char *); \
+#define VARDUMP(x,y)        VARDUMP5(x,y,0,0,0)
+#define VARDUMPD(x,y)       if (y) VARDUMP5(x,*y,0,0,0)
+/* value name w/o bit mask: z = const *char[] name in relation to y; f = 0 */
+#define VARDUMP2(x,y,z)     VARDUMP5(x,y,z,0,0)
+/* value name w/ bit mask:  z == const *char[] index bit masking y;  f = 1 */
+#define VARDUMP3(x,y,z)     VARDUMP5(x,y,z,1,0)
+/* register name:           z = const *char[] name in relation to y; f = 0, r = register size */
+#define VARDUMP4(x,y,z)     VARDUMP5(x,y,z,0,4)
+#define VARDUMP5(x,y,z,f,r) do { \
+            unsigned long long __v = (typeof(__v))(y); \
+            register char *__c = NULL; \
+            register size_t __t = (typeof(__t))(z); \
+            if (__t) __t = sizeof((z)) / sizeof(char *); \
             if (!(f) && __t) { /* set c w/o flags */ \
-                if (__t) __t = (__v < __t); \
-                if (__t) __c = ((char **)(z))[__v]; \
+                register size_t __r = (r) ? __v / (r) : __v; \
+                if (__r < __t) __c = ((char **)(z))[__r]; \
             } else if (__t) { /* set c w/ flags */ \
-                char *__n; \
-                size_t __l, __len; \
-                typeof(__t) __i; \
+                register char *__n; \
+                register size_t __l, __len; \
+                register typeof(__t) __i; \
                 for (__l = 0, __i = 0; __i <= __t; ++__i) { \
                     if (__i >= __t) { \
                         if (__l) __c[__l] = 0; \
@@ -180,7 +181,11 @@ static pthread_t *          xboxkrnl_dpc_thread = NULL;
 static pthread_mutexattr_t *xboxkrnl_dpc_mattr = NULL;
 static pthread_mutex_t *    xboxkrnl_dpc_mutex = NULL;
 static pthread_cond_t *     xboxkrnl_dpc_cond = NULL;
+#define DPC_LOCK            pthread_mutex_lock(xboxkrnl_dpc_mutex)
+#define DPC_UNLOCK          pthread_mutex_unlock(xboxkrnl_dpc_mutex)
+#define DPC_WAIT            pthread_cond_wait(xboxkrnl_dpc_cond, xboxkrnl_dpc_mutex)
 #define DPC_SIGNAL          pthread_cond_signal(xboxkrnl_dpc_cond)
+#define DPC_BROADCAST       pthread_cond_broadcast(xboxkrnl_dpc_cond)
 
 /* winnt */
 typedef struct _listentry {
@@ -234,7 +239,11 @@ static pthread_t *          xboxkrnl_event_thread = NULL;
 static pthread_mutexattr_t *xboxkrnl_event_mattr = NULL;
 static pthread_mutex_t *    xboxkrnl_event_mutex = NULL;
 static pthread_cond_t *     xboxkrnl_event_cond = NULL;
+#define EVENT_LOCK          pthread_mutex_lock(xboxkrnl_event_mutex)
+#define EVENT_UNLOCK        pthread_mutex_unlock(xboxkrnl_event_mutex)
+#define EVENT_WAIT          pthread_cond_wait(xboxkrnl_event_cond, xboxkrnl_event_mutex)
 #define EVENT_SIGNAL        pthread_cond_signal(xboxkrnl_event_cond)
+#define EVENT_BROADCAST     pthread_cond_broadcast(xboxkrnl_event_cond)
 
 typedef struct {
     struct _dispatcherheader {
@@ -871,13 +880,13 @@ xboxkrnl_worker(void *arg) {
         ENTER_DPC;
 
         for (;;) {
-            pthread_mutex_lock(xboxkrnl_dpc_mutex);
+            DPC_LOCK;
 
             PRINT_DPC("/* waiting for deferred procedure routines */", 0);
 
-            pthread_cond_wait(xboxkrnl_dpc_cond, xboxkrnl_dpc_mutex);
+            DPC_WAIT;
 
-            pthread_mutex_unlock(xboxkrnl_dpc_mutex);
+            DPC_UNLOCK;
         }
 
         LEAVE_DPC;
@@ -886,13 +895,17 @@ xboxkrnl_worker(void *arg) {
         ENTER_EVENT;
 
         for (;;) {
-            pthread_mutex_lock(xboxkrnl_event_mutex);
+            EVENT_LOCK;
 
             PRINT_EVENT("/* waiting for event routines */", 0);
 
-            pthread_cond_wait(xboxkrnl_event_cond, xboxkrnl_event_mutex);
+            EVENT_WAIT;
 
-            pthread_mutex_unlock(xboxkrnl_event_mutex);
+            PRINT_EVENT("/* signaled for event routines */", 0);
+
+            nv2a_pfifo_puller(NULL);
+
+            EVENT_UNLOCK;
         }
 
         LEAVE_EVENT;
