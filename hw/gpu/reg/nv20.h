@@ -1,433 +1,6 @@
 
-#ifndef NV2A_H
-#define NV2A_H
-
-#define REG8(x)                     *(uint8_t *)((x))
-#define REG16(x)                    *(uint16_t *)((x))
-#define REG32(x)                    *(uint32_t *)((x))
-
-#define NV2A_REGADDR(x,y,z)         ((x) + nv2a_blocks[y].offset + y ## _ ## z)
-
-#define NV2A_MASK_GET(x,y)          ((x) & (y))
-#define NV2A_MASK_SET(x,y)          ((x) |= (y))
-#define NV2A_MASK_UNSET(x,y)        ((x) &= ~(y))
-
-/*
- * x = memreg base,
- * y = block index name,
- * z = register name (after block index name),
- * m = mask name (after register name),
- * v = variable
- */
-#define NV2A_REG32(x,y,z) \
-        REG32(NV2A_REGADDR((x), y, z))
-
-#define NV2A_REG32_MASK_GET(x,y,z,m) \
-        NV2A_MASK_GET(NV2A_REG32((x), y, z), y ## _ ## z ## _ ## m)
-#define NV2A_REG32_MASK_SET(x,y,z,m) \
-        NV2A_MASK_SET(NV2A_REG32((x), y, z), y ## _ ## z ## _ ## m)
-#define NV2A_REG32_MASK_UNSET(x,y,z,m) \
-        NV2A_MASK_UNSET(NV2A_REG32((x), y, z), y ## _ ## z ## _ ## m)
-
-#define NV2A_REG32_MASK_SET_VAL(x,y,z,m,v) \
-        NV2A_REG32_MASK_UNSET((x), y, z, m); \
-        if ((v)) NV2A_MASK_SET(NV2A_REG32((x), y, z), NV2A_MASK_GET((v), y ## _ ## z ## _ ## m))
-
-#define NV2A_REG32_MASK_BITSHIFT_GET(x,y,z,m) \
-        (NV2A_REG32_MASK_GET(x,y,z,m) >> y ## _ ## z ## _ ## m ## __BITSHIFT)
-#define NV2A_REG32_MASK_BITSHIFT_SET_VAL(x,y,z,m,v) \
-        NV2A_REG32_MASK_UNSET((x), y, z, m); \
-        if ((v)) NV2A_MASK_SET(NV2A_REG32((x), y, z), NV2A_MASK_GET((v) << y ## _ ## z ## _ ## m ## __BITSHIFT, y ## _ ## z ## _ ## m))
-
-#define NV2A_MAX_CHANNELS           32
-#define NV2A_MAX_SUBCHANNELS        8
-
-enum {  /* NV_PMC */    /* 0 */     /* card master control */
-        NV_PMC_BOOT_0                               = 0x00000000,
-        NV_PMC_INTR_0                               = 0x00000100,
-#define NV_PMC_INTR_0_PFIFO                             (1 << 8)        /* 0x00000100 */
-#define NV_PMC_INTR_0_PGRAPH                            (1 << 12)       /* 0x00001000 */
-#define NV_PMC_INTR_0_PCRTC                             (1 << 24)       /* 0x01000000 */
-#define NV_PMC_INTR_0_PBUS                              (1 << 28)       /* 0x10000000 */
-#define NV_PMC_INTR_0_SOFTWARE                          (1 << 31)       /* 0x80000000 */
-        NV_PMC_INTR_EN_0                            = 0x00000140,
-#define NV_PMC_INTR_EN_0_INTA_HARDWARE                  0x00000001
-#define NV_PMC_INTR_EN_0_INTA_SOFTWARE                  0x00000002
-};
-/* NV_PBUS */           /* 1 */     /* bus control */
-enum {  /* NV_PFIFO */  /* 2 */     /* MMIO and DMA FIFO submission to PGRAPH and VPE */
-        NV_PFIFO_INTR_0                             = 0x00000100,
-#define NV_PFIFO_INTR_0_CACHE_ERROR                     (1 << 0)        /* 0x00000001 */
-#define NV_PFIFO_INTR_0_RUNOUT                          (1 << 4)        /* 0x00000010 */
-#define NV_PFIFO_INTR_0_RUNOUT_OVERFLOW                 (1 << 8)        /* 0x00000100 */
-#define NV_PFIFO_INTR_0_DMA_PUSHER                      (1 << 12)       /* 0x00001000 */
-#define NV_PFIFO_INTR_0_DMA_PT                          (1 << 16)       /* 0x00010000 */
-#define NV_PFIFO_INTR_0_SEMAPHORE                       (1 << 20)       /* 0x00100000 */
-#define NV_PFIFO_INTR_0_ACQUIRE_TIMEOUT                 (1 << 24)       /* 0x01000000 */
-        NV_PFIFO_INTR_EN_0                          = 0x00000140,
-#define NV_PFIFO_INTR_EN_0_CACHE_ERROR                  (1 << 0)        /* 0x00000001 */
-#define NV_PFIFO_INTR_EN_0_RUNOUT                       (1 << 4)        /* 0x00000010 */
-#define NV_PFIFO_INTR_EN_0_RUNOUT_OVERFLOW              (1 << 8)        /* 0x00000100 */
-#define NV_PFIFO_INTR_EN_0_DMA_PUSHER                   (1 << 12)       /* 0x00001000 */
-#define NV_PFIFO_INTR_EN_0_DMA_PT                       (1 << 16)       /* 0x00010000 */
-#define NV_PFIFO_INTR_EN_0_SEMAPHORE                    (1 << 20)       /* 0x00100000 */
-#define NV_PFIFO_INTR_EN_0_ACQUIRE_TIMEOUT              (1 << 24)       /* 0x01000000 */
-        NV_PFIFO_RAMHT                              = 0x00000210,
-#define NV_PFIFO_RAMHT_BASE_ADDRESS                     0x000001f0
-#define NV_PFIFO_RAMHT_BASE_ADDRESS__BITSHIFT           4
-#define NV_PFIFO_RAMHT_SIZE                             0x00030000
-#define NV_PFIFO_RAMHT_SIZE__BITSHIFT                   16
-#define NV_PFIFO_RAMHT_SIZE_4K                          0               /* 0x00000000 */
-#define NV_PFIFO_RAMHT_SIZE_8K                          1               /* 0x00010000 */
-#define NV_PFIFO_RAMHT_SIZE_16K                         2               /* 0x00020000 */
-#define NV_PFIFO_RAMHT_SIZE_32K                         3               /* 0x00030000 */
-//#define NV_PFIFO_RAMHT_SEARCH                              0x03000000
-//#define NV_PFIFO_RAMHT_SEARCH_16                           0
-//#define NV_PFIFO_RAMHT_SEARCH_32                           1
-//#define NV_PFIFO_RAMHT_SEARCH_64                           2
-//#define NV_PFIFO_RAMHT_SEARCH_128                          3
-        NV_PFIFO_RUNOUT_STATUS                      = 0x00000400,
-#define NV_PFIFO_RUNOUT_STATUS_RANOUT_TRUE              (1 << 0)        /* 0x00000001 */
-#define NV_PFIFO_RUNOUT_STATUS_LOW_MARK_EMPTY           (1 << 4)        /* 0x00000010 */
-#define NV_PFIFO_RUNOUT_STATUS_HIGH_MARK_FULL           (1 << 8)        /* 0x00000100 */
-        NV_PFIFO_MODE                               = 0x00000504,
-//#define NV_PFIFO_MODE_DMA                               0xffffffff
-//#define NV_PFIFO_MODE_PIO                               0x00000000
-        NV_PFIFO_CACHE1_PUSH0                       = 0x00001200,
-#define NV_PFIFO_CACHE1_PUSH0_ACCESS_ENABLED            (1 << 0)        /* 0x00000001 */    /* push access enabled */
-        NV_PFIFO_CACHE1_PUSH1                       = 0x00001204,
-#define NV_PFIFO_CACHE1_PUSH1_CHID                      0x0000001f
-#define NV_PFIFO_CACHE1_PUSH1_MODE_DMA                  0x00000100
-        NV_PFIFO_CACHE1_STATUS                      = 0x00001214,
-#define NV_PFIFO_CACHE1_STATUS_LOW_MARK_EMPTY           (1 << 4)        /* 0x00000010 */
-#define NV_PFIFO_CACHE1_STATUS_HIGH_MARK_FULL           (1 << 8)        /* 0x00000100 */
-        NV_PFIFO_CACHE1_DMA_PUSH                    = 0x00001220,
-#define NV_PFIFO_CACHE1_DMA_PUSH_ACCESS_ENABLED         (1 << 0)        /* 0x00000001 */    /* push access enabled */
-#define NV_PFIFO_CACHE1_DMA_PUSH_STATE_BUSY             (1 << 4)        /* 0x00000010 */    /* push state busy */
-#define NV_PFIFO_CACHE1_DMA_PUSH_BUFFER_EMPTY           (1 << 8)        /* 0x00000100 */    /* push buffer empty */
-#define NV_PFIFO_CACHE1_DMA_PUSH_STATUS_SUSPENDED       (1 << 12)       /* 0x00001000 */    /* push status suspended */
-#define NV_PFIFO_CACHE1_DMA_PUSH_ACQUIRE_PENDING        (1 << 16)       /* 0x00010000 */    /* push acquire pending */
-        NV_PFIFO_CACHE1_DMA_STATE                   = 0x00001228,
-#define NV_PFIFO_CACHE1_DMA_STATE_METHOD_TYPE_NON_INC   (1 << 0)        /* 0x00000001 */
-#define NV_PFIFO_CACHE1_DMA_STATE_METHOD                0x00001ffc
-#define NV_PFIFO_CACHE1_DMA_STATE_SUBCHANNEL            0x0000e000
-#define NV_PFIFO_CACHE1_DMA_STATE_METHOD_COUNT          0x1ffc0000
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR                 0xe0000000
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR__BITSHIFT       29
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR_NONE            0               /* 0x00000000 */
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR_CALL            1               /* 0x20000000 */
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR_NON_CACHE       2               /* 0x40000000 */
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR_RETURN          3               /* 0x60000000 */
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR_RESERVED_CMD    4               /* 0x80000000 */
-#define NV_PFIFO_CACHE1_DMA_STATE_ERROR_PROTECTION      6               /* 0xc0000000 */
-        NV_PFIFO_CACHE1_DMA_INSTANCE                = 0x0000122c,
-#define NV_PFIFO_CACHE1_DMA_INSTANCE_ADDRESS            0x0000ffff
-        NV_PFIFO_CACHE1_DMA_PUT                     = 0x00001240,
-#define NV_PFIFO_CACHE1_DMA_PUT_OFFSET                  0xfffffffc
-        NV_PFIFO_CACHE1_DMA_GET                     = 0x00001244,
-#define NV_PFIFO_CACHE1_DMA_GET_OFFSET                  0xfffffffc
-        NV_PFIFO_CACHE1_DMA_SUBROUTINE              = 0x0000124c,
-#define NV_PFIFO_CACHE1_DMA_SUBROUTINE_RETURN_OFFSET    0xfffffffc
-#define NV_PFIFO_CACHE1_DMA_SUBROUTINE_STATE_ACTIVE     (1 << 0)        /* 0x00000001 */
-        NV_PFIFO_CACHE1_PULL0                       = 0x00001250,
-#define NV_PFIFO_CACHE1_PULL0_ACCESS_ENABLED            (1 << 0)        /* 0x00000001 */    /* pull access enabled */
-        NV_PFIFO_CACHE1_ENGINE                      = 0x00001280,
-#define NV_PFIFO_CACHE1_ENGINE_0                        0x00000003
-#define NV_PFIFO_CACHE1_ENGINE_0__BITSHIFT              0
-#define NV_PFIFO_CACHE1_ENGINE_1                        0x00000030
-#define NV_PFIFO_CACHE1_ENGINE_1__BITSHIFT              4
-#define NV_PFIFO_CACHE1_ENGINE_2                        0x00000300
-#define NV_PFIFO_CACHE1_ENGINE_2__BITSHIFT              8
-#define NV_PFIFO_CACHE1_ENGINE_3                        0x00003000
-#define NV_PFIFO_CACHE1_ENGINE_3__BITSHIFT              12
-#define NV_PFIFO_CACHE1_ENGINE_4                        0x00030000
-#define NV_PFIFO_CACHE1_ENGINE_4__BITSHIFT              16
-#define NV_PFIFO_CACHE1_ENGINE_5                        0x00300000
-#define NV_PFIFO_CACHE1_ENGINE_5__BITSHIFT              20
-#define NV_PFIFO_CACHE1_ENGINE_6                        0x03000000
-#define NV_PFIFO_CACHE1_ENGINE_6__BITSHIFT              24
-#define NV_PFIFO_CACHE1_ENGINE_7                        0x30000000
-#define NV_PFIFO_CACHE1_ENGINE_7__BITSHIFT              28
-        NV_PFIFO_CACHE1_DMA_DCOUNT                  = 0x000012a0,
-//#define NV_PFIFO_CACHE1_DMA_DCOUNT_VALUE                0x00001ffc
-        NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW          = 0x000012a4,
-#define NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET       0xfffffffc
-        NV_PFIFO_CACHE1_DMA_RSVD_SHADOW             = 0x000012a8,
-        NV_PFIFO_CACHE1_DMA_DATA_SHADOW             = 0x000012ac,
-};
-/* NV_PFIFO_CACHE */    /* 3 */
-/* NV_PRMA */           /* 4 */     /* access to BAR0/BAR1 from real mode */
-/* NV_PVIDEO */         /* 5 */     /* video overlay */
-enum { /* NV_PTIMER */  /* 6 */     /* time measurement and time-based alarms */
-        NV_PTIMER_INTR_0                            = 0x00000100,
-#define NV_PTIMER_INTR_0_ALARM                          (1 << 0)        /* 0x00000001 */
-        NV_PTIMER_INTR_EN_0                         = 0x00000140,
-#define NV_PTIMER_INTR_EN_0_ALARM                       (1 << 0)        /* 0x00000001 */
-};
-/* NV_PCOUNTER */       /* 7 */     /* performance monitoring counters */
-/* NV_PVPE */           /* 8 */     /* MPEG2 decoding engine */
-/* NV_PTV */            /* 9 */     /* TV encoder */
-/* NV_PRMFB */          /* 10 */    /* aliases VGA memory window */
-/* NV_PRMVIO */         /* 11 */    /* aliases VGA sequencer and graphics controller registers */
-enum {  /* NV_PFB */    /* 12 */    /* memory interface */
-        NV_PFB_CFG0                                 = 0x00000200,
-#define NV_PFB_CFG0_PART_4                              0x00000003
-        NV_PFB_CSTATUS                              = 0x0000020c,
-        NV_PFB_WBC                                  = 0x00000410,
-//#define NV_PFB_WBC_FLUSH_PENDING                    (1 << 16)       /* 0x00010000 */
-};
-/* NV_PSTRAPS */        /* 13 */    /* straps readout / override */
-enum {  /* NV_PGRAPH */ /* 14 */    /* accelerated 2d/3d drawing engine */
-        NV_PGRAPH_INTR                              = 0x00000100,
-#define NV_PGRAPH_INTR_NOTIFY                           (1 << 0)        /* 0x00000001 */
-#define NV_PGRAPH_INTR_MISSING_HW                       (1 << 4)        /* 0x00000010 */
-#define NV_PGRAPH_INTR_TLB_PRESENT_DMA_R                (1 << 6)        /* 0x00000040 */
-#define NV_PGRAPH_INTR_TLB_PRESENT_DMA_W                (1 << 7)        /* 0x00000080 */
-#define NV_PGRAPH_INTR_TLB_PRESENT_TEX_A                (1 << 8)        /* 0x00000100 */
-#define NV_PGRAPH_INTR_TLB_PRESENT_TEX_B                (1 << 9)        /* 0x00000200 */
-#define NV_PGRAPH_INTR_TLB_PRESENT_VTX                  (1 << 10)       /* 0x00000400 */
-#define NV_PGRAPH_INTR_CONTEXT_SWITCH                   (1 << 12)       /* 0x00001000 */
-#define NV_PGRAPH_INTR_STATE3D                          (1 << 13)       /* 0x00002000 */
-#define NV_PGRAPH_INTR_BUFFER_NOTIFY                    (1 << 16)       /* 0x00010000 */
-#define NV_PGRAPH_INTR_ERROR                            (1 << 20)       /* 0x00100000 */
-#define NV_PGRAPH_INTR_SINGLE_STEP                      (1 << 24)       /* 0x01000000 */
-        NV_PGRAPH_INTR_EN                           = 0x00000140,
-#define NV_PGRAPH_INTR_EN_NOTIFY                        (1 << 0)        /* 0x00000001 */
-#define NV_PGRAPH_INTR_EN_MISSING_HW                    (1 << 4)        /* 0x00000010 */
-#define NV_PGRAPH_INTR_EN_TLB_PRESENT_DMA_R             (1 << 6)        /* 0x00000040 */
-#define NV_PGRAPH_INTR_EN_TLB_PRESENT_DMA_W             (1 << 7)        /* 0x00000080 */
-#define NV_PGRAPH_INTR_EN_TLB_PRESENT_TEX_A             (1 << 8)        /* 0x00000100 */
-#define NV_PGRAPH_INTR_EN_TLB_PRESENT_TEX_B             (1 << 9)        /* 0x00000200 */
-#define NV_PGRAPH_INTR_EN_TLB_PRESENT_VTX               (1 << 10)       /* 0x00000400 */
-#define NV_PGRAPH_INTR_EN_CONTEXT_SWITCH                (1 << 12)       /* 0x00001000 */
-#define NV_PGRAPH_INTR_EN_STATE3D                       (1 << 13)       /* 0x00002000 */
-#define NV_PGRAPH_INTR_EN_BUFFER_NOTIFY                 (1 << 16)       /* 0x00010000 */
-#define NV_PGRAPH_INTR_EN_ERROR                         (1 << 20)       /* 0x00100000 */
-#define NV_PGRAPH_INTR_EN_SINGLE_STEP                   (1 << 24)       /* 0x01000000 */
-        NV_PGRAPH_CTX_CONTROL                       = 0x00000144,
-#define NV_PGRAPH_CTX_CONTROL_CHID_VALID                (1 << 16)       /* 0x00010000 */
-        NV_PGRAPH_CTX_USER                          = 0x00000148,
-#define NV_PGRAPH_CTX_USER_CHID                         0x1f000000
-#define NV_PGRAPH_CTX_USER_CHID__BITSHIFT               24
-#define NV_PGRAPH_CTX_CACHE_OFFSET(x)                   ((x) << 2)      /* x = subchannel */
-        NV_PGRAPH_CTX_CACHE1                        = 0x00000160,
-        NV_PGRAPH_CTX_CACHE2                        = 0x00000180,
-        NV_PGRAPH_CTX_CACHE3                        = 0x000001a0,
-        NV_PGRAPH_CTX_CACHE4                        = 0x000001c0,
-        NV_PGRAPH_CTX_CACHE5                        = 0x000001e0,
-        NV_PGRAPH_TRAPPED_ADDR                      = 0x00000704,
-#define NV_PGRAPH_TRAPPED_ADDR_CHID                     0x01f00000
-#define NV_PGRAPH_TRAPPED_ADDR_CHID__BITSHIFT           20
-        NV_PGRAPH_FIFO                              = 0x00000720,
-#define NV_PGRAPH_FIFO_ACCESS_ENABLED                   (1 << 0)        /* 0x00000001 */
-};
-enum {  /* NV_PCRTC */  /* 15 */    /* more CRTC controls */
-        NV_PCRTC_INTR_0                             = 0x00000100,
-#define NV_PCRTC_INTR_0_VBLANK                          (1 << 0)        /* 0x00000001 */
-        NV_PCRTC_INTR_EN_0                          = 0x00000140,
-#define NV_PCRTC_INTR_EN_0_VBLANK                       (1 << 0)        /* 0x00000001 */
-};
-/* NV_PRMCIO */         /* 16 */    /* aliases VGA CRTC and attribute controller registers */
-/* NV_PRAMDAC */        /* 17 */    /* RAMDAC, cursor, and PLL control */
-/* NV_PRMDIO */         /* 18 */    /* aliases VGA palette registers */
-enum {  /* NV_PRAMIN */ /* 19 */    /* RAMIN access */
-        NV_PRAMIN_BASE                              = 0x00000000,
-};
-enum {  /* NV_USER */   /* 20 */    /* PFIFO MMIO and DMA submission area */
-#define NV_USER_ADDR_REG(x)                             (((x) & 0x0000ffff) >>  0)
-#define NV_USER_ADDR_CHID(x)                            (((x) & 0xffff0000) >> 16)
-        NV_USER_OBJECT                              = 0x00000000,
-#define NV_USER_OBJECT_OFFSET(x,y)                      (((x) << 16) + ((y) << 13)) /* x = channel, y = subchannel */
-        NV_USER_DMA_PUT                             = 0x00000040,
-#define NV_USER_DMA_PUT_OFFSET                          0xfffffffc
-        NV_USER_DMA_GET                             = 0x00000044,
-#define NV_USER_DMA_GET_OFFSET                          0xfffffffc
-        NV_USER_REF                                 = 0x00000048,
-};
-
-////#define NV_DMA_CLASS                                    0x00000fff
-//#define NV_DMA_PAGE_TABLE                                      (1 << 12)
-//#define NV_DMA_PAGE_ENTRY                                      (1 << 13)
-//#define NV_DMA_FLAGS_ACCESS                                    (1 << 14)
-//#define NV_DMA_FLAGS_MAPPING_COHERENCY                         (1 << 15)
-////#define NV_DMA_TARGET                                   0x00030000
-//#   define NV_DMA_TARGET_NVM                                      0x00000000
-//#   define NV_DMA_TARGET_NVM_TILED                                0x00010000
-//#   define NV_DMA_TARGET_PCI                                      0x00020000
-//#   define NV_DMA_TARGET_AGP                                      0x00030000
-////#define NV_DMA_ADJUST                                   0xfff00000
-////#define NV_DMA_ADDRESS                                  0xfffff000
-
-
-typedef union {
-    uint32_t     field;
-    struct {
-        uint32_t grclass          : 8;  /*  0 */
-        uint32_t pad1             : 4;  /*  8 */
-        uint32_t chroma_key       : 1;  /* 12 */    /* enable flag */
-        uint32_t user_clip        : 1;  /* 13 */    /* enable flag */
-        uint32_t swizzle          : 1;  /* 14 */    /* enable flag */
-        uint32_t patch_config     : 3;  /* 15 */
-#define NV_PGRAPH_CTX_SWITCH1_PATCH_CONFIG_SRCCOPY_AND          0
-#define NV_PGRAPH_CTX_SWITCH1_PATCH_CONFIG_ROP_AND              1
-#define NV_PGRAPH_CTX_SWITCH1_PATCH_CONFIG_BLEND_AND            2
-#define NV_PGRAPH_CTX_SWITCH1_PATCH_CONFIG_SRCCOPY              3
-#define NV_PGRAPH_CTX_SWITCH1_PATCH_CONFIG_SRCCOPY_PRE          4
-#define NV_PGRAPH_CTX_SWITCH1_PATCH_CONFIG_BLEND_PRE            5
-        uint32_t synchronize      : 1;  /* 18 */    /* enable flag */
-        uint32_t endian_mode      : 1;  /* 19 */    /* big endian flag */
-        uint32_t dither_mode      : 2;  /* 20 */
-#define NV_PGRAPH_CTX_SWITCH1_DITHER_MODE_COMPATIBILITY         0
-#define NV_PGRAPH_CTX_SWITCH1_DITHER_MODE_DITHER                1
-#define NV_PGRAPH_CTX_SWITCH1_DITHER_MODE_TRUNCATE              2
-#define NV_PGRAPH_CTX_SWITCH1_DITHER_MODE_MS                    3
-        uint32_t class_type       : 1;  /* 22 */
-#define NV_PGRAPH_CTX_SWITCH1_CLASS_TYPE_COMPATIBILITY          0
-#define NV_PGRAPH_CTX_SWITCH1_CLASS_TYPE_PERFORMANCE            1
-        uint32_t single_step      : 1;  /* 23 */    /* enable flag */
-        uint32_t patch_status     : 1;  /* 24 */    /* valid flag */
-        uint32_t context_surface0 : 1;  /* 25 */    /* valid flag */
-        uint32_t context_surface1 : 1;  /* 26 */    /* valid flag */
-        uint32_t context_pattern  : 1;  /* 27 */    /* valid flag */
-        uint32_t context_rop      : 1;  /* 28 */    /* valid flag */
-        uint32_t context_beta1    : 1;  /* 29 */    /* valid flag */
-        uint32_t context_beta4    : 1;  /* 30 */    /* valid flag */
-        uint32_t volatile_reset   : 1;  /* 31 */    /* enable flag */
-    } PACKED;
-} PACKED nv2a_pgraph_ctx_cache1;
-
-typedef union {
-    uint32_t     field;
-    struct {
-        uint32_t mono_format      : 2;  /*  0 */
-#define NV_PGRAPH_CTX_SWITCH2_MONO_FORMAT_INVALID               0
-#define NV_PGRAPH_CTX_SWITCH2_MONO_FORMAT_CGA6_M1               1
-#define NV_PGRAPH_CTX_SWITCH2_MONO_FORMAT_LE_M1                 2
-        uint32_t pad1             : 6;  /*  2 */
-        uint32_t color_format     : 6;  /*  8 */
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_INVALID              0
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_Y8                1
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X16A8Y8           2
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X24Y8             3
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_A1R5G5B5          6
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X1R5G5B5          7
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X16A1R5G5B5       8
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X17R5G5B5         9
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_R5G6B5            10
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_A16R5G6B5         11
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X16R5G6B5         12
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_A8R8G8B8          13
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X8R8G8B8          14
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_Y16               15
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_A16Y16            16
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_X16Y16            17
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_V8YB8U8YA8        18
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_YB8V8YA8U8        19
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_Y32               20
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_AY8               21
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_EYB8ECR8EYA8ECB8  22
-#define NV_PGRAPH_CTX_SWITCH2_COLOR_FORMAT_LE_ECR8EYB8ECB8EYA8  23
-        uint32_t pad2             : 2;  /* 14 */
-        uint32_t notify_instance  : 16; /* 16 */
-    } PACKED;
-} PACKED nv2a_pgraph_ctx_cache2;
-
-typedef union {
-    uint32_t     field;
-    struct {
-        uint32_t dma_instance0    : 16; /*  0 */
-        uint32_t dma_instance1    : 16; /* 16 */
-    } PACKED;
-} PACKED nv2a_pgraph_ctx_cache3;
-
-typedef union {
-    uint32_t     field;
-    struct {
-        uint32_t user_instance    : 16; /*  0 */
-        uint32_t pad1             : 16; /* 16 */
-    } PACKED;
-} PACKED nv2a_pgraph_ctx_cache4;
-
-typedef union {
-    uint32_t     field;
-    struct {
-        uint32_t trap_bits;             /*  0 */
-    } PACKED;
-} PACKED nv2a_pgraph_ctx_cache5;
-
-
-enum {  /* NV_PGRAPH */
-        NV10_CONTEXT_SURFACES_2D                    = 0x00000062,
-        NV12_IMAGE_BLIT                             = 0x0000009f,
+enum {
         NV20_KELVIN_PRIMITIVE                       = 0x00000097,
-};
-enum {  /* NV10_CONTEXT_SURFACES_2D */
-        NV_062_NV10_CONTEXT_SURFACES_2D             = 0x00000000,
-        NV_062_NOP                                  = 0x00000100,
-        NV_062_PM_TRIGGER                           = 0x00000140,
-        NV_062_NOTIFY                               = 0x00000104,
-        NV_062_WAIT_FOR_IDLE                        = 0x00000108,
-        NV_062_SET_CONTEXT_DMA_NOTIFY               = 0x00000180,
-        NV_062_SET_CONTEXT_DMA_IMAGE_SOURCE         = 0x00000184,
-        NV_062_SET_CONTEXT_DMA_IMAGE_DESTIN         = 0x00000188,
-        NV_062_COLOR_FORMAT                         = 0x00000300,
-#define NV_062_COLOR_FORMAT_LE_Y8                       1
-#define NV_062_COLOR_FORMAT_LE_X1R5G5B5_Z1R5G5B5        2
-#define NV_062_COLOR_FORMAT_LE_X1R5G5B5_O1R5G5B5        3
-#define NV_062_COLOR_FORMAT_LE_R5G6B5                   4
-#define NV_062_COLOR_FORMAT_LE_Y16                      5
-#define NV_062_COLOR_FORMAT_LE_X8R8G8B8_Z8R8G8B8        6
-#define NV_062_COLOR_FORMAT_LE_X8R8G8B8_O8R8G8B8        7
-#define NV_062_COLOR_FORMAT_LE_X1A7R8G8B8_Z1A7R8G8B8    8
-#define NV_062_COLOR_FORMAT_LE_X1A7R8G8B8_O1A7R8G8B8    9
-#define NV_062_COLOR_FORMAT_LE_A8R8G8B8                 10
-#define NV_062_COLOR_FORMAT_LE_Y32                      11
-        NV_062_PITCH                                = 0x00000304,
-#define NV_062_PITCH_SOURCE                             0x0000ffff
-#define NV_062_PITCH_SOURCE__BITSHIFT                   0
-#define NV_062_PITCH_DESTIN                             0xffff0000
-#define NV_062_PITCH_DESTIN__BITSHIFT                   16
-        NV_062_OFFSET_SOURCE                        = 0x00000308,
-        NV_062_OFFSET_DESTIN                        = 0x0000030c,
-};
-enum {  /* NV12_IMAGE_BLIT */
-        NV_09F_NV12_IMAGE_BLIT                      = 0x00000000,
-        NV_09F_NOP                                  = 0x00000100,
-        NV_09F_NOTIFY                               = 0x00000104,
-        NV_09F_WAIT_FOR_IDLE                        = 0x00000108,
-        NV_09F_WAIT_FOR_CRTC                        = 0x0000010c,
-        NV_09F_SET_CONTEXT_DMA_NOTIFY               = 0x00000180,
-        NV_09F_SET_CONTEXT_COLOR_KEY                = 0x00000184,
-        NV_09F_SET_CONTEXT_CLIP_RECTANGLE           = 0x00000188,
-        NV_09F_SET_CONTEXT_PATTERN                  = 0x0000018c,
-        NV_09F_SET_CONTEXT_ROP                      = 0x00000190,
-        NV_09F_SET_CONTEXT_BETA1                    = 0x00000194,
-        NV_09F_SET_CONTEXT_BETA4                    = 0x00000198,
-        NV_09F_SET_CONTEXT_SURFACE                  = 0x0000019c,
-        NV_09F_SET_OPERATION                        = 0x000002fc,
-#define NV_09F_SET_OPERATION_MODE_SRCCOPY_AND           0
-#define NV_09F_SET_OPERATION_MODE_ROP_AND               1
-#define NV_09F_SET_OPERATION_MODE_BLEND_AND             2
-#define NV_09F_SET_OPERATION_MODE_SRCCOPY               3
-#define NV_09F_SET_OPERATION_MODE_SRCCOPY_PREMULT       4
-#define NV_09F_SET_OPERATION_MODE_BLEND_PREMULT         5
-        NV_09F_POINT_IN                             = 0x00000300,
-#define NV_09F_POINT_IN_X                               0x0000ffff
-#define NV_09F_POINT_IN_X__BITSHIFT                     0
-#define NV_09F_POINT_IN_Y                               0xffff0000
-#define NV_09F_POINT_IN_Y__BITSHIFT                     16
-        NV_09F_POINT_OUT                            = 0x00000304,
-#define NV_09F_POINT_OUT_X                              0x0000ffff
-#define NV_09F_POINT_OUT_X__BITSHIFT                    0
-#define NV_09F_POINT_OUT_Y                              0xffff0000
-#define NV_09F_POINT_OUT_Y__BITSHIFT                    16
-        NV_09F_SIZE                                 = 0x00000308,
-#define NV_09F_SIZE_WIDTH                               0x0000ffff
-#define NV_09F_SIZE_WIDTH__BITSHIFT                     0
-#define NV_09F_SIZE_HEIGHT                              0xffff0000
-#define NV_09F_SIZE_HEIGHT__BITSHIFT                    16
-};
-enum {  /* NV20_KELVIN_PRIMITIVE */
         NV_097_NV20_KELVIN_PRIMITIVE                = 0x00000000,
         NV_097_NO_OPERATION                         = 0x00000100,
         NV_097_NOTIFY                               = 0x00000104,
@@ -2451,18 +2024,20 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
 #define NV_097_DRAW_ARRAYS_START_INDEX__BITSHIFT                        0
         NV_097_INLINE_VERTEX_REUSE                  = 0x00001828,
         NV_097_INLINE_ARRAY                         = 0x00001818,
+        NV_097_SET_TEXTURE_OFFSET                   = 0x00001b00,
         NV_097_SET_TEXTURE_OFFSET_0                 = 0x00001b00,
         NV_097_SET_TEXTURE_OFFSET_1                 = 0x00001b40,
         NV_097_SET_TEXTURE_OFFSET_2                 = 0x00001b80,
         NV_097_SET_TEXTURE_OFFSET_3                 = 0x00001bc0,
+        NV_097_SET_TEXTURE_FORMAT                   = 0x00001b04,
         NV_097_SET_TEXTURE_FORMAT_0                 = 0x00001b04,
         NV_097_SET_TEXTURE_FORMAT_1                 = 0x00001b44,
         NV_097_SET_TEXTURE_FORMAT_2                 = 0x00001b84,
         NV_097_SET_TEXTURE_FORMAT_3                 = 0x00001bc4,
 #define NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA                           0x00000003
 #define NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA__BITSHIFT                 0
-#define NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_A                         1
-#define NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_B                         2
+#define NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_A                         0
+#define NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_B                         1
 #define NV_097_SET_TEXTURE_FORMAT_CUBEMAP_ENABLE                        0x00000004
 #define NV_097_SET_TEXTURE_FORMAT_CUBEMAP_ENABLE__BITSHIFT              2
 #define NV_097_SET_TEXTURE_FORMAT_CUBEMAP_ENABLE_FALSE                  0
@@ -2581,6 +2156,7 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
 #define NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_128                       7
 #define NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_256                       8
 #define NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_512                       9
+        NV_097_SET_TEXTURE_ADDRESS                  = 0x00001b08,
         NV_097_SET_TEXTURE_ADDRESS_0                = 0x00001b08,
         NV_097_SET_TEXTURE_ADDRESS_1                = 0x00001b48,
         NV_097_SET_TEXTURE_ADDRESS_2                = 0x00001b88,
@@ -2622,6 +2198,7 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
 #define NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_Q__BITSHIFT                  24
 #define NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_Q_FALSE                      0
 #define NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_Q_TRUE                       1
+        NV_097_SET_TEXTURE_CONTROL0                 = 0x00001b0c,
         NV_097_SET_TEXTURE_CONTROL0_0               = 0x00001b0c,
         NV_097_SET_TEXTURE_CONTROL0_1               = 0x00001b4c,
         NV_097_SET_TEXTURE_CONTROL0_2               = 0x00001b8c,
@@ -2654,12 +2231,14 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
 #define NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION_ALPHA           1
 #define NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION_RGBA            2
 #define NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION_KILL            3
+        NV_097_SET_TEXTURE_CONTROL1                 = 0x00001b10,
         NV_097_SET_TEXTURE_CONTROL1_0               = 0x00001b10,
         NV_097_SET_TEXTURE_CONTROL1_1               = 0x00001b50,
         NV_097_SET_TEXTURE_CONTROL1_2               = 0x00001b90,
         NV_097_SET_TEXTURE_CONTROL1_3               = 0x00001bd0,
 #define NV_097_SET_TEXTURE_CONTROL1_IMAGE_PITCH                         0xffff0000
 #define NV_097_SET_TEXTURE_CONTROL1_IMAGE_PITCH__BITSHIFT               16
+        NV_097_SET_TEXTURE_FILTER                   = 0x00001b14,
         NV_097_SET_TEXTURE_FILTER_0                 = 0x00001b14,
         NV_097_SET_TEXTURE_FILTER_1                 = 0x00001b54,
         NV_097_SET_TEXTURE_FILTER_2                 = 0x00001b94,
@@ -2700,6 +2279,7 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
 #define NV_097_SET_TEXTURE_FILTER_BSIGNED__BITSHIFT                     31
 #define NV_097_SET_TEXTURE_FILTER_BSIGNED_BIT_DISABLED                  0
 #define NV_097_SET_TEXTURE_FILTER_BSIGNED_BIT_ENABLED                   1
+        NV_097_SET_TEXTURE_IMAGE_RECT               = 0x00001b1c,
         NV_097_SET_TEXTURE_IMAGE_RECT_0             = 0x00001b1c,
         NV_097_SET_TEXTURE_IMAGE_RECT_1             = 0x00001b5c,
         NV_097_SET_TEXTURE_IMAGE_RECT_2             = 0x00001b9c,
@@ -2708,6 +2288,7 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
 #define NV_097_SET_TEXTURE_IMAGE_RECT_WIDTH__BITSHIFT                   16
 #define NV_097_SET_TEXTURE_IMAGE_RECT_HEIGHT                            0x0000ffff
 #define NV_097_SET_TEXTURE_IMAGE_RECT_HEIGHT__BITSHIFT                  0
+        NV_097_SET_TEXTURE_PALETTE                  = 0x00001b20,
         NV_097_SET_TEXTURE_PALETTE_0                = 0x00001b20,
         NV_097_SET_TEXTURE_PALETTE_1                = 0x00001b60,
         NV_097_SET_TEXTURE_PALETTE_2                = 0x00001ba0,
@@ -2724,6 +2305,7 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
 #define NV_097_SET_TEXTURE_PALETTE_LENGTH_32                            3
 #define NV_097_SET_TEXTURE_PALETTE_OFFSET                               0xffffffc0
 #define NV_097_SET_TEXTURE_PALETTE_OFFSET__BITSHIFT                     6
+        NV_097_SET_TEXTURE_BORDER_COLOR             = 0x00001b24,
         NV_097_SET_TEXTURE_BORDER_COLOR_0           = 0x00001b24,
         NV_097_SET_TEXTURE_BORDER_COLOR_1           = 0x00001b64,
         NV_097_SET_TEXTURE_BORDER_COLOR_2           = 0x00001ba4,
@@ -3455,38 +3037,3233 @@ enum {  /* NV20_KELVIN_PRIMITIVE */
         NV_097_DEBUG_INIT_9                         = 0x00001fe4,
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+static const char *const nv2a_097_name[] = {
+    NAMER(NV_097_NV20_KELVIN_PRIMITIVE),
+    NAMER(NV_097_NO_OPERATION),
+    NAMER(NV_097_NOTIFY),
+    NAMER(NV_097_SET_WARNING_ENABLE),
+    NAMER(NV_097_GET_STATE),
+    NAMER(NV_097_WAIT_FOR_IDLE),
+    NAMER(NV_097_PM_TRIGGER),
+    NAMER(NV_097_SET_FLIP_READ),
+    NAMER(NV_097_SET_FLIP_WRITE),
+    NAMER(NV_097_SET_FLIP_MODULO),
+    NAMER(NV_097_FLIP_INCREMENT_WRITE),
+    NAMER(NV_097_FLIP_STALL),
+    NAMER(NV_097_SET_CONTEXT_DMA_NOTIFIES),
+    NAMER(NV_097_SET_CONTEXT_DMA_A),
+    NAMER(NV_097_SET_CONTEXT_DMA_B),
+    NAMER(NV_097_SET_CONTEXT_DMA_STATE),
+    NAMER(NV_097_SET_CONTEXT_DMA_COLOR),
+    NAMER(NV_097_SET_CONTEXT_DMA_ZETA),
+    NAMER(NV_097_SET_CONTEXT_DMA_VERTEX_A),
+    NAMER(NV_097_SET_CONTEXT_DMA_VERTEX_B),
+    NAMER(NV_097_SET_CONTEXT_DMA_SEMAPHORE),
+    NAMER(NV_097_SET_CONTEXT_DMA_REPORT),
+    NAMER(NV_097_SET_SURFACE_CLIP_HORIZONTAL),
+    NAMER(NV_097_SET_SURFACE_CLIP_VERTICAL),
+    NAMER(NV_097_SET_SURFACE_PITCH),
+    NAMER(NV_097_SET_SURFACE_COLOR_OFFSET),
+    NAMER(NV_097_SET_SURFACE_ZETA_OFFSET),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_0),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_1),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_2),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_3),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_4),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_5),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_6),
+    NAMER(NV_097_SET_COMBINER_ALPHA_ICW_7),
+#if 0
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP                             0xe0000000
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP__BITSHIFT                   29
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_ALPHA_ICW_A_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_ALPHA_ICW_A_ALPHA                           0x10000000
+NV_097_SET_COMBINER_ALPHA_ICW_A_ALPHA__BITSHIFT                 28
+NV_097_SET_COMBINER_ALPHA_ICW_A_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_ALPHA_ICW_A_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE                          0x0f000000
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE__BITSHIFT                24
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_ALPHA_ICW_A_SOURCE_REG_D                    13
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP                             0x00e00000
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP__BITSHIFT                   21
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_ALPHA_ICW_B_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_ALPHA_ICW_B_ALPHA                           0x00100000
+NV_097_SET_COMBINER_ALPHA_ICW_B_ALPHA__BITSHIFT                 20
+NV_097_SET_COMBINER_ALPHA_ICW_B_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_ALPHA_ICW_B_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE                          0x000f0000
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE__BITSHIFT                16
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_ALPHA_ICW_B_SOURCE_REG_D                    13
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP                             0x0000e000
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP__BITSHIFT                   13
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_ALPHA_ICW_C_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_ALPHA_ICW_C_ALPHA                           0x00001000
+NV_097_SET_COMBINER_ALPHA_ICW_C_ALPHA__BITSHIFT                 12
+NV_097_SET_COMBINER_ALPHA_ICW_C_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_ALPHA_ICW_C_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE                          0x00000f00
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE__BITSHIFT                8
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_ALPHA_ICW_C_SOURCE_REG_D                    13
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP                             0x000000e0
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP__BITSHIFT                   5
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_ALPHA_ICW_D_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_ALPHA_ICW_D_ALPHA                           0x00000010
+NV_097_SET_COMBINER_ALPHA_ICW_D_ALPHA__BITSHIFT                 4
+NV_097_SET_COMBINER_ALPHA_ICW_D_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_ALPHA_ICW_D_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE                          0x0000000f
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE__BITSHIFT                0
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_ALPHA_ICW_D_SOURCE_REG_D                    13
 #endif
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_0),
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_1),
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_2),
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_3),
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_4),
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_5),
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_6),
+    NAMER(NV_097_SET_COMBINER_COLOR_ICW_7),
+#if 0
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP                             0xe0000000
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP__BITSHIFT                   29
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_COLOR_ICW_A_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_COLOR_ICW_A_ALPHA                           0x10000000
+NV_097_SET_COMBINER_COLOR_ICW_A_ALPHA__BITSHIFT                 28
+NV_097_SET_COMBINER_COLOR_ICW_A_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_COLOR_ICW_A_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE                          0x0f000000
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE__BITSHIFT                24
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_COLOR_ICW_A_SOURCE_REG_D                    13
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP                             0x00e00000
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP__BITSHIFT                   21
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_COLOR_ICW_B_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_COLOR_ICW_B_ALPHA                           0x00100000
+NV_097_SET_COMBINER_COLOR_ICW_B_ALPHA__BITSHIFT                 20
+NV_097_SET_COMBINER_COLOR_ICW_B_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_COLOR_ICW_B_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE                          0x000f0000
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE__BITSHIFT                16
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_COLOR_ICW_B_SOURCE_REG_D                    13
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP                             0x0000e000
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP__BITSHIFT                   13
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_COLOR_ICW_C_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_COLOR_ICW_C_ALPHA                           0x00001000
+NV_097_SET_COMBINER_COLOR_ICW_C_ALPHA__BITSHIFT                 12
+NV_097_SET_COMBINER_COLOR_ICW_C_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_COLOR_ICW_C_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE                          0x00000f00
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE__BITSHIFT                8
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_COLOR_ICW_C_SOURCE_REG_D                    13
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP                             0x000000e0
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP__BITSHIFT                   5
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_UNSIGNED_IDENTITY           0
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_UNSIGNED_INVERT             1
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_EXPAND_NORMAL               2
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_EXPAND_NEGATE               3
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_HALFBIAS_NORMAL             4
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_HALFBIAS_NEGATE             5
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_SIGNED_IDENTITY             6
+NV_097_SET_COMBINER_COLOR_ICW_D_MAP_SIGNED_NEGATE               7
+NV_097_SET_COMBINER_COLOR_ICW_D_ALPHA                           0x00000010
+NV_097_SET_COMBINER_COLOR_ICW_D_ALPHA__BITSHIFT                 4
+NV_097_SET_COMBINER_COLOR_ICW_D_ALPHA_FALSE                     0
+NV_097_SET_COMBINER_COLOR_ICW_D_ALPHA_TRUE                      1
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE                          0x0000000f
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE__BITSHIFT                0
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_0                    0
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_1                    1
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_2                    2
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_3                    3
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_4                    4
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_5                    5
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_8                    8
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_9                    9
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_A                    10
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_B                    11
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_C                    12
+NV_097_SET_COMBINER_COLOR_ICW_D_SOURCE_REG_D                    13
+#endif
+    NAMER(NV_097_SET_COMBINER_FACTOR0_0),
+    NAMER(NV_097_SET_COMBINER_FACTOR0_1),
+    NAMER(NV_097_SET_COMBINER_FACTOR0_2),
+    NAMER(NV_097_SET_COMBINER_FACTOR0_3),
+    NAMER(NV_097_SET_COMBINER_FACTOR0_4),
+    NAMER(NV_097_SET_COMBINER_FACTOR0_5),
+    NAMER(NV_097_SET_COMBINER_FACTOR0_6),
+    NAMER(NV_097_SET_COMBINER_FACTOR0_7),
+#if 0
+NV_097_SET_COMBINER_FACTOR0_BLUE                                0x000000ff
+NV_097_SET_COMBINER_FACTOR0_BLUE__BITSHIFT                      0
+NV_097_SET_COMBINER_FACTOR0_GREEN                               0x0000ff00
+NV_097_SET_COMBINER_FACTOR0_GREEN__BITSHIFT                     8
+NV_097_SET_COMBINER_FACTOR0_RED                                 0x00ff0000
+NV_097_SET_COMBINER_FACTOR0_RED__BITSHIFT                       16
+NV_097_SET_COMBINER_FACTOR0_ALPHA                               0xff000000
+NV_097_SET_COMBINER_FACTOR0_ALPHA__BITSHIFT                     24
+#endif
+    NAMER(NV_097_SET_COMBINER_FACTOR1_0),
+    NAMER(NV_097_SET_COMBINER_FACTOR1_1),
+    NAMER(NV_097_SET_COMBINER_FACTOR1_2),
+    NAMER(NV_097_SET_COMBINER_FACTOR1_3),
+    NAMER(NV_097_SET_COMBINER_FACTOR1_4),
+    NAMER(NV_097_SET_COMBINER_FACTOR1_5),
+    NAMER(NV_097_SET_COMBINER_FACTOR1_6),
+    NAMER(NV_097_SET_COMBINER_FACTOR1_7),
+#if 0
+NV_097_SET_COMBINER_FACTOR1_BLUE                                0x000000ff
+NV_097_SET_COMBINER_FACTOR1_BLUE__BITSHIFT                      0
+NV_097_SET_COMBINER_FACTOR1_GREEN                               0x0000ff00
+NV_097_SET_COMBINER_FACTOR1_GREEN__BITSHIFT                     8
+NV_097_SET_COMBINER_FACTOR1_RED                                 0x00ff0000
+NV_097_SET_COMBINER_FACTOR1_RED__BITSHIFT                       16
+NV_097_SET_COMBINER_FACTOR1_ALPHA                               0xff000000
+NV_097_SET_COMBINER_FACTOR1_ALPHA__BITSHIFT                     24
+#endif
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_0),
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_1),
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_2),
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_3),
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_4),
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_5),
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_6),
+    NAMER(NV_097_SET_COMBINER_ALPHA_OCW_7),
+#if 0
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION                         0xffff8000
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION__BITSHIFT               15
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION_NOSHIFT                 0
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION_NOSHIFT_BIAS            1
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION_SHIFTLEFTBY1            2
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION_SHIFTLEFTBY1_BIAS       3
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION_SHIFTLEFTBY2            4
+NV_097_SET_COMBINER_ALPHA_OCW_OPERATION_SHIFTRIGHTBY1           6
+NV_097_SET_COMBINER_ALPHA_OCW_MUX_ENABLE                        0x00004000
+NV_097_SET_COMBINER_ALPHA_OCW_MUX_ENABLE__BITSHIFT              14
+NV_097_SET_COMBINER_ALPHA_OCW_MUX_ENABLE_FALSE                  0
+NV_097_SET_COMBINER_ALPHA_OCW_MUX_ENABLE_TRUE                   1
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST                           0x00000f00
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST__BITSHIFT                 8
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_0                     0
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_4                     4
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_5                     5
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_8                     8
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_9                     9
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_A                     10
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_B                     11
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_C                     12
+NV_097_SET_COMBINER_ALPHA_OCW_SUM_DST_REG_D                     13
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST                            0x000000f0
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST__BITSHIFT                  4
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_0                      0
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_4                      4
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_5                      5
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_8                      8
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_9                      9
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_A                      10
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_B                      11
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_C                      12
+NV_097_SET_COMBINER_ALPHA_OCW_AB_DST_REG_D                      13
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST                            0x0000000f
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST__BITSHIFT                  0
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_0                      0
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_4                      4
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_5                      5
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_8                      8
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_9                      9
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_A                      10
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_B                      11
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_C                      12
+NV_097_SET_COMBINER_ALPHA_OCW_CD_DST_REG_D                      13
+#endif
+    NAMER(NV_097_SET_COMBINER_SPECULAR_FOG_CW0),
+#if 0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_INVERSE                  0xe0000000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_INVERSE__BITSHIFT        29
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_INVERSE_FALSE            0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_INVERSE_TRUE             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_ALPHA                    0x10000000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_ALPHA__BITSHIFT          28
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_ALPHA_FALSE              0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_ALPHA_TRUE               1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE                   0x0f000000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE__BITSHIFT         24
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_0             0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_1             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_2             2
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_3             3
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_4             4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_5             5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_8             8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_9             9
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_A             10
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_B             11
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_C             12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_D             13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_SPECLIT       14
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_A_SOURCE_REG_EF_PROD       15
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_INVERSE                  0x00e00000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_INVERSE__BITSHIFT        21
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_INVERSE_FALSE            0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_INVERSE_TRUE             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_ALPHA                    0x00100000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_ALPHA__BITSHIFT          20
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_ALPHA_FALSE              0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_ALPHA_TRUE               1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE                   0x000f0000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE__BITSHIFT         16
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_0             0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_1             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_2             2
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_3             3
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_4             4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_5             5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_8             8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_9             9
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_A             10
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_B             11
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_C             12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_D             13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_SPECLIT       14
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_B_SOURCE_REG_EF_PROD       15
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_INVERSE                  0x0000e000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_INVERSE__BITSHIFT        13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_INVERSE_FALSE            0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_INVERSE_TRUE             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_ALPHA                    0x00001000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_ALPHA__BITSHIFT          12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_ALPHA_FALSE              0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_ALPHA_TRUE               1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE                   0x00000f00
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE__BITSHIFT         8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_0             0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_1             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_2             2
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_3             3
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_4             4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_5             5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_8             8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_9             9
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_A             10
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_B             11
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_C             12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_D             13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_SPECLIT       14
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_C_SOURCE_REG_EF_PROD       15
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_INVERSE                  0x000000e0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_INVERSE__BITSHIFT        5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_INVERSE_FALSE            0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_INVERSE_TRUE             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_ALPHA                    0x00000010
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_ALPHA__BITSHIFT          4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_ALPHA_FALSE              0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_ALPHA_TRUE               1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE                   0x0000000f
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE__BITSHIFT         0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_0             0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_1             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_2             2
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_3             3
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_4             4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_5             5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_8             8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_9             9
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_A             10
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_B             11
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_C             12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_D             13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_SPECLIT       14
+NV_097_SET_COMBINER_SPECULAR_FOG_CW0_D_SOURCE_REG_EF_PROD       15
+#endif
+    NAMER(NV_097_SET_COMBINER_SPECULAR_FOG_CW1),
+#if 0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_INVERSE                  0xe0000000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_INVERSE__BITSHIFT        29
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_INVERSE_FALSE            0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_INVERSE_TRUE             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_ALPHA                    0x10000000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_ALPHA__BITSHIFT          28
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_ALPHA_FALSE              0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_ALPHA_TRUE               1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE                   0x0f000000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE__BITSHIFT         24
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_0             0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_1             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_2             2
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_3             3
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_4             4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_5             5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_8             8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_9             9
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_A             10
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_B             11
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_C             12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_E_SOURCE_REG_D             13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_INVERSE                  0x00e00000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_INVERSE__BITSHIFT        21
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_INVERSE_FALSE            0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_INVERSE_TRUE             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_ALPHA                    0x00100000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_ALPHA__BITSHIFT          20
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_ALPHA_FALSE              0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_ALPHA_TRUE               1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE                   0x000f0000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE__BITSHIFT         16
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_0             0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_1             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_2             2
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_3             3
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_4             4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_5             5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_8             8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_9             9
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_A             10
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_B             11
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_C             12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_F_SOURCE_REG_D             13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_INVERSE                  0x0000e000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_INVERSE__BITSHIFT        13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_INVERSE_FALSE            0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_INVERSE_TRUE             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_ALPHA                    0x00001000
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_ALPHA__BITSHIFT          12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_ALPHA_FALSE              0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_ALPHA_TRUE               1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE                   0x00000f00
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE__BITSHIFT         8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_0             0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_1             1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_2             2
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_3             3
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_4             4
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_5             5
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_8             8
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_9             9
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_A             10
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_B             11
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_C             12
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_G_SOURCE_REG_D             13
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_CLAMP             0x00000080
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_CLAMP__BITSHIFT   7
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_CLAMP_FALSE       0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_CLAMP_TRUE        1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R5             0x00000040
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R5__BITSHIFT   6
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R5_FALSE       0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R5_TRUE        1
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R12            0x0000003f
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R12__BITSHIFT  0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R12_FALSE      0
+NV_097_SET_COMBINER_SPECULAR_FOG_CW1_SPECULAR_ADD_INVERT_R12_TRUE       32
+#endif
+    NAMER(NV_097_SET_CONTROL0),
+#if 0
+NV_097_SET_CONTROL0_COLOR_SPACE_CONVERT                         0xf0000000
+NV_097_SET_CONTROL0_COLOR_SPACE_CONVERT__BITSHIFT               28
+NV_097_SET_CONTROL0_COLOR_SPACE_CONVERT_PASS                    0
+NV_097_SET_CONTROL0_COLOR_SPACE_CONVERT_CRYCB_TO_RGB            1
+NV_097_SET_CONTROL0_COLOR_SPACE_CONVERT_SCRYSCB_TO_RGB          2
+NV_097_SET_CONTROL0_PREMULTIPLIEDALPHA                          0x0f000000
+NV_097_SET_CONTROL0_PREMULTIPLIEDALPHA__BITSHIFT                24
+NV_097_SET_CONTROL0_PREMULTIPLIEDALPHA_FALSE                    0
+NV_097_SET_CONTROL0_PREMULTIPLIEDALPHA_TRUE                     1
+NV_097_SET_CONTROL0_TEXTUREPERSPECTIVE                          0x00f00000
+NV_097_SET_CONTROL0_TEXTUREPERSPECTIVE__BITSHIFT                20
+NV_097_SET_CONTROL0_TEXTUREPERSPECTIVE_FALSE                    0
+NV_097_SET_CONTROL0_TEXTUREPERSPECTIVE_TRUE                     1
+NV_097_SET_CONTROL0_Z_PERSPECTIVE_ENABLE                        0x000f0000
+NV_097_SET_CONTROL0_Z_PERSPECTIVE_ENABLE__BITSHIFT              16
+NV_097_SET_CONTROL0_Z_PERSPECTIVE_ENABLE_FALSE                  0
+NV_097_SET_CONTROL0_Z_PERSPECTIVE_ENABLE_TRUE                   1
+NV_097_SET_CONTROL0_Z_FORMAT                                    0x0000f000
+NV_097_SET_CONTROL0_Z_FORMAT__BITSHIFT                          12
+NV_097_SET_CONTROL0_Z_FORMAT_FIXED                              0
+NV_097_SET_CONTROL0_Z_FORMAT_FLOAT                              1
+NV_097_SET_CONTROL0_STENCIL_WRITE_ENABLE                        0x000000ff
+NV_097_SET_CONTROL0_STENCIL_WRITE_ENABLE__BITSHIFT              0
+NV_097_SET_CONTROL0_STENCIL_WRITE_ENABLE_FALSE                  0
+NV_097_SET_CONTROL0_STENCIL_WRITE_ENABLE_TRUE                   1
+#endif
+    NAMER(NV_097_SET_LIGHT_CONTROL),
+#if 0
+NV_097_SET_LIGHT_CONTROL_LOCALEYE                               0x00010000
+NV_097_SET_LIGHT_CONTROL_LOCALEYE__BITSHIFT                     16
+NV_097_SET_LIGHT_CONTROL_LOCALEYE_FALSE                         0
+NV_097_SET_LIGHT_CONTROL_LOCALEYE_TRUE                          1
+NV_097_SET_LIGHT_CONTROL_SOUT                                   0xfffe0000
+NV_097_SET_LIGHT_CONTROL_SOUT__BITSHIFT                         17
+NV_097_SET_LIGHT_CONTROL_SOUT_ZERO_OUT                          0
+NV_097_SET_LIGHT_CONTROL_SOUT_PASSTHROUGH                       1
+NV_097_SET_LIGHT_CONTROL_SEPARATE_SPECULAR_EN                   0x00000003
+NV_097_SET_LIGHT_CONTROL_SEPARATE_SPECULAR_EN__BITSHIFT         0
+NV_097_SET_LIGHT_CONTROL_SEPARATE_SPECULAR_EN_FALSE             0
+NV_097_SET_LIGHT_CONTROL_SEPARATE_SPECULAR_EN_TRUE              1
+#endif
+    NAMER(NV_097_SET_COLOR_MATERIAL),
+#if 0
+NV_097_SET_COLOR_MATERIAL_EMISSIVE_MATERIAL                     0x00000003
+NV_097_SET_COLOR_MATERIAL_EMISSIVE_MATERIAL__BITSHIFT           0
+NV_097_SET_COLOR_MATERIAL_EMISSIVE_MATERIAL_DISABLE             0
+NV_097_SET_COLOR_MATERIAL_EMISSIVE_MATERIAL_DIFFUSE_VTX_COLOR   1
+NV_097_SET_COLOR_MATERIAL_EMISSIVE_MATERIAL_SPECULAR_VTX_COLOR  2
+NV_097_SET_COLOR_MATERIAL_AMBIENT_MATERIAL                      0x0000000c
+NV_097_SET_COLOR_MATERIAL_AMBIENT_MATERIAL__BITSHIFT            2
+NV_097_SET_COLOR_MATERIAL_AMBIENT_MATERIAL_DISABLE              0
+NV_097_SET_COLOR_MATERIAL_AMBIENT_MATERIAL_DIFFUSE_VTX_COLOR    1
+NV_097_SET_COLOR_MATERIAL_AMBIENT_MATERIAL_SPECULAR_VTX_COLOR   2
+NV_097_SET_COLOR_MATERIAL_DIFF_MATERIAL                         0x00000030
+NV_097_SET_COLOR_MATERIAL_DIFF_MATERIAL__BITSHIFT               4
+NV_097_SET_COLOR_MATERIAL_DIFF_MATERIAL_DISABLE                 0
+NV_097_SET_COLOR_MATERIAL_DIFF_MATERIAL_DIFFUSE_VTX_COLOR       1
+NV_097_SET_COLOR_MATERIAL_DIFF_MATERIAL_SPECULAR_VTX_COLOR      2
+NV_097_SET_COLOR_MATERIAL_SPECULAR_MATERIAL                     0x000000c0
+NV_097_SET_COLOR_MATERIAL_SPECULAR_MATERIAL__BITSHIFT           6
+NV_097_SET_COLOR_MATERIAL_SPECULAR_MATERIAL_DISABLE             0
+NV_097_SET_COLOR_MATERIAL_SPECULAR_MATERIAL_DIFFUSE_VTX_COLOR   1
+NV_097_SET_COLOR_MATERIAL_SPECULAR_MATERIAL_SPECULAR_VTX_COLOR  2
+NV_097_SET_COLOR_MATERIAL_BACK_EMISSIVE_MATERIAL                0x00000300
+NV_097_SET_COLOR_MATERIAL_BACK_EMISSIVE_MATERIAL__BITSHIFT      8
+NV_097_SET_COLOR_MATERIAL_BACK_EMISSIVE_MATERIAL_DISABLE        0
+NV_097_SET_COLOR_MATERIAL_BACK_EMISSIVE_MATERIAL_DIFF_VTX_COLOR 1
+NV_097_SET_COLOR_MATERIAL_BACK_EMISSIVE_MATERIAL_SPEC_VTX_COLOR 2
+NV_097_SET_COLOR_MATERIAL_BACK_AMBIENT_MATERIAL                 0x00000c00
+NV_097_SET_COLOR_MATERIAL_BACK_AMBIENT_MATERIAL__BITSHIFT       10
+NV_097_SET_COLOR_MATERIAL_BACK_AMBIENT_MATERIAL_DISABLE         0
+NV_097_SET_COLOR_MATERIAL_BACK_AMBIENT_MATERIAL_DIFF_VTX_COLOR  1
+NV_097_SET_COLOR_MATERIAL_BACK_AMBIENT_MATERIAL_SPEC_VTX_COLOR  2
+NV_097_SET_COLOR_MATERIAL_BACK_DIFF_MATERIAL                    0x00003000
+NV_097_SET_COLOR_MATERIAL_BACK_DIFF_MATERIAL__BITSHIFT          12
+NV_097_SET_COLOR_MATERIAL_BACK_DIFF_MATERIAL_DISABLE            0
+NV_097_SET_COLOR_MATERIAL_BACK_DIFF_MATERIAL_DIFF_VTX_COLOR     1
+NV_097_SET_COLOR_MATERIAL_BACK_DIFF_MATERIAL_SPEC_VTX_COLOR     2
+NV_097_SET_COLOR_MATERIAL_BACK_SPECULAR_MATERIAL                0x0000c000
+NV_097_SET_COLOR_MATERIAL_BACK_SPECULAR_MATERIAL__BITSHIFT      14
+NV_097_SET_COLOR_MATERIAL_BACK_SPECULAR_MATERIAL_DISABLE        0
+NV_097_SET_COLOR_MATERIAL_BACK_SPECULAR_MATERIAL_DIFF_VTX_COLOR 1
+NV_097_SET_COLOR_MATERIAL_BACK_SPECULAR_MATERIAL_SPEC_VTX_COLOR 2
+#endif
+    NAMER(NV_097_SET_FOG_MODE),
+#if 0
+NV_097_SET_FOG_MODE_V_LINEAR                                    0x00002601
+NV_097_SET_FOG_MODE_V_EXP                                       0x00000800
+NV_097_SET_FOG_MODE_V_EXP2                                      0x00000801
+NV_097_SET_FOG_MODE_V_EXP_ABS                                   0x00000802
+NV_097_SET_FOG_MODE_V_EXP2_ABS                                  0x00000803
+NV_097_SET_FOG_MODE_V_LINEAR_ABS                                0x00000804
+#endif
+    NAMER(NV_097_SET_FOG_GEN_MODE),
+#if 0
+NV_097_SET_FOG_GEN_MODE_V_SPEC_ALPHA                            0
+NV_097_SET_FOG_GEN_MODE_V_RADIAL                                1
+NV_097_SET_FOG_GEN_MODE_V_PLANAR                                2
+NV_097_SET_FOG_GEN_MODE_V_ABS_PLANAR                            3
+NV_097_SET_FOG_GEN_MODE_V_FOG_X                                 6
+#endif
+    NAMER(NV_097_SET_FOG_ENABLE),
+#if 0
+NV_097_SET_FOG_ENABLE_V_FALSE                                   0
+NV_097_SET_FOG_ENABLE_V_TRUE                                    1
+#endif
+    NAMER(NV_097_SET_FOG_COLOR),
+#if 0
+NV_097_SET_FOG_COLOR_RED                                        0x000000ff
+NV_097_SET_FOG_COLOR_RED__BITSHIFT                              0
+NV_097_SET_FOG_COLOR_GREEN                                      0x0000ff00
+NV_097_SET_FOG_COLOR_GREEN__BITSHIFT                            8
+NV_097_SET_FOG_COLOR_BLUE                                       0x00ff0000
+NV_097_SET_FOG_COLOR_BLUE__BITSHIFT                             16
+NV_097_SET_FOG_COLOR_ALPHA                                      0xff000000
+NV_097_SET_FOG_COLOR_ALPHA__BITSHIFT                            24
+#endif
+    NAMER(NV_097_SET_COLOR_KEY_COLOR_0),
+    NAMER(NV_097_SET_COLOR_KEY_COLOR_1),
+    NAMER(NV_097_SET_COLOR_KEY_COLOR_2),
+    NAMER(NV_097_SET_COLOR_KEY_COLOR_3),
+    NAMER(NV_097_SET_WINDOW_CLIP_TYPE),
+#if 0
+NV_097_SET_WINDOW_CLIP_TYPE_V_INCLUSIVE                         0
+NV_097_SET_WINDOW_CLIP_TYPE_V_EXCLUSIVE                         1
+#endif
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_0),
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_1),
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_2),
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_3),
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_4),
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_5),
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_6),
+    NAMER(NV_097_SET_WINDOW_CLIP_HORIZONTAL_7),
+#if 0
+NV_097_SET_WINDOW_CLIP_HORIZONTAL_XMIN                          0x00000fff
+NV_097_SET_WINDOW_CLIP_HORIZONTAL_XMIN__BITSHIFT                0
+NV_097_SET_WINDOW_CLIP_HORIZONTAL_XMAX                          0x0fff0000
+NV_097_SET_WINDOW_CLIP_HORIZONTAL_XMAX__BITSHIFT                16
+#endif
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_0),
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_1),
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_2),
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_3),
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_4),
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_5),
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_6),
+    NAMER(NV_097_SET_WINDOW_CLIP_VERTICAL_7),
+#if 0
+NV_097_SET_WINDOW_CLIP_VERTICAL_YMIN                            0x00000fff
+NV_097_SET_WINDOW_CLIP_VERTICAL_YMIN__BITSHIFT                  0
+NV_097_SET_WINDOW_CLIP_VERTICAL_YMAX                            0x0fff0000
+NV_097_SET_WINDOW_CLIP_VERTICAL_YMAX__BITSHIFT                  16
+#endif
+    NAMER(NV_097_SET_ALPHA_TEST_ENABLE),
+#if 0
+NV_097_SET_ALPHA_TEST_ENABLE_V_FALSE                            0
+NV_097_SET_ALPHA_TEST_ENABLE_V_TRUE                             1
+#endif
+    NAMER(NV_097_SET_BLEND_ENABLE),
+#if 0
+NV_097_SET_BLEND_ENABLE_V_FALSE                                 0
+NV_097_SET_BLEND_ENABLE_V_TRUE                                  1
+#endif
+    NAMER(NV_097_SET_CULL_FACE_ENABLE),
+#if 0
+NV_097_SET_CULL_FACE_ENABLE_V_FALSE                             0
+NV_097_SET_CULL_FACE_ENABLE_V_TRUE                              1
+#endif
+    NAMER(NV_097_SET_DEPTH_TEST_ENABLE),
+#if 0
+NV_097_SET_DEPTH_TEST_ENABLE_V_FALSE                            0
+NV_097_SET_DEPTH_TEST_ENABLE_V_TRUE                             1
+#endif
+    NAMER(NV_097_SET_DITHER_ENABLE),
+#if 0
+NV_097_SET_DITHER_ENABLE_V_FALSE                                0
+NV_097_SET_DITHER_ENABLE_V_TRUE                                 1
+#endif
+    NAMER(NV_097_SET_LIGHTING_ENABLE),
+#if 0
+NV_097_SET_LIGHTING_ENABLE_V_FALSE                              0
+NV_097_SET_LIGHTING_ENABLE_V_TRUE                               1
+#endif
+    NAMER(NV_097_SET_POINT_PARAMS_ENABLE),
+#if 0
+NV_097_SET_POINT_PARAMS_ENABLE_V_FALSE                          0
+NV_097_SET_POINT_PARAMS_ENABLE_V_TRUE                           1
+#endif
+    NAMER(NV_097_SET_POINT_SMOOTH_ENABLE),
+#if 0
+NV_097_SET_POINT_SMOOTH_ENABLE_V_FALSE                          0
+NV_097_SET_POINT_SMOOTH_ENABLE_V_TRUE                           1
+#endif
+    NAMER(NV_097_SET_LINE_SMOOTH_ENABLE),
+#if 0
+NV_097_SET_LINE_SMOOTH_ENABLE_V_FALSE                           0
+NV_097_SET_LINE_SMOOTH_ENABLE_V_TRUE                            1
+#endif
+    NAMER(NV_097_SET_POLY_SMOOTH_ENABLE),
+#if 0
+NV_097_SET_POLY_SMOOTH_ENABLE_V_FALSE                           0
+NV_097_SET_POLY_SMOOTH_ENABLE_V_TRUE                            1
+#endif
+    NAMER(NV_097_SET_STIPPLE_CONTROL),
+#if 0
+NV_097_SET_STIPPLE_CONTROL_V_OFF                                0
+NV_097_SET_STIPPLE_CONTROL_V_POLYGON                            1
+#endif
+    NAMER(NV_097_SET_STIPPLE_PATTERN_0),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_1),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_2),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_3),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_4),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_5),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_6),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_7),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_8),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_9),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_10),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_11),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_12),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_13),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_14),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_15),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_16),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_17),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_18),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_19),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_20),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_21),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_22),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_23),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_24),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_25),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_26),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_27),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_28),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_29),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_30),
+    NAMER(NV_097_SET_STIPPLE_PATTERN_31),
+    NAMER(NV_097_SET_SKIN_MODE),
+#if 0
+NV_097_SET_SKIN_MODE_V_OFF                                      0
+NV_097_SET_SKIN_MODE_V_2G                                       1
+NV_097_SET_SKIN_MODE_V_2                                        2
+NV_097_SET_SKIN_MODE_V_3G                                       3
+NV_097_SET_SKIN_MODE_V_3                                        4
+NV_097_SET_SKIN_MODE_V_4G                                       5
+NV_097_SET_SKIN_MODE_V_4                                        6
+#endif
+    NAMER(NV_097_SET_STENCIL_TEST_ENABLE),
+#if 0
+NV_097_SET_STENCIL_TEST_ENABLE_V_FALSE                          0
+NV_097_SET_STENCIL_TEST_ENABLE_V_TRUE                           1
+#endif
+    NAMER(NV_097_SET_POLY_OFFSET_POINT_ENABLE),
+#if 0
+NV_097_SET_POLY_OFFSET_POINT_ENABLE_V_FALSE                     0
+NV_097_SET_POLY_OFFSET_POINT_ENABLE_V_TRUE                      1
+#endif
+    NAMER(NV_097_SET_POLY_OFFSET_LINE_ENABLE),
+#if 0
+NV_097_SET_POLY_OFFSET_LINE_ENABLE_V_FALSE                      0
+NV_097_SET_POLY_OFFSET_LINE_ENABLE_V_TRUE                       1
+#endif
+    NAMER(NV_097_SET_POLY_OFFSET_FILL_ENABLE),
+#if 0
+NV_097_SET_POLY_OFFSET_FILL_ENABLE_V_FALSE                      0
+NV_097_SET_POLY_OFFSET_FILL_ENABLE_V_TRUE                       1
+#endif
+    NAMER(NV_097_SET_ALPHA_FUNC),
+#if 0
+NV_097_SET_ALPHA_FUNC_V_NEVER                                   0x00000200
+NV_097_SET_ALPHA_FUNC_V_LESS                                    0x00000201
+NV_097_SET_ALPHA_FUNC_V_EQUAL                                   0x00000202
+NV_097_SET_ALPHA_FUNC_V_LEQUAL                                  0x00000203
+NV_097_SET_ALPHA_FUNC_V_GREATER                                 0x00000204
+NV_097_SET_ALPHA_FUNC_V_NOTEQUAL                                0x00000205
+NV_097_SET_ALPHA_FUNC_V_GEQUAL                                  0x00000206
+NV_097_SET_ALPHA_FUNC_V_ALWAYS                                  0x00000207
+#endif
+    NAMER(NV_097_SET_ALPHA_REF),
+    NAMER(NV_097_SET_BLEND_FUNC_SFACTOR),
+#if 0
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ZERO                            0x00000000
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ONE                             0x00000001
+NV_097_SET_BLEND_FUNC_SFACTOR_V_SRC_COLOR                       0x00000300
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ONE_MINUS_SRC_COLOR             0x00000301
+NV_097_SET_BLEND_FUNC_SFACTOR_V_SRC_ALPHA                       0x00000302
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ONE_MINUS_SRC_ALPHA             0x00000303
+NV_097_SET_BLEND_FUNC_SFACTOR_V_DST_ALPHA                       0x00000304
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ONE_MINUS_DST_ALPHA             0x00000305
+NV_097_SET_BLEND_FUNC_SFACTOR_V_DST_COLOR                       0x00000306
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ONE_MINUS_DST_COLOR             0x00000307
+NV_097_SET_BLEND_FUNC_SFACTOR_V_SRC_ALPHA_SATURATE              0x00000308
+NV_097_SET_BLEND_FUNC_SFACTOR_V_CONSTANT_COLOR                  0x00008001
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ONE_MINUS_CONSTANT_COLOR        0x00008002
+NV_097_SET_BLEND_FUNC_SFACTOR_V_CONSTANT_ALPHA                  0x00008003
+NV_097_SET_BLEND_FUNC_SFACTOR_V_ONE_MINUS_CONSTANT_ALPHA        0x00008004
+#endif
+    NAMER(NV_097_SET_BLEND_FUNC_DFACTOR),
+#if 0
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ZERO                            0x00000000
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ONE                             0x00000001
+NV_097_SET_BLEND_FUNC_DFACTOR_V_SRC_COLOR                       0x00000300
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ONE_MINUS_SRC_COLOR             0x00000301
+NV_097_SET_BLEND_FUNC_DFACTOR_V_SRC_ALPHA                       0x00000302
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ONE_MINUS_SRC_ALPHA             0x00000303
+NV_097_SET_BLEND_FUNC_DFACTOR_V_DST_ALPHA                       0x00000304
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ONE_MINUS_DST_ALPHA             0x00000305
+NV_097_SET_BLEND_FUNC_DFACTOR_V_DST_COLOR                       0x00000306
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ONE_MINUS_DST_COLOR             0x00000307
+NV_097_SET_BLEND_FUNC_DFACTOR_V_SRC_ALPHA_SATURATE              0x00000308
+NV_097_SET_BLEND_FUNC_DFACTOR_V_CONSTANT_COLOR                  0x00008001
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ONE_MINUS_CONSTANT_COLOR        0x00008002
+NV_097_SET_BLEND_FUNC_DFACTOR_V_CONSTANT_ALPHA                  0x00008003
+NV_097_SET_BLEND_FUNC_DFACTOR_V_ONE_MINUS_CONSTANT_ALPHA        0x00008004
+#endif
+    NAMER(NV_097_SET_BLEND_COLOR),
+    NAMER(NV_097_SET_BLEND_EQUATION),
+#if 0
+NV_097_SET_BLEND_EQUATION_V_FUNC_SUBTRACT                       0x0000800a
+NV_097_SET_BLEND_EQUATION_V_FUNC_REVERSE_SUBTRACT               0x0000800b
+NV_097_SET_BLEND_EQUATION_V_FUNC_ADD                            0x00008006
+NV_097_SET_BLEND_EQUATION_V_MIN                                 0x00008007
+NV_097_SET_BLEND_EQUATION_V_MAX                                 0x00008008
+NV_097_SET_BLEND_EQUATION_V_FUNC_REVERSE_SUBTRACT_SIGNED        0x0000f005
+NV_097_SET_BLEND_EQUATION_V_FUNC_ADD_SIGNED                     0x0000f006
+#endif
+    NAMER(NV_097_SET_DEPTH_FUNC),
+#if 0
+NV_097_SET_DEPTH_FUNC_V_NEVER                                   0x00000200
+NV_097_SET_DEPTH_FUNC_V_LESS                                    0x00000201
+NV_097_SET_DEPTH_FUNC_V_EQUAL                                   0x00000202
+NV_097_SET_DEPTH_FUNC_V_LEQUAL                                  0x00000203
+NV_097_SET_DEPTH_FUNC_V_GREATER                                 0x00000204
+NV_097_SET_DEPTH_FUNC_V_NOTEQUAL                                0x00000205
+NV_097_SET_DEPTH_FUNC_V_GEQUAL                                  0x00000206
+NV_097_SET_DEPTH_FUNC_V_ALWAYS                                  0x00000207
+#endif
+    NAMER(NV_097_SET_COLOR_MASK),
+#if 0
+NV_097_SET_COLOR_MASK_ALPHA_WRITE_ENABLE                        0xff000000
+NV_097_SET_COLOR_MASK_ALPHA_WRITE_ENABLE__BITSHIFT              24
+NV_097_SET_COLOR_MASK_ALPHA_WRITE_ENABLE_FALSE                  0
+NV_097_SET_COLOR_MASK_ALPHA_WRITE_ENABLE_TRUE                   1
+NV_097_SET_COLOR_MASK_RED_WRITE_ENABLE                          0x00ff0000
+NV_097_SET_COLOR_MASK_RED_WRITE_ENABLE__BITSHIFT                16
+NV_097_SET_COLOR_MASK_RED_WRITE_ENABLE_FALSE                    0
+NV_097_SET_COLOR_MASK_RED_WRITE_ENABLE_TRUE                     1
+NV_097_SET_COLOR_MASK_GREEN_WRITE_ENABLE                        0x0000ff00
+NV_097_SET_COLOR_MASK_GREEN_WRITE_ENABLE__BITSHIFT              8
+NV_097_SET_COLOR_MASK_GREEN_WRITE_ENABLE_FALSE                  0
+NV_097_SET_COLOR_MASK_GREEN_WRITE_ENABLE_TRUE                   1
+NV_097_SET_COLOR_MASK_BLUE_WRITE_ENABLE                         0x000000ff
+NV_097_SET_COLOR_MASK_BLUE_WRITE_ENABLE__BITSHIFT               0
+NV_097_SET_COLOR_MASK_BLUE_WRITE_ENABLE_FALSE                   0
+NV_097_SET_COLOR_MASK_BLUE_WRITE_ENABLE_TRUE                    1
+#endif
+    NAMER(NV_097_SET_DEPTH_MASK),
+#if 0
+NV_097_SET_DEPTH_MASK_V_FALSE                                   0
+NV_097_SET_DEPTH_MASK_V_TRUE                                    1
+#endif
+    NAMER(NV_097_SET_STENCIL_MASK),
+    NAMER(NV_097_SET_STENCIL_FUNC),
+#if 0
+NV_097_SET_STENCIL_FUNC_V_NEVER                                 0x00000200
+NV_097_SET_STENCIL_FUNC_V_LESS                                  0x00000201
+NV_097_SET_STENCIL_FUNC_V_EQUAL                                 0x00000202
+NV_097_SET_STENCIL_FUNC_V_LEQUAL                                0x00000203
+NV_097_SET_STENCIL_FUNC_V_GREATER                               0x00000204
+NV_097_SET_STENCIL_FUNC_V_NOTEQUAL                              0x00000205
+NV_097_SET_STENCIL_FUNC_V_GEQUAL                                0x00000206
+NV_097_SET_STENCIL_FUNC_V_ALWAYS                                0x00000207
+#endif
+    NAMER(NV_097_SET_STENCIL_FUNC_REF),
+    NAMER(NV_097_SET_STENCIL_FUNC_MASK),
+    NAMER(NV_097_SET_STENCIL_OP_FAIL),
+#if 0
+NV_097_SET_STENCIL_OP_FAIL_V_KEEP                               0x00001e00
+NV_097_SET_STENCIL_OP_FAIL_V_ZERO                               0x00000000
+NV_097_SET_STENCIL_OP_FAIL_V_REPLACE                            0x00001e01
+NV_097_SET_STENCIL_OP_FAIL_V_INCRSAT                            0x00001e02
+NV_097_SET_STENCIL_OP_FAIL_V_DECRSAT                            0x00001e03
+NV_097_SET_STENCIL_OP_FAIL_V_INVERT                             0x0000150a
+NV_097_SET_STENCIL_OP_FAIL_V_INCR                               0x00008507
+NV_097_SET_STENCIL_OP_FAIL_V_DECR                               0x00008508
+#endif
+    NAMER(NV_097_SET_STENCIL_OP_ZFAIL),
+#if 0
+NV_097_SET_STENCIL_OP_ZFAIL_V_KEEP                              0x00001e00
+NV_097_SET_STENCIL_OP_ZFAIL_V_ZERO                              0x00000000
+NV_097_SET_STENCIL_OP_ZFAIL_V_REPLACE                           0x00001e01
+NV_097_SET_STENCIL_OP_ZFAIL_V_INCRSAT                           0x00001e02
+NV_097_SET_STENCIL_OP_ZFAIL_V_DECRSAT                           0x00001e03
+NV_097_SET_STENCIL_OP_ZFAIL_V_INVERT                            0x0000150a
+NV_097_SET_STENCIL_OP_ZFAIL_V_INCR                              0x00008507
+NV_097_SET_STENCIL_OP_ZFAIL_V_DECR                              0x00008508
+#endif
+    NAMER(NV_097_SET_STENCIL_OP_ZPASS),
+#if 0
+NV_097_SET_STENCIL_OP_ZPASS_V_KEEP                              0x00001e00
+NV_097_SET_STENCIL_OP_ZPASS_V_ZERO                              0x00000000
+NV_097_SET_STENCIL_OP_ZPASS_V_REPLACE                           0x00001e01
+NV_097_SET_STENCIL_OP_ZPASS_V_INCRSAT                           0x00001e02
+NV_097_SET_STENCIL_OP_ZPASS_V_DECRSAT                           0x00001e03
+NV_097_SET_STENCIL_OP_ZPASS_V_INVERT                            0x0000150a
+NV_097_SET_STENCIL_OP_ZPASS_V_INCR                              0x00008507
+NV_097_SET_STENCIL_OP_ZPASS_V_DECR                              0x00008508
+#endif
+    NAMER(NV_097_SET_SHADE_MODE),
+#if 0
+NV_097_SET_SHADE_MODE_V_FLAT                                    0x00001d00
+NV_097_SET_SHADE_MODE_V_SMOOTH                                  0x00001d01
+#endif
+    NAMER(NV_097_SET_LINE_WIDTH),
+    NAMER(NV_097_SET_POLYGON_OFFSET_SCALE_FACTOR),
+    NAMER(NV_097_SET_POLYGON_OFFSET_BIAS),
+    NAMER(NV_097_SET_FRONT_POLYGON_MODE),
+#if 0
+NV_097_SET_FRONT_POLYGON_MODE_V_POINT                           0x00001b00
+NV_097_SET_FRONT_POLYGON_MODE_V_LINE                            0x00001b01
+NV_097_SET_FRONT_POLYGON_MODE_V_FILL                            0x00001b02
+#endif
+    NAMER(NV_097_SET_BACK_POLYGON_MODE),
+#if 0
+NV_097_SET_BACK_POLYGON_MODE_V_POINT                            0x00001b00
+NV_097_SET_BACK_POLYGON_MODE_V_LINE                             0x00001b01
+NV_097_SET_BACK_POLYGON_MODE_V_FILL                             0x00001b02
+#endif
+    NAMER(NV_097_SET_CLIP_MIN),
+    NAMER(NV_097_SET_CLIP_MAX),
+    NAMER(NV_097_SET_CULL_FACE),
+#if 0
+NV_097_SET_CULL_FACE_V_FRONT                                    0x00000404
+NV_097_SET_CULL_FACE_V_BACK                                     0x00000405
+NV_097_SET_CULL_FACE_V_FRONT_AND_BACK                           0x00000408
+#endif
+    NAMER(NV_097_SET_FRONT_FACE),
+#if 0
+NV_097_SET_FRONT_FACE_V_CW                                      0x00000900
+NV_097_SET_FRONT_FACE_V_CCW                                     0x00000901
+#endif
+    NAMER(NV_097_SET_NORMALIZATION_ENABLE),
+#if 0
+NV_097_SET_NORMALIZATION_ENABLE_V_FALSE                         0
+NV_097_SET_NORMALIZATION_ENABLE_V_TRUE                          1
+#endif
+    NAMER(NV_097_SET_MATERIAL_EMISSION_0),
+    NAMER(NV_097_SET_MATERIAL_EMISSION_1),
+    NAMER(NV_097_SET_MATERIAL_EMISSION_2),
+    NAMER(NV_097_SET_MATERIAL_ALPHA),
+    NAMER(NV_097_SET_BACK_MATERIAL_ALPHA),
+    NAMER(NV_097_SET_SPECULAR_ENABLE),
+#if 0
+NV_097_SET_SPECULAR_ENABLE_V_FALSE                              0
+NV_097_SET_SPECULAR_ENABLE_V_TRUE                               1
+#endif
+    NAMER(NV_097_SET_LIGHT_ENABLE_MASK),
+#if 0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT0                             0x00000003
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT0__BITSHIFT                   0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT0_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT0_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT0_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT0_SPOT                        3
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT1                             0x0000000c
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT1__BITSHIFT                   2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT1_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT1_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT1_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT1_SPOT                        3
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT2                             0x00000030
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT2__BITSHIFT                   4
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT2_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT2_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT2_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT2_SPOT                        3
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT3                             0x000000c0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT3__BITSHIFT                   6
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT3_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT3_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT3_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT3_SPOT                        3
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT4                             0x00000300
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT4__BITSHIFT                   8
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT4_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT4_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT4_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT4_SPOT                        3
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT5                             0x00000c00
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT5__BITSHIFT                   10
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT5_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT5_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT5_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT5_SPOT                        3
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT6                             0x00003000
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT6__BITSHIFT                   12
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT6_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT6_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT6_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT6_SPOT                        3
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT7                             0x0000c000
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT7__BITSHIFT                   14
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT7_OFF                         0
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT7_INFINITE                    1
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT7_LOCAL                       2
+NV_097_SET_LIGHT_ENABLE_MASK_LIGHT7_SPOT                        3
+#endif
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_0_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_0_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_1_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_1_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_2_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_2_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_3_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_3_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_4_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_4_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_5_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_5_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_6_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_6_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_7_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_7_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_8_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_8_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_9_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_9_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_10_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_10_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_11_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_11_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_12_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_12_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_13_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_13_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_14_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_14_1),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_15_0),
+    NAMER(NV_097_SET_VERTEX_DATA2F_M_15_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_0_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_0_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_0_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_0_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_1_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_1_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_1_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_1_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_2_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_2_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_2_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_2_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_3_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_3_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_3_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_3_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_4_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_4_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_4_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_4_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_5_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_5_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_5_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_5_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_6_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_6_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_6_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_6_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_7_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_7_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_7_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_7_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_8_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_8_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_8_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_8_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_9_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_9_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_9_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_9_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_10_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_10_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_10_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_10_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_11_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_11_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_11_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_11_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_12_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_12_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_12_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_12_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_13_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_13_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_13_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_13_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_14_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_14_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_14_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_14_3),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_15_0),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_15_1),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_15_2),
+    NAMER(NV_097_SET_VERTEX_DATA4F_M_15_3),
+    NAMER(NV_097_SET_VERTEX_DATA2S_0),
+    NAMER(NV_097_SET_VERTEX_DATA2S_1),
+    NAMER(NV_097_SET_VERTEX_DATA2S_2),
+    NAMER(NV_097_SET_VERTEX_DATA2S_3),
+    NAMER(NV_097_SET_VERTEX_DATA2S_4),
+    NAMER(NV_097_SET_VERTEX_DATA2S_5),
+    NAMER(NV_097_SET_VERTEX_DATA2S_6),
+    NAMER(NV_097_SET_VERTEX_DATA2S_7),
+    NAMER(NV_097_SET_VERTEX_DATA2S_8),
+    NAMER(NV_097_SET_VERTEX_DATA2S_9),
+    NAMER(NV_097_SET_VERTEX_DATA2S_10),
+    NAMER(NV_097_SET_VERTEX_DATA2S_11),
+    NAMER(NV_097_SET_VERTEX_DATA2S_12),
+    NAMER(NV_097_SET_VERTEX_DATA2S_13),
+    NAMER(NV_097_SET_VERTEX_DATA2S_14),
+    NAMER(NV_097_SET_VERTEX_DATA2S_15),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_0),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_1),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_2),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_3),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_4),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_5),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_6),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_7),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_8),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_9),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_10),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_11),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_12),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_13),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_14),
+    NAMER(NV_097_SET_VERTEX_DATA4UB_15),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_0_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_0_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_1_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_1_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_2_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_2_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_3_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_3_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_4_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_4_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_5_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_5_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_6_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_6_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_7_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_7_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_8_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_8_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_9_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_9_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_10_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_10_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_11_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_11_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_12_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_12_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_13_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_13_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_14_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_14_1),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_15_0),
+    NAMER(NV_097_SET_VERTEX_DATA4S_M_15_1),
+    NAMER(NV_097_SET_TEXGEN_S_0),
+    NAMER(NV_097_SET_TEXGEN_S_1),
+    NAMER(NV_097_SET_TEXGEN_S_2),
+    NAMER(NV_097_SET_TEXGEN_S_3),
+#if 0
+NV_097_SET_TEXGEN_S_V_DISABLE                                   0x00000000
+NV_097_SET_TEXGEN_S_V_NORMAL_MAP                                0x00008511
+NV_097_SET_TEXGEN_S_V_REFLECTION_MAP                            0x00008512
+NV_097_SET_TEXGEN_S_V_EYE_LINEAR                                0x00002400
+NV_097_SET_TEXGEN_S_V_OBJECT_LINEAR                             0x00002401
+NV_097_SET_TEXGEN_S_V_SPHERE_MAP                                0x00002402
+#endif
+    NAMER(NV_097_SET_TEXGEN_T_0),
+    NAMER(NV_097_SET_TEXGEN_T_1),
+    NAMER(NV_097_SET_TEXGEN_T_2),
+    NAMER(NV_097_SET_TEXGEN_T_3),
+#if 0
+NV_097_SET_TEXGEN_T_V_DISABLE                                   0x00000000
+NV_097_SET_TEXGEN_T_V_NORMAL_MAP                                0x00008511
+NV_097_SET_TEXGEN_T_V_REFLECTION_MAP                            0x00008512
+NV_097_SET_TEXGEN_T_V_EYE_LINEAR                                0x00002400
+NV_097_SET_TEXGEN_T_V_OBJECT_LINEAR                             0x00002401
+NV_097_SET_TEXGEN_T_V_SPHERE_MAP                                0x00002402
+#endif
+    NAMER(NV_097_SET_TEXGEN_R_0),
+    NAMER(NV_097_SET_TEXGEN_R_1),
+    NAMER(NV_097_SET_TEXGEN_R_2),
+    NAMER(NV_097_SET_TEXGEN_R_3),
+#if 0
+NV_097_SET_TEXGEN_R_V_DISABLE                                   0x00000000
+NV_097_SET_TEXGEN_R_V_NORMAL_MAP                                0x00008511
+NV_097_SET_TEXGEN_R_V_REFLECTION_MAP                            0x00008512
+NV_097_SET_TEXGEN_R_V_EYE_LINEAR                                0x00002400
+NV_097_SET_TEXGEN_R_V_OBJECT_LINEAR                             0x00002401
+#endif
+    NAMER(NV_097_SET_TEXGEN_Q_0),
+    NAMER(NV_097_SET_TEXGEN_Q_1),
+    NAMER(NV_097_SET_TEXGEN_Q_2),
+    NAMER(NV_097_SET_TEXGEN_Q_3),
+#if 0
+NV_097_SET_TEXGEN_Q_V_DISABLE                                   0x00000000
+NV_097_SET_TEXGEN_Q_V_EYE_LINEAR                                0x00002400
+NV_097_SET_TEXGEN_Q_V_OBJECT_LINEAR                             0x00002401
+#endif
+    NAMER(NV_097_SET_TEXGEN_VIEW_MODEL),
+#if 0
+NV_097_SET_TEXGEN_VIEW_MODEL_V_LOCAL_VIEWER                     0
+NV_097_SET_TEXGEN_VIEW_MODEL_V_INFINITE_VIEWER                  1
+#endif
+    NAMER(NV_097_SET_TEXTURE_MATRIX_ENABLE_0),
+    NAMER(NV_097_SET_TEXTURE_MATRIX_ENABLE_1),
+    NAMER(NV_097_SET_TEXTURE_MATRIX_ENABLE_2),
+    NAMER(NV_097_SET_TEXTURE_MATRIX_ENABLE_3),
+#if 0
+NV_097_SET_TEXTURE_MATRIX_ENABLE_V_FALSE                        0
+NV_097_SET_TEXTURE_MATRIX_ENABLE_V_TRUE                         1
+#endif
+    NAMER(NV_097_SET_POINT_SIZE),
+    NAMER(NV_097_SET_SWATH_WIDTH),
+#if 0
+NV_097_SET_SWATH_WIDTH_V_8                                      0
+NV_097_SET_SWATH_WIDTH_V_16                                     1
+NV_097_SET_SWATH_WIDTH_V_32                                     2
+NV_097_SET_SWATH_WIDTH_V_64                                     3
+NV_097_SET_SWATH_WIDTH_V_128                                    4
+NV_097_SET_SWATH_WIDTH_V_OFF                                    15
+#endif
+    NAMER(NV_097_SET_FLAT_SHADE_OP),
+#if 0
+NV_097_SET_FLAT_SHADE_OP_V_LAST_VTX                             0
+NV_097_SET_FLAT_SHADE_OP_V_FIRST_VTX                            1
+#endif
+    NAMER(NV_097_SET_PROJECTION_MATRIX_0),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_1),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_2),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_3),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_4),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_5),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_6),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_7),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_8),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_9),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_10),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_11),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_12),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_13),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_14),
+    NAMER(NV_097_SET_PROJECTION_MATRIX_15),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_0),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_1),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_2),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_3),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_4),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_5),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_6),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_7),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_8),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_9),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_10),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_11),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_12),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_13),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_14),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX0_15),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_0),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_1),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_2),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_3),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_4),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_5),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_6),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_7),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_8),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_9),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_10),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_11),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_12),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_13),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_14),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX1_15),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_0),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_1),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_2),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_3),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_4),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_5),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_6),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_7),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_8),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_9),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_10),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_11),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_12),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_13),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_14),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX2_15),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_0),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_1),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_2),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_3),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_4),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_5),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_6),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_7),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_8),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_9),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_10),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_11),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_12),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_13),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_14),
+    NAMER(NV_097_SET_MODEL_VIEW_MATRIX3_15),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_0),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_1),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_2),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_3),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_4),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_5),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_6),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_7),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_8),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_9),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_10),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_11),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_12),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_13),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_14),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX0_15),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_0),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_1),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_2),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_3),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_4),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_5),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_6),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_7),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_8),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_9),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_10),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_11),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_12),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_13),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_14),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX1_15),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_0),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_1),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_2),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_3),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_4),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_5),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_6),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_7),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_8),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_9),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_10),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_11),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_12),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_13),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_14),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX2_15),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_0),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_1),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_2),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_3),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_4),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_5),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_6),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_7),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_8),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_9),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_10),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_11),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_12),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_13),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_14),
+    NAMER(NV_097_SET_INVERSE_MODEL_VIEW_MATRIX3_15),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_0),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_1),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_2),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_3),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_4),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_5),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_6),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_7),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_8),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_9),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_10),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_11),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_12),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_13),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_14),
+    NAMER(NV_097_SET_COMPOSITE_MATRIX_15),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_0),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_1),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_2),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_3),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_4),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_5),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_6),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_7),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_8),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_9),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_10),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_11),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_12),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_13),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_14),
+    NAMER(NV_097_SET_TEXTURE_MATRIX0_15),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_0),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_1),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_2),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_3),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_4),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_5),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_6),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_7),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_8),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_9),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_10),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_11),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_12),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_13),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_14),
+    NAMER(NV_097_SET_TEXTURE_MATRIX1_15),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_0),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_1),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_2),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_3),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_4),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_5),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_6),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_7),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_8),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_9),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_10),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_11),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_12),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_13),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_14),
+    NAMER(NV_097_SET_TEXTURE_MATRIX2_15),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_0),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_1),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_2),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_3),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_4),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_5),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_6),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_7),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_8),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_9),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_10),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_11),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_12),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_13),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_14),
+    NAMER(NV_097_SET_TEXTURE_MATRIX3_15),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_0_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_0_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_0_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_0_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_1_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_1_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_1_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_1_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_2_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_2_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_2_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_2_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_3_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_3_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_3_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_S_3_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_0_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_0_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_0_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_0_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_1_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_1_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_1_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_1_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_2_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_2_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_2_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_2_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_3_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_3_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_3_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_T_3_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_0_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_0_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_0_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_0_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_1_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_1_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_1_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_1_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_2_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_2_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_2_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_2_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_3_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_3_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_3_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_R_3_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_0_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_0_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_0_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_0_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_1_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_1_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_1_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_1_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_2_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_2_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_2_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_2_3),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_3_0),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_3_1),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_3_2),
+    NAMER(NV_097_SET_TEXGEN_PLANE_Q_3_3),
+    NAMER(NV_097_SET_FOG_PARAMS_0),
+    NAMER(NV_097_SET_FOG_PARAMS_1),
+    NAMER(NV_097_SET_FOG_PARAMS_2),
+    NAMER(NV_097_SET_FOG_PLANE_0),
+    NAMER(NV_097_SET_FOG_PLANE_1),
+    NAMER(NV_097_SET_FOG_PLANE_2),
+    NAMER(NV_097_SET_FOG_PLANE_3),
+    NAMER(NV_097_SET_SPECULAR_PARAMS_0),
+    NAMER(NV_097_SET_SPECULAR_PARAMS_1),
+    NAMER(NV_097_SET_SPECULAR_PARAMS_2),
+    NAMER(NV_097_SET_SPECULAR_PARAMS_3),
+    NAMER(NV_097_SET_SPECULAR_PARAMS_4),
+    NAMER(NV_097_SET_SPECULAR_PARAMS_5),
+    NAMER(NV_097_SET_BACK_SPECULAR_PARAMS_0),
+    NAMER(NV_097_SET_BACK_SPECULAR_PARAMS_1),
+    NAMER(NV_097_SET_BACK_SPECULAR_PARAMS_2),
+    NAMER(NV_097_SET_BACK_SPECULAR_PARAMS_3),
+    NAMER(NV_097_SET_BACK_SPECULAR_PARAMS_4),
+    NAMER(NV_097_SET_BACK_SPECULAR_PARAMS_5),
+    NAMER(NV_097_SET_SCENE_AMBIENT_COLOR_0),
+    NAMER(NV_097_SET_SCENE_AMBIENT_COLOR_1),
+    NAMER(NV_097_SET_SCENE_AMBIENT_COLOR_2),
+    NAMER(NV_097_SET_VIEWPORT_SCALE_0),
+    NAMER(NV_097_SET_VIEWPORT_SCALE_1),
+    NAMER(NV_097_SET_VIEWPORT_SCALE_2),
+    NAMER(NV_097_SET_VIEWPORT_SCALE_3),
+    NAMER(NV_097_SET_VIEWPORT_OFFSET_0),
+    NAMER(NV_097_SET_VIEWPORT_OFFSET_1),
+    NAMER(NV_097_SET_VIEWPORT_OFFSET_2),
+    NAMER(NV_097_SET_VIEWPORT_OFFSET_3),
+    NAMER(NV_097_SET_POINT_PARAMS_0),
+    NAMER(NV_097_SET_POINT_PARAMS_1),
+    NAMER(NV_097_SET_POINT_PARAMS_2),
+    NAMER(NV_097_SET_POINT_PARAMS_3),
+    NAMER(NV_097_SET_POINT_PARAMS_4),
+    NAMER(NV_097_SET_POINT_PARAMS_5),
+    NAMER(NV_097_SET_POINT_PARAMS_6),
+    NAMER(NV_097_SET_POINT_PARAMS_7),
+    NAMER(NV_097_SET_EYE_POSITION_0),
+    NAMER(NV_097_SET_EYE_POSITION_1),
+    NAMER(NV_097_SET_EYE_POSITION_2),
+    NAMER(NV_097_SET_EYE_POSITION_3),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_0_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_0_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_0_2),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_1_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_1_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_1_2),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_2_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_2_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_2_2),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_3_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_3_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_3_2),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_4_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_4_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_4_2),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_5_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_5_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_5_2),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_6_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_6_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_6_2),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_7_0),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_7_1),
+    NAMER(NV_097_SET_BACK_LIGHT_AMBIENT_COLOR_7_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_0_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_0_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_0_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_1_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_1_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_1_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_2_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_2_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_2_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_3_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_3_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_3_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_4_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_4_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_4_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_5_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_5_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_5_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_6_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_6_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_6_2),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_7_0),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_7_1),
+    NAMER(NV_097_SET_BACK_LIGHT_DIFFUSE_COLOR_7_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_0_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_0_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_0_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_1_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_1_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_1_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_2_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_2_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_2_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_3_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_3_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_3_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_4_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_4_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_4_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_5_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_5_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_5_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_6_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_6_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_6_2),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_7_0),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_7_1),
+    NAMER(NV_097_SET_BACK_LIGHT_SPECULAR_COLOR_7_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_0_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_0_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_0_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_1_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_1_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_1_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_2_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_2_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_2_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_3_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_3_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_3_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_4_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_4_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_4_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_5_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_5_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_5_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_6_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_6_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_6_2),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_7_0),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_7_1),
+    NAMER(NV_097_SET_LIGHT_AMBIENT_COLOR_7_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_0_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_0_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_0_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_1_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_1_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_1_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_2_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_2_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_2_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_3_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_3_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_3_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_4_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_4_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_4_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_5_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_5_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_5_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_6_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_6_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_6_2),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_7_0),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_7_1),
+    NAMER(NV_097_SET_LIGHT_DIFFUSE_COLOR_7_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_0_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_0_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_0_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_1_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_1_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_1_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_2_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_2_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_2_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_3_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_3_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_3_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_4_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_4_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_4_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_5_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_5_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_5_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_6_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_6_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_6_2),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_7_0),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_7_1),
+    NAMER(NV_097_SET_LIGHT_SPECULAR_COLOR_7_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_3),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_4),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_5),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_6),
+    NAMER(NV_097_SET_LIGHT_LOCAL_RANGE_7),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_0_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_0_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_0_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_1_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_1_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_1_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_2_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_2_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_2_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_3_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_3_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_3_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_4_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_4_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_4_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_5_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_5_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_5_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_6_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_6_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_6_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_7_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_7_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_HALF_VECTOR_7_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_0_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_0_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_0_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_1_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_1_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_1_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_2_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_2_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_2_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_3_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_3_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_3_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_4_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_4_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_4_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_5_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_5_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_5_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_6_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_6_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_6_2),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_7_0),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_7_1),
+    NAMER(NV_097_SET_LIGHT_INFINITE_DIRECTION_7_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_0_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_0_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_0_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_1_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_1_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_1_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_2_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_2_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_2_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_3_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_3_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_3_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_4_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_4_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_4_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_5_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_5_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_5_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_6_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_6_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_6_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_7_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_7_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_FALLOFF_7_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_0_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_0_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_0_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_0_3),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_1_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_1_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_1_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_1_3),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_2_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_2_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_2_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_2_3),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_3_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_3_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_3_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_3_3),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_4_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_4_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_4_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_4_3),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_5_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_5_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_5_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_5_3),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_6_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_6_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_6_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_6_3),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_7_0),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_7_1),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_7_2),
+    NAMER(NV_097_SET_LIGHT_SPOT_DIRECTION_7_3),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_0_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_0_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_0_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_1_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_1_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_1_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_2_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_2_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_2_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_3_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_3_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_3_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_4_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_4_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_4_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_5_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_5_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_5_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_6_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_6_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_6_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_7_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_7_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_POSITION_7_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_0_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_0_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_0_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_1_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_1_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_1_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_2_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_2_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_2_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_3_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_3_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_3_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_4_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_4_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_4_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_5_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_5_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_5_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_6_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_6_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_6_2),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_7_0),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_7_1),
+    NAMER(NV_097_SET_LIGHT_LOCAL_ATTENUATION_7_2),
+    NAMER(NV_097_SET_VERTEX3F_0),
+    NAMER(NV_097_SET_VERTEX3F_1),
+    NAMER(NV_097_SET_VERTEX3F_2),
+    NAMER(NV_097_SET_VERTEX4F_0),
+    NAMER(NV_097_SET_VERTEX4F_1),
+    NAMER(NV_097_SET_VERTEX4F_2),
+    NAMER(NV_097_SET_VERTEX4F_3),
+    NAMER(NV_097_SET_VERTEX4S_0),
+    NAMER(NV_097_SET_VERTEX4S_1),
+    NAMER(NV_097_SET_NORMAL3F_0),
+    NAMER(NV_097_SET_NORMAL3F_1),
+    NAMER(NV_097_SET_NORMAL3F_2),
+    NAMER(NV_097_SET_NORMAL3S_0),
+    NAMER(NV_097_SET_NORMAL3S_1),
+    NAMER(NV_097_SET_DIFFUSE_COLOR4F_0),
+    NAMER(NV_097_SET_DIFFUSE_COLOR4F_1),
+    NAMER(NV_097_SET_DIFFUSE_COLOR4F_2),
+    NAMER(NV_097_SET_DIFFUSE_COLOR4F_3),
+    NAMER(NV_097_SET_DIFFUSE_COLOR3F_0),
+    NAMER(NV_097_SET_DIFFUSE_COLOR3F_1),
+    NAMER(NV_097_SET_DIFFUSE_COLOR3F_2),
+    NAMER(NV_097_SET_DIFFUSE_COLOR4UB),
+    NAMER(NV_097_SET_SPECULAR_COLOR4F_0),
+    NAMER(NV_097_SET_SPECULAR_COLOR4F_1),
+    NAMER(NV_097_SET_SPECULAR_COLOR4F_2),
+    NAMER(NV_097_SET_SPECULAR_COLOR4F_3),
+    NAMER(NV_097_SET_SPECULAR_COLOR3F_0),
+    NAMER(NV_097_SET_SPECULAR_COLOR3F_1),
+    NAMER(NV_097_SET_SPECULAR_COLOR3F_2),
+    NAMER(NV_097_SET_SPECULAR_COLOR4UB),
+    NAMER(NV_097_SET_TEXCOORD0_2F_0),
+    NAMER(NV_097_SET_TEXCOORD0_2F_1),
+    NAMER(NV_097_SET_TEXCOORD0_2S),
+    NAMER(NV_097_SET_TEXCOORD0_4F_0),
+    NAMER(NV_097_SET_TEXCOORD0_4F_1),
+    NAMER(NV_097_SET_TEXCOORD0_4F_2),
+    NAMER(NV_097_SET_TEXCOORD0_4F_3),
+    NAMER(NV_097_SET_TEXCOORD0_4S_0),
+    NAMER(NV_097_SET_TEXCOORD0_4S_1),
+    NAMER(NV_097_SET_TEXCOORD1_2F_0),
+    NAMER(NV_097_SET_TEXCOORD1_2F_1),
+    NAMER(NV_097_SET_TEXCOORD1_2S),
+    NAMER(NV_097_SET_TEXCOORD1_4F_0),
+    NAMER(NV_097_SET_TEXCOORD1_4F_1),
+    NAMER(NV_097_SET_TEXCOORD1_4F_2),
+    NAMER(NV_097_SET_TEXCOORD1_4F_3),
+    NAMER(NV_097_SET_TEXCOORD1_4S_0),
+    NAMER(NV_097_SET_TEXCOORD1_4S_1),
+    NAMER(NV_097_SET_TEXCOORD2_2F_0),
+    NAMER(NV_097_SET_TEXCOORD2_2F_1),
+    NAMER(NV_097_SET_TEXCOORD2_2S),
+    NAMER(NV_097_SET_TEXCOORD2_4F_0),
+    NAMER(NV_097_SET_TEXCOORD2_4F_1),
+    NAMER(NV_097_SET_TEXCOORD2_4F_2),
+    NAMER(NV_097_SET_TEXCOORD2_4F_3),
+    NAMER(NV_097_SET_TEXCOORD2_4S_0),
+    NAMER(NV_097_SET_TEXCOORD2_4S_1),
+    NAMER(NV_097_SET_TEXCOORD3_2F_0),
+    NAMER(NV_097_SET_TEXCOORD3_2F_1),
+    NAMER(NV_097_SET_TEXCOORD3_2S),
+    NAMER(NV_097_SET_TEXCOORD3_4F_0),
+    NAMER(NV_097_SET_TEXCOORD3_4F_1),
+    NAMER(NV_097_SET_TEXCOORD3_4F_2),
+    NAMER(NV_097_SET_TEXCOORD3_4F_3),
+    NAMER(NV_097_SET_TEXCOORD3_4S_0),
+    NAMER(NV_097_SET_TEXCOORD3_4S_1),
+    NAMER(NV_097_SET_FOG1F),
+    NAMER(NV_097_SET_WEIGHT1F),
+    NAMER(NV_097_SET_WEIGHT2F_0),
+    NAMER(NV_097_SET_WEIGHT2F_1),
+    NAMER(NV_097_SET_WEIGHT3F_0),
+    NAMER(NV_097_SET_WEIGHT3F_1),
+    NAMER(NV_097_SET_WEIGHT3F_2),
+    NAMER(NV_097_SET_WEIGHT4F_0),
+    NAMER(NV_097_SET_WEIGHT4F_1),
+    NAMER(NV_097_SET_WEIGHT4F_2),
+    NAMER(NV_097_SET_WEIGHT4F_3),
+    NAMER(NV_097_SET_EDGE_FLAG),
+#if 0
+NV_097_SET_EDGE_FLAG_V_FALSE                                    0
+NV_097_SET_EDGE_FLAG_V_TRUE                                     1
+#endif
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST0_0),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST0_1),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST0_2),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST0_3),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST1_0),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST1_1),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST1_2),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST1_3),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST2_0),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST2_1),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST2_2),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST2_3),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST3_0),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST3_1),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST3_2),
+    NAMER(NV_097_SET_TRANSFORM_FIXED_CONST3_3),
+    NAMER(NV_097_SET_TLCONST_ZERO_0),
+    NAMER(NV_097_SET_TLCONST_ZERO_1),
+    NAMER(NV_097_SET_TLCONST_ZERO_2),
+    NAMER(NV_097_SET_EYE_DIRECTION_0),
+    NAMER(NV_097_SET_EYE_DIRECTION_1),
+    NAMER(NV_097_SET_EYE_DIRECTION_2),
+    NAMER(NV_097_SET_LINEAR_FOG_CONST_0),
+    NAMER(NV_097_SET_LINEAR_FOG_CONST_1),
+    NAMER(NV_097_SET_LINEAR_FOG_CONST_2),
+    NAMER(NV_097_INVALIDATE_VERTEX_CACHE_FILE),
+    NAMER(NV_097_INVALIDATE_VERTEX_FILE),
+    NAMER(NV_097_TL_NOP),
+    NAMER(NV_097_TL_SYNC),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_0),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_1),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_2),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_3),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_4),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_5),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_6),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_7),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_8),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_9),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_10),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_11),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_12),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_13),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_14),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_15),
+#if 0
+NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_CONTEXT_DMA                 0x80000000
+NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_CONTEXT_DMA__BITSHIFT       31
+NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_CONTEXT_DMA_VERTEX_A        0
+NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_CONTEXT_DMA_VERTEX_B        1
+NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_OFFSET                      0x7fffffff
+NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_OFFSET__BITSHIFT            0
+#endif
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_0),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_1),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_2),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_3),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_4),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_5),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_6),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_7),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_8),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_9),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_10),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_11),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_12),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_13),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_14),
+    NAMER(NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_15),
+#if 0
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE                      0xffffff00
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE__BITSHIFT            8
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE                        0x000000f0
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE__BITSHIFT              4
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_DISABLED               0
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_1                      1
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_2                      2
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_3                      3
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_4                      4
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_3W                     7
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE                        0x0000000f
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE__BITSHIFT              0
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_D3D                 0
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S1                     1
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_F                      2
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_OGL                 4
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S32K                   5
+NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP                    6
+#endif
+    NAMER(NV_097_SET_LOGIC_OP_ENABLE),
+#if 0
+NV_097_SET_LOGIC_OP_ENABLE_V_FALSE                              0
+NV_097_SET_LOGIC_OP_ENABLE_V_TRUE                               1
+#endif
+    NAMER(NV_097_SET_LOGIC_OP),
+#if 0
+NV_097_SET_LOGIC_OP_V_CLEAR                                     0x00001500
+NV_097_SET_LOGIC_OP_V_AND                                       0x00001501
+NV_097_SET_LOGIC_OP_V_AND_REVERSE                               0x00001502
+NV_097_SET_LOGIC_OP_V_COPY                                      0x00001503
+NV_097_SET_LOGIC_OP_V_AND_INVERTED                              0x00001504
+NV_097_SET_LOGIC_OP_V_NOOP                                      0x00001505
+NV_097_SET_LOGIC_OP_V_XOR                                       0x00001506
+NV_097_SET_LOGIC_OP_V_OR                                        0x00001507
+NV_097_SET_LOGIC_OP_V_NOR                                       0x00001508
+NV_097_SET_LOGIC_OP_V_EQUIV                                     0x00001509
+NV_097_SET_LOGIC_OP_V_INVERT                                    0x0000150a
+NV_097_SET_LOGIC_OP_V_OR_REVERSE                                0x0000150b
+NV_097_SET_LOGIC_OP_V_COPY_INVERTED                             0x0000150c
+NV_097_SET_LOGIC_OP_V_OR_INVERTED                               0x0000150d
+NV_097_SET_LOGIC_OP_V_NAND                                      0x0000150e
+NV_097_SET_LOGIC_OP_V_SET                                       0x0000150f
+#endif
+    NAMER(NV_097_SET_BEGIN_END),
+#if 0
+NV_097_SET_BEGIN_END_OP_END                                     0
+NV_097_SET_BEGIN_END_OP_POINTS                                  1
+NV_097_SET_BEGIN_END_OP_LINES                                   2
+NV_097_SET_BEGIN_END_OP_LINE_LOOP                               3
+NV_097_SET_BEGIN_END_OP_LINE_STRIP                              4
+NV_097_SET_BEGIN_END_OP_TRIANGLES                               5
+NV_097_SET_BEGIN_END_OP_TRIANGLE_STRIP                          6
+NV_097_SET_BEGIN_END_OP_TRIANGLE_FAN                            7
+NV_097_SET_BEGIN_END_OP_QUADS                                   8
+NV_097_SET_BEGIN_END_OP_QUAD_STRIP                              9
+NV_097_SET_BEGIN_END_OP_POLYGON                                 10
+#endif
+    NAMER(NV_097_ARRAY_ELEMENT16),
+#if 0
+NV_097_ARRAY_ELEMENT16_VERTEX0                                  0x0000ffff
+NV_097_ARRAY_ELEMENT16_VERTEX0__BITSHIFT                        0
+NV_097_ARRAY_ELEMENT16_VERTEX1                                  0xffff0000
+NV_097_ARRAY_ELEMENT16_VERTEX1__BITSHIFT                        16
+#endif
+    NAMER(NV_097_ARRAY_ELEMENT32),
+    NAMER(NV_097_DRAW_ARRAYS),
+#if 0
+NV_097_DRAW_ARRAYS_COUNT                                        0xff000000
+NV_097_DRAW_ARRAYS_COUNT__BITSHIFT                              24
+NV_097_DRAW_ARRAYS_START_INDEX                                  0x00ffffff
+NV_097_DRAW_ARRAYS_START_INDEX__BITSHIFT                        0
+#endif
+    NAMER(NV_097_INLINE_VERTEX_REUSE),
+    NAMER(NV_097_INLINE_ARRAY),
+    NAMER(NV_097_SET_TEXTURE_OFFSET_0),
+    NAMER(NV_097_SET_TEXTURE_OFFSET_1),
+    NAMER(NV_097_SET_TEXTURE_OFFSET_2),
+    NAMER(NV_097_SET_TEXTURE_OFFSET_3),
+    NAMER(NV_097_SET_TEXTURE_FORMAT_0),
+    NAMER(NV_097_SET_TEXTURE_FORMAT_1),
+    NAMER(NV_097_SET_TEXTURE_FORMAT_2),
+    NAMER(NV_097_SET_TEXTURE_FORMAT_3),
+#if 0
+NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA                           0x00000003
+NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA__BITSHIFT                 0
+NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_A                         1
+NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_B                         2
+NV_097_SET_TEXTURE_FORMAT_CUBEMAP_ENABLE                        0x00000004
+NV_097_SET_TEXTURE_FORMAT_CUBEMAP_ENABLE__BITSHIFT              2
+NV_097_SET_TEXTURE_FORMAT_CUBEMAP_ENABLE_FALSE                  0
+NV_097_SET_TEXTURE_FORMAT_CUBEMAP_ENABLE_TRUE                   1
+NV_097_SET_TEXTURE_FORMAT_BORDER_SOURCE                         0x00000008
+NV_097_SET_TEXTURE_FORMAT_BORDER_SOURCE__BITSHIFT               3
+NV_097_SET_TEXTURE_FORMAT_BORDER_SOURCE_TEXTURE                 0
+NV_097_SET_TEXTURE_FORMAT_BORDER_SOURCE_COLOR                   1
+NV_097_SET_TEXTURE_FORMAT_DIMENSIONALITY                        0x000000f0
+NV_097_SET_TEXTURE_FORMAT_DIMENSIONALITY__BITSHIFT              4
+NV_097_SET_TEXTURE_FORMAT_DIMENSIONALITY_ONE                    1
+NV_097_SET_TEXTURE_FORMAT_DIMENSIONALITY_TWO                    2
+NV_097_SET_TEXTURE_FORMAT_DIMENSIONALITY_THREE                  3
+NV_097_SET_TEXTURE_FORMAT_COLOR                                 0x0000ff00
+NV_097_SET_TEXTURE_FORMAT_COLOR__BITSHIFT                       8
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_Y8                           0
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_AY8                          1
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_A1R5G5B5                     2
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_X1R5G5B5                     3
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_A4R4G4B4                     4
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_R5G6B5                       5
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_A8R8G8B8                     6
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_X8R8G8B8                     7
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8                  11
+NV_097_SET_TEXTURE_FORMAT_COLOR_L_DXT1_A1R5G5B5                 12
+NV_097_SET_TEXTURE_FORMAT_COLOR_L_DXT23_A8R8G8B8                14
+NV_097_SET_TEXTURE_FORMAT_COLOR_L_DXT45_A8R8G8B8                15
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A1R5G5B5               16
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R5G6B5                 17
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8               18
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y8                     19
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_SY8                    20
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X7SY9                  21
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8B8                   22
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_G8B8                   23
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_SG8SB8                 24
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_A8                           25
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_A8Y8                         26
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_AY8                    27
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X1R5G5B5               28
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A4R4G4B4               29
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8               30
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8                     31
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8Y8                   32
+NV_097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_CR8YB8CB8YA8           36
+NV_097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_YB8CR8YA8CB8           37
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8CR8CB8Y8             38
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_R6G5B5                       39
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_G8B8                         40
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_R8B8                         41
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_DEPTH_X8_Y24_FIXED           42
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_DEPTH_X8_Y24_FLOAT           43
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_DEPTH_Y16_FIXED              44
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_DEPTH_Y16_FLOAT              45
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_X8_Y24_FIXED     46
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_X8_Y24_FLOAT     47
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FIXED        48
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FLOAT        49
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_Y16                          50
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_YB_16_YA_16                  51
+NV_097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_A4V6YB6A4U6YA6         52
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y16                    53
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_YB16YA16               54
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R6G5B5                 55
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_R5G5B5A1                     56
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_R4G4B4A4                     57
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_A8B8G8R8                     58
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_B8G8R8A8                     59
+NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_R8G8B8A8                     60
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R5G5B5A1               61
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R4G4B4A4               62
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8B8G8R8               63
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_B8G8R8A8               64
+NV_097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8G8B8A8               65
+NV_097_SET_TEXTURE_FORMAT_MIPMAP_LEVELS                         0x000f0000
+NV_097_SET_TEXTURE_FORMAT_MIPMAP_LEVELS__BITSHIFT               16
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U                           0x00f00000
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U__BITSHIFT                 20
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_1                         0
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_2                         1
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_4                         2
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_8                         3
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_16                        4
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_32                        5
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_64                        6
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_128                       7
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_256                       8
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_512                       9
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_1024                      10
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_2048                      11
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_U_4096                      12
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V                           0x0f000000
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V__BITSHIFT                 24
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_1                         0
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_2                         1
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_4                         2
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_8                         3
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_16                        4
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_32                        5
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_64                        6
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_128                       7
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_256                       8
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_512                       9
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_1024                      10
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_2048                      11
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_V_4096                      12
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P                           0xf0000000
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P__BITSHIFT                 28
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_1                         0
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_2                         1
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_4                         2
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_8                         3
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_16                        4
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_32                        5
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_64                        6
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_128                       7
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_256                       8
+NV_097_SET_TEXTURE_FORMAT_BASE_SIZE_P_512                       9
+#endif
+    NAMER(NV_097_SET_TEXTURE_ADDRESS_0),
+    NAMER(NV_097_SET_TEXTURE_ADDRESS_1),
+    NAMER(NV_097_SET_TEXTURE_ADDRESS_2),
+    NAMER(NV_097_SET_TEXTURE_ADDRESS_3),
+#if 0
+NV_097_SET_TEXTURE_ADDRESS_U                                    0x0000000f
+NV_097_SET_TEXTURE_ADDRESS_U__BITSHIFT                          0
+NV_097_SET_TEXTURE_ADDRESS_U_WRAP                               1
+NV_097_SET_TEXTURE_ADDRESS_U_MIRROR                             2
+NV_097_SET_TEXTURE_ADDRESS_U_CLAMP_TO_EDGE                      3
+NV_097_SET_TEXTURE_ADDRESS_U_BORDER                             4
+NV_097_SET_TEXTURE_ADDRESS_U_CLAMP_OGL                          5
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_U                            0x000000f0
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_U__BITSHIFT                  4
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_U_FALSE                      0
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_U_TRUE                       1
+NV_097_SET_TEXTURE_ADDRESS_V                                    0x00000f00
+NV_097_SET_TEXTURE_ADDRESS_V__BITSHIFT                          8
+NV_097_SET_TEXTURE_ADDRESS_V_WRAP                               1
+NV_097_SET_TEXTURE_ADDRESS_V_MIRROR                             2
+NV_097_SET_TEXTURE_ADDRESS_V_CLAMP_TO_EDGE                      3
+NV_097_SET_TEXTURE_ADDRESS_V_BORDER                             4
+NV_097_SET_TEXTURE_ADDRESS_V_CLAMP_OGL                          5
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_V                            0x0000f000
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_V__BITSHIFT                  12
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_V_FALSE                      0
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_V_TRUE                       1
+NV_097_SET_TEXTURE_ADDRESS_P                                    0x000f0000
+NV_097_SET_TEXTURE_ADDRESS_P__BITSHIFT                          16
+NV_097_SET_TEXTURE_ADDRESS_P_WRAP                               1
+NV_097_SET_TEXTURE_ADDRESS_P_MIRROR                             2
+NV_097_SET_TEXTURE_ADDRESS_P_CLAMP_TO_EDGE                      3
+NV_097_SET_TEXTURE_ADDRESS_P_BORDER                             4
+NV_097_SET_TEXTURE_ADDRESS_P_CLAMP_OGL                          5
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_P                            0x00f00000
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_P__BITSHIFT                  20
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_P_FALSE                      0
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_P_TRUE                       1
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_Q                            0xff000000
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_Q__BITSHIFT                  24
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_Q_FALSE                      0
+NV_097_SET_TEXTURE_ADDRESS_CYLWRAP_Q_TRUE                       1
+#endif
+    NAMER(NV_097_SET_TEXTURE_CONTROL0_0),
+    NAMER(NV_097_SET_TEXTURE_CONTROL0_1),
+    NAMER(NV_097_SET_TEXTURE_CONTROL0_2),
+    NAMER(NV_097_SET_TEXTURE_CONTROL0_3),
+#if 0
+NV_097_SET_TEXTURE_CONTROL0_ENABLE                              0xc0000000
+NV_097_SET_TEXTURE_CONTROL0_ENABLE__BITSHIFT                    30
+NV_097_SET_TEXTURE_CONTROL0_ENABLE_FALSE                        0
+NV_097_SET_TEXTURE_CONTROL0_ENABLE_TRUE                         1
+NV_097_SET_TEXTURE_CONTROL0_MIN_LOD_CLAMP                       0x3ffc0000
+NV_097_SET_TEXTURE_CONTROL0_MIN_LOD_CLAMP__BITSHIFT             18
+NV_097_SET_TEXTURE_CONTROL0_MAX_LOD_CLAMP                       0x0003ffc0
+NV_097_SET_TEXTURE_CONTROL0_MAX_LOD_CLAMP__BITSHIFT             6
+NV_097_SET_TEXTURE_CONTROL0_LOG_MAX_ANISO                       0x00000030
+NV_097_SET_TEXTURE_CONTROL0_LOG_MAX_ANISO__BITSHIFT             4
+NV_097_SET_TEXTURE_CONTROL0_LOG_MAX_ANISO_0                     0
+NV_097_SET_TEXTURE_CONTROL0_LOG_MAX_ANISO_1                     1
+NV_097_SET_TEXTURE_CONTROL0_LOG_MAX_ANISO_2                     2
+NV_097_SET_TEXTURE_CONTROL0_LOG_MAX_ANISO_3                     3
+NV_097_SET_TEXTURE_CONTROL0_IMAGE_FIELD_ENABLE                  0x00000008
+NV_097_SET_TEXTURE_CONTROL0_IMAGE_FIELD_ENABLE__BITSHIFT        3
+NV_097_SET_TEXTURE_CONTROL0_IMAGE_FIELD_ENABLE_FALSE            0
+NV_097_SET_TEXTURE_CONTROL0_IMAGE_FIELD_ENABLE_TRUE             1
+NV_097_SET_TEXTURE_CONTROL0_ALPHA_KILL_ENABLE                   0x00000004
+NV_097_SET_TEXTURE_CONTROL0_ALPHA_KILL_ENABLE__BITSHIFT         2
+NV_097_SET_TEXTURE_CONTROL0_ALPHA_KILL_ENABLE_FALSE             0
+NV_097_SET_TEXTURE_CONTROL0_ALPHA_KILL_ENABLE_TRUE              1
+NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION                 0x00000003
+NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION__BITSHIFT       0
+NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION_FALSE           0
+NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION_ALPHA           1
+NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION_RGBA            2
+NV_097_SET_TEXTURE_CONTROL0_COLOR_KEY_OPERATION_KILL            3
+#endif
+    NAMER(NV_097_SET_TEXTURE_CONTROL1_0),
+    NAMER(NV_097_SET_TEXTURE_CONTROL1_1),
+    NAMER(NV_097_SET_TEXTURE_CONTROL1_2),
+    NAMER(NV_097_SET_TEXTURE_CONTROL1_3),
+#if 0
+NV_097_SET_TEXTURE_CONTROL1_IMAGE_PITCH                         0xffff0000
+NV_097_SET_TEXTURE_CONTROL1_IMAGE_PITCH__BITSHIFT               16
+#endif
+    NAMER(NV_097_SET_TEXTURE_FILTER_0),
+    NAMER(NV_097_SET_TEXTURE_FILTER_1),
+    NAMER(NV_097_SET_TEXTURE_FILTER_2),
+    NAMER(NV_097_SET_TEXTURE_FILTER_3),
+#if 0
+NV_097_SET_TEXTURE_FILTER_MIPMAP_LOD_BIAS                       0x00001fff
+NV_097_SET_TEXTURE_FILTER_MIPMAP_LOD_BIAS__BITSHIFT             0
+NV_097_SET_TEXTURE_FILTER_CONVOLUTION_KERNEL                    0x0000e000
+NV_097_SET_TEXTURE_FILTER_CONVOLUTION_KERNEL__BITSHIFT          13
+NV_097_SET_TEXTURE_FILTER_CONVOLUTION_KERNEL_QUINCUNX           1
+NV_097_SET_TEXTURE_FILTER_CONVOLUTION_KERNEL_GAUSSIAN_3         2
+NV_097_SET_TEXTURE_FILTER_MIN                                   0x00ff0000
+NV_097_SET_TEXTURE_FILTER_MIN__BITSHIFT                         16
+NV_097_SET_TEXTURE_FILTER_MIN_BOX_LOD0                          1
+NV_097_SET_TEXTURE_FILTER_MIN_TENT_LOD0                         2
+NV_097_SET_TEXTURE_FILTER_MIN_BOX_NEARESTLOD                    3
+NV_097_SET_TEXTURE_FILTER_MIN_TENT_NEARESTLOD                   4
+NV_097_SET_TEXTURE_FILTER_MIN_BOX_TENT_LOD                      5
+NV_097_SET_TEXTURE_FILTER_MIN_TENT_TENT_LOD                     6
+NV_097_SET_TEXTURE_FILTER_MIN_CONVOLUTION_2D_LOD0               7
+NV_097_SET_TEXTURE_FILTER_MAG                                   0x0f000000
+NV_097_SET_TEXTURE_FILTER_MAG__BITSHIFT                         24
+NV_097_SET_TEXTURE_FILTER_MAG_BOX_LOD0                          1
+NV_097_SET_TEXTURE_FILTER_MAG_TENT_LOD0                         2
+NV_097_SET_TEXTURE_FILTER_MAG_CONVOLUTION_2D_LOD0               4
+NV_097_SET_TEXTURE_FILTER_ASIGNED                               0x10000000
+NV_097_SET_TEXTURE_FILTER_ASIGNED__BITSHIFT                     28
+NV_097_SET_TEXTURE_FILTER_ASIGNED_BIT_DISABLED                  0
+NV_097_SET_TEXTURE_FILTER_ASIGNED_BIT_ENABLED                   1
+NV_097_SET_TEXTURE_FILTER_RSIGNED                               0x20000000
+NV_097_SET_TEXTURE_FILTER_RSIGNED__BITSHIFT                     29
+NV_097_SET_TEXTURE_FILTER_RSIGNED_BIT_DISABLED                  0
+NV_097_SET_TEXTURE_FILTER_RSIGNED_BIT_ENABLED                   1
+NV_097_SET_TEXTURE_FILTER_GSIGNED                               0x40000000
+NV_097_SET_TEXTURE_FILTER_GSIGNED__BITSHIFT                     30
+NV_097_SET_TEXTURE_FILTER_GSIGNED_BIT_DISABLED                  0
+NV_097_SET_TEXTURE_FILTER_GSIGNED_BIT_ENABLED                   1
+NV_097_SET_TEXTURE_FILTER_BSIGNED                               0x80000000
+NV_097_SET_TEXTURE_FILTER_BSIGNED__BITSHIFT                     31
+NV_097_SET_TEXTURE_FILTER_BSIGNED_BIT_DISABLED                  0
+NV_097_SET_TEXTURE_FILTER_BSIGNED_BIT_ENABLED                   1
+#endif
+    NAMER(NV_097_SET_TEXTURE_IMAGE_RECT_0),
+    NAMER(NV_097_SET_TEXTURE_IMAGE_RECT_1),
+    NAMER(NV_097_SET_TEXTURE_IMAGE_RECT_2),
+    NAMER(NV_097_SET_TEXTURE_IMAGE_RECT_3),
+#if 0
+NV_097_SET_TEXTURE_IMAGE_RECT_WIDTH                             0xffff0000
+NV_097_SET_TEXTURE_IMAGE_RECT_WIDTH__BITSHIFT                   16
+NV_097_SET_TEXTURE_IMAGE_RECT_HEIGHT                            0x0000ffff
+NV_097_SET_TEXTURE_IMAGE_RECT_HEIGHT__BITSHIFT                  0
+#endif
+    NAMER(NV_097_SET_TEXTURE_PALETTE_0),
+    NAMER(NV_097_SET_TEXTURE_PALETTE_1),
+    NAMER(NV_097_SET_TEXTURE_PALETTE_2),
+    NAMER(NV_097_SET_TEXTURE_PALETTE_3),
+#if 0
+NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA                          0x00000003
+NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA__BITSHIFT                0
+NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_A                        0
+NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_B                        1
+NV_097_SET_TEXTURE_PALETTE_LENGTH                               0x0000003c
+NV_097_SET_TEXTURE_PALETTE_LENGTH__BITSHIFT                     2
+NV_097_SET_TEXTURE_PALETTE_LENGTH_256                           0
+NV_097_SET_TEXTURE_PALETTE_LENGTH_128                           1
+NV_097_SET_TEXTURE_PALETTE_LENGTH_64                            2
+NV_097_SET_TEXTURE_PALETTE_LENGTH_32                            3
+NV_097_SET_TEXTURE_PALETTE_OFFSET                               0xffffffc0
+NV_097_SET_TEXTURE_PALETTE_OFFSET__BITSHIFT                     6
+#endif
+    NAMER(NV_097_SET_TEXTURE_BORDER_COLOR_0),
+    NAMER(NV_097_SET_TEXTURE_BORDER_COLOR_1),
+    NAMER(NV_097_SET_TEXTURE_BORDER_COLOR_2),
+    NAMER(NV_097_SET_TEXTURE_BORDER_COLOR_3),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT00_0),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT00_1),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT00_2),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT00_3),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT01_0),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT01_1),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT01_2),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT01_3),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT11_0),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT11_1),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT11_2),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT11_3),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT10_0),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT10_1),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT10_2),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_MAT10_3),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_SCALE_0),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_SCALE_1),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_SCALE_2),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_SCALE_3),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_OFFSET_0),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_OFFSET_1),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_OFFSET_2),
+    NAMER(NV_097_SET_TEXTURE_SET_BUMP_ENV_OFFSET_3),
+    NAMER(NV_097_PARK_ATTRIBUTE),
+    NAMER(NV_097_UNPARK_ATTRIBUTE),
+    NAMER(NV_097_SET_SEMAPHORE_OFFSET),
+    NAMER(NV_097_BACK_END_WRITE_SEMAPHORE_RELEASE),
+    NAMER(NV_097_TEXTURE_READ_SEMAPHORE_RELEASE),
+    NAMER(NV_097_SET_ZMIN_MAX_CONTROL),
+#if 0
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_NEAR_FAR_EN                    0x0000000f
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_NEAR_FAR_EN__BITSHIFT          0
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_NEAR_FAR_EN_FALSE              0
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_NEAR_FAR_EN_TRUE               1
+NV_097_SET_ZMIN_MAX_CONTROL_ZCLAMP_EN                           0x000000f0
+NV_097_SET_ZMIN_MAX_CONTROL_ZCLAMP_EN__BITSHIFT                 4
+NV_097_SET_ZMIN_MAX_CONTROL_ZCLAMP_EN_CULL                      0
+NV_097_SET_ZMIN_MAX_CONTROL_ZCLAMP_EN_CLAMP                     1
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_IGNORE_W                       0x00000f00
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_IGNORE_W__BITSHIFT             8
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_IGNORE_W_FALSE                 0
+NV_097_SET_ZMIN_MAX_CONTROL_CULL_IGNORE_W_TRUE                  1
+#endif
+    NAMER(NV_097_SET_ANTI_ALIASING_CONTROL),
+#if 0
+NV_097_SET_ANTI_ALIASING_CONTROL_ENABLE                         0x0000000f
+NV_097_SET_ANTI_ALIASING_CONTROL_ENABLE__BITSHIFT               0
+NV_097_SET_ANTI_ALIASING_CONTROL_ENABLE_FALSE                   0
+NV_097_SET_ANTI_ALIASING_CONTROL_ENABLE_TRUE                    1
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_COVERAGE              0x000000f0
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_COVERAGE__BITSHIFT    4
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_COVERAGE_DISABLE      0
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_COVERAGE_ENABLE       1
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_ONE                   0x00000f00
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_ONE__BITSHIFT         8
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_ONE_DISABLE           0
+NV_097_SET_ANTI_ALIASING_CONTROL_ALPHA_TO_ONE_ENABLE            1
+NV_097_SET_ANTI_ALIASING_CONTROL_SAMPLE_MASK                    0xffff0000
+NV_097_SET_ANTI_ALIASING_CONTROL_SAMPLE_MASK__BITSHIFT          16
+#endif
+    NAMER(NV_097_SET_DXT_DITHER_ENABLE_SW),
+#if 0
+NV_097_SET_DXT_DITHER_ENABLE_SW_V_DISABLE                       0
+NV_097_SET_DXT_DITHER_ENABLE_SW_V_ENABLE                        1
+#endif
+    NAMER(NV_097_SET_COMPRESS_ZBUFFER_EN),
+#if 0
+NV_097_SET_COMPRESS_ZBUFFER_EN_V_DISABLE                        0
+NV_097_SET_COMPRESS_ZBUFFER_EN_V_ENABLE                         1
+#endif
+    NAMER(NV_097_SET_OCCLUDE_ZSTENCIL_EN),
+#if 0
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_ZEN                      0x00000001
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_ZEN__BITSHIFT            0
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_ZEN_DISABLE              0
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_ZEN_ENABLE               1
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_STENCIL_EN               0x00000002
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_STENCIL_EN__BITSHIFT     1
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_STENCIL_EN_DISABLE       0
+NV_097_SET_OCCLUDE_ZSTENCIL_EN_OCCLUDE_STENCIL_EN_ENABLE        1
+#endif
+    NAMER(NV_097_SET_SURFACE_FORMAT),
+#if 0
+NV_097_SET_SURFACE_FORMAT_COLOR                                 0x0000000f
+NV_097_SET_SURFACE_FORMAT_COLOR__BITSHIFT                       0
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_X1R5G5B5_Z1R5G5B5            1
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_X1R5G5B5_O1R5G5B5            2
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_R5G6B5                       3
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_X8R8G8B8_Z8R8G8B8            4
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_X8R8G8B8_O8R8G8B8            5
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_X1A7R8G8B8_Z1A7R8G8B8        6
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_X1A7R8G8B8_O1A7R8G8B8        7
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_A8R8G8B8                     8
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_B8                           9
+NV_097_SET_SURFACE_FORMAT_COLOR_LE_G8B8                         10
+NV_097_SET_SURFACE_FORMAT_ZETA                                  0x000000f0
+NV_097_SET_SURFACE_FORMAT_ZETA__BITSHIFT                        4
+NV_097_SET_SURFACE_FORMAT_ZETA_Z16                              1
+NV_097_SET_SURFACE_FORMAT_ZETA_Z24S8                            2
+NV_097_SET_SURFACE_FORMAT_TYPE                                  0x00000f00
+NV_097_SET_SURFACE_FORMAT_TYPE__BITSHIFT                        8
+NV_097_SET_SURFACE_FORMAT_TYPE_PITCH                            1
+NV_097_SET_SURFACE_FORMAT_TYPE_SWIZZLE                          2
+NV_097_SET_SURFACE_FORMAT_ANTI_ALIASING                         0x0000f000
+NV_097_SET_SURFACE_FORMAT_ANTI_ALIASING__BITSHIFT               12
+NV_097_SET_SURFACE_FORMAT_ANTI_ALIASING_CENTER_1                0
+NV_097_SET_SURFACE_FORMAT_ANTI_ALIASING_CENTER_CORNER_2         1
+NV_097_SET_SURFACE_FORMAT_ANTI_ALIASING_SQUARE_OFFSET_4         2
+NV_097_SET_SURFACE_FORMAT_WIDTH                                 0x00ff0000
+NV_097_SET_SURFACE_FORMAT_WIDTH__BITSHIFT                       16
+NV_097_SET_SURFACE_FORMAT_WIDTH_1                               0
+NV_097_SET_SURFACE_FORMAT_WIDTH_2                               1
+NV_097_SET_SURFACE_FORMAT_WIDTH_4                               2
+NV_097_SET_SURFACE_FORMAT_WIDTH_8                               3
+NV_097_SET_SURFACE_FORMAT_WIDTH_16                              4
+NV_097_SET_SURFACE_FORMAT_WIDTH_32                              5
+NV_097_SET_SURFACE_FORMAT_WIDTH_64                              6
+NV_097_SET_SURFACE_FORMAT_WIDTH_128                             7
+NV_097_SET_SURFACE_FORMAT_WIDTH_256                             8
+NV_097_SET_SURFACE_FORMAT_WIDTH_512                             9
+NV_097_SET_SURFACE_FORMAT_WIDTH_1024                            10
+NV_097_SET_SURFACE_FORMAT_WIDTH_2048                            11
+NV_097_SET_SURFACE_FORMAT_WIDTH_4096                            12
+NV_097_SET_SURFACE_FORMAT_HEIGHT                                0xff000000
+NV_097_SET_SURFACE_FORMAT_HEIGHT__BITSHIFT                      24
+NV_097_SET_SURFACE_FORMAT_HEIGHT_1                              0
+NV_097_SET_SURFACE_FORMAT_HEIGHT_2                              1
+NV_097_SET_SURFACE_FORMAT_HEIGHT_4                              2
+NV_097_SET_SURFACE_FORMAT_HEIGHT_8                              3
+NV_097_SET_SURFACE_FORMAT_HEIGHT_16                             4
+NV_097_SET_SURFACE_FORMAT_HEIGHT_32                             5
+NV_097_SET_SURFACE_FORMAT_HEIGHT_64                             6
+NV_097_SET_SURFACE_FORMAT_HEIGHT_128                            7
+NV_097_SET_SURFACE_FORMAT_HEIGHT_256                            8
+NV_097_SET_SURFACE_FORMAT_HEIGHT_512                            9
+NV_097_SET_SURFACE_FORMAT_HEIGHT_1024                           10
+NV_097_SET_SURFACE_FORMAT_HEIGHT_2048                           11
+NV_097_SET_SURFACE_FORMAT_HEIGHT_4096                           12
+#endif
+    NAMER(NV_097_SET_ZSTENCIL_CLEAR_VALUE),
+    NAMER(NV_097_SET_COLOR_CLEAR_VALUE),
+    NAMER(NV_097_CLEAR_SURFACE),
+#if 0
+NV_097_CLEAR_SURFACE_Z                                          0x00000001
+NV_097_CLEAR_SURFACE_Z__BITSHIFT                                0
+NV_097_CLEAR_SURFACE_Z_DISABLE                                  0
+NV_097_CLEAR_SURFACE_Z_ENABLE                                   1
+NV_097_CLEAR_SURFACE_STENCIL                                    0x00000002
+NV_097_CLEAR_SURFACE_STENCIL__BITSHIFT                          1
+NV_097_CLEAR_SURFACE_STENCIL_DISABLE                            0
+NV_097_CLEAR_SURFACE_STENCIL_ENABLE                             1
+NV_097_CLEAR_SURFACE_R                                          0x00000010
+NV_097_CLEAR_SURFACE_R__BITSHIFT                                4
+NV_097_CLEAR_SURFACE_R_DISABLE                                  0
+NV_097_CLEAR_SURFACE_R_ENABLE                                   1
+NV_097_CLEAR_SURFACE_G                                          0x00000020
+NV_097_CLEAR_SURFACE_G__BITSHIFT                                5
+NV_097_CLEAR_SURFACE_G_DISABLE                                  0
+NV_097_CLEAR_SURFACE_G_ENABLE                                   1
+NV_097_CLEAR_SURFACE_B                                          0x00000040
+NV_097_CLEAR_SURFACE_B__BITSHIFT                                6
+NV_097_CLEAR_SURFACE_B_DISABLE                                  0
+NV_097_CLEAR_SURFACE_B_ENABLE                                   1
+NV_097_CLEAR_SURFACE_A                                          0x00000080
+NV_097_CLEAR_SURFACE_A__BITSHIFT                                7
+NV_097_CLEAR_SURFACE_A_DISABLE                                  0
+NV_097_CLEAR_SURFACE_A_ENABLE                                   1
+#endif
+    NAMER(NV_097_SET_CLEAR_RECT_HORIZONTAL),
+#if 0
+NV_097_SET_CLEAR_RECT_HORIZONTAL_XMIN                           0x0000ffff
+NV_097_SET_CLEAR_RECT_HORIZONTAL_XMIN__BITSHIFT                 0
+NV_097_SET_CLEAR_RECT_HORIZONTAL_XMAX                           0xffff0000
+NV_097_SET_CLEAR_RECT_HORIZONTAL_XMAX__BITSHIFT                 16
+#endif
+    NAMER(NV_097_SET_CLEAR_RECT_VERTICAL),
+#if 0
+NV_097_SET_CLEAR_RECT_VERTICAL_YMIN                             0x0000ffff
+NV_097_SET_CLEAR_RECT_VERTICAL_YMIN__BITSHIFT                   0
+NV_097_SET_CLEAR_RECT_VERTICAL_YMAX                             0xffff0000
+NV_097_SET_CLEAR_RECT_VERTICAL_YMAX__BITSHIFT                   16
+#endif
+    NAMER(NV_097_SET_BEGIN_PATCH0),
+#if 0
+NV_097_SET_BEGIN_PATCH0_POSITION_DEGREE                         0x0000000f
+NV_097_SET_BEGIN_PATCH0_POSITION_DEGREE__BITSHIFT               0
+NV_097_SET_BEGIN_PATCH0_PARAM1_DEGREE                           0x000000f0
+NV_097_SET_BEGIN_PATCH0_PARAM1_DEGREE__BITSHIFT                 4
+NV_097_SET_BEGIN_PATCH0_PARAM2_DEGREE                           0x00000f00
+NV_097_SET_BEGIN_PATCH0_PARAM2_DEGREE__BITSHIFT                 8
+NV_097_SET_BEGIN_PATCH0_PARAM3_DEGREE                           0x0000f000
+NV_097_SET_BEGIN_PATCH0_PARAM3_DEGREE__BITSHIFT                 12
+NV_097_SET_BEGIN_PATCH0_PARAM4_DEGREE                           0x000f0000
+NV_097_SET_BEGIN_PATCH0_PARAM4_DEGREE__BITSHIFT                 16
+NV_097_SET_BEGIN_PATCH0_PARAM5_DEGREE                           0x00f00000
+NV_097_SET_BEGIN_PATCH0_PARAM5_DEGREE__BITSHIFT                 20
+NV_097_SET_BEGIN_PATCH0_PARAM6_DEGREE                           0x0f000000
+NV_097_SET_BEGIN_PATCH0_PARAM6_DEGREE__BITSHIFT                 24
+NV_097_SET_BEGIN_PATCH0_PARAM7_DEGREE                           0xf0000000
+NV_097_SET_BEGIN_PATCH0_PARAM7_DEGREE__BITSHIFT                 28
+#endif
+    NAMER(NV_097_SET_BEGIN_PATCH1),
+#if 0
+NV_097_SET_BEGIN_PATCH1_PARAM8_DEGREE                           0x0000000f
+NV_097_SET_BEGIN_PATCH1_PARAM8_DEGREE__BITSHIFT                 0
+NV_097_SET_BEGIN_PATCH1_PARAM9_DEGREE                           0x000000f0
+NV_097_SET_BEGIN_PATCH1_PARAM9_DEGREE__BITSHIFT                 4
+NV_097_SET_BEGIN_PATCH1_PARAM10_DEGREE                          0x00000f00
+NV_097_SET_BEGIN_PATCH1_PARAM10_DEGREE__BITSHIFT                8
+NV_097_SET_BEGIN_PATCH1_PARAM11_DEGREE                          0x0000f000
+NV_097_SET_BEGIN_PATCH1_PARAM11_DEGREE__BITSHIFT                12
+NV_097_SET_BEGIN_PATCH1_PARAM12_DEGREE                          0x000f0000
+NV_097_SET_BEGIN_PATCH1_PARAM12_DEGREE__BITSHIFT                16
+NV_097_SET_BEGIN_PATCH1_PARAM13_DEGREE                          0x00f00000
+NV_097_SET_BEGIN_PATCH1_PARAM13_DEGREE__BITSHIFT                20
+NV_097_SET_BEGIN_PATCH1_PARAM14_DEGREE                          0x0f000000
+NV_097_SET_BEGIN_PATCH1_PARAM14_DEGREE__BITSHIFT                24
+NV_097_SET_BEGIN_PATCH1_PARAM15_DEGREE                          0xf0000000
+NV_097_SET_BEGIN_PATCH1_PARAM15_DEGREE__BITSHIFT                28
+#endif
+    NAMER(NV_097_SET_BEGIN_PATCH2),
+#if 0
+NV_097_SET_BEGIN_PATCH2_SWATCH_ROWS                             0x000000ff
+NV_097_SET_BEGIN_PATCH2_SWATCH_ROWS__BITSHIFT                   0
+NV_097_SET_BEGIN_PATCH2_SWATCH_COLS                             0x0000ff00
+NV_097_SET_BEGIN_PATCH2_SWATCH_COLS__BITSHIFT                   8
+NV_097_SET_BEGIN_PATCH2_SWATCH_SIZE                             0x001f0000
+NV_097_SET_BEGIN_PATCH2_SWATCH_SIZE__BITSHIFT                   16
+NV_097_SET_BEGIN_PATCH2_PARTIAL_SWATCH_WIDTH                    0x03e00000
+NV_097_SET_BEGIN_PATCH2_PARTIAL_SWATCH_WIDTH__BITSHIFT          21
+NV_097_SET_BEGIN_PATCH2_PARTIAL_SWATCH_HEIGHT                   0x7c000000
+NV_097_SET_BEGIN_PATCH2_PARTIAL_SWATCH_HEIGHT__BITSHIFT         26
+NV_097_SET_BEGIN_PATCH2_PATCH_TYPE                              0x80000000
+NV_097_SET_BEGIN_PATCH2_PATCH_TYPE__BITSHIFT                    31
+NV_097_SET_BEGIN_PATCH2_PATCH_TYPE_SQUARE                       0
+#endif
+    NAMER(NV_097_SET_BEGIN_PATCH3),
+#if 0
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS                                0x00000007
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS__BITSHIFT                      0
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS_NONE                           0
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS_FIRST                          1
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS_LAST                           2
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS_FIRST_AND_LAST                 3
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS_REV_FIRST                      5
+NV_097_SET_BEGIN_PATCH3_ROW_TRNS_REV_LAST                       6
+NV_097_SET_BEGIN_PATCH3_COL_TRNS                                0x00000038
+NV_097_SET_BEGIN_PATCH3_COL_TRNS__BITSHIFT                      3
+NV_097_SET_BEGIN_PATCH3_COL_TRNS_NONE                           0
+NV_097_SET_BEGIN_PATCH3_COL_TRNS_FIRST                          1
+NV_097_SET_BEGIN_PATCH3_COL_TRNS_LAST                           2
+NV_097_SET_BEGIN_PATCH3_COL_TRNS_FIRST_AND_LAST                 3
+NV_097_SET_BEGIN_PATCH3_COL_TRNS_REV_FIRST                      5
+NV_097_SET_BEGIN_PATCH3_COL_TRNS_REV_LAST                       6
+NV_097_SET_BEGIN_PATCH3_POSITION_GUARD_CURVE_DEGREE             0x000003c0
+NV_097_SET_BEGIN_PATCH3_POSITION_GUARD_CURVE_DEGREE__BITSHIFT   6
+NV_097_SET_BEGIN_PATCH3_NORMAL_GUARD_CURVE_DEGREE               0x00003c00
+NV_097_SET_BEGIN_PATCH3_NORMAL_GUARD_CURVE_DEGREE__BITSHIFT     10
+NV_097_SET_BEGIN_PATCH3_PRIMITIVE                               0x0000c000
+NV_097_SET_BEGIN_PATCH3_PRIMITIVE__BITSHIFT                     14
+NV_097_SET_BEGIN_PATCH3_PRIMITIVE_TRI_STRIP                     0
+NV_097_SET_BEGIN_PATCH3_PRIMITIVE_REVERSED_TRI_STRIP            1
+NV_097_SET_BEGIN_PATCH3_PRIMITIVE_BW_TRI_STRIP                  2
+NV_097_SET_BEGIN_PATCH3_PRIMITIVE_BW_REVERSED_TRI_STRIP         3
+NV_097_SET_BEGIN_PATCH3_TESSELATION                             0x00010000
+NV_097_SET_BEGIN_PATCH3_TESSELATION__BITSHIFT                   16
+NV_097_SET_BEGIN_PATCH3_TESSELATION_ADAPTIVE_STITCH             0
+NV_097_SET_BEGIN_PATCH3_TESSELATION_FIXED_STITCH                1
+NV_097_SET_BEGIN_PATCH3_NUM_COEFFS                              0xff000000
+NV_097_SET_BEGIN_PATCH3_NUM_COEFFS__BITSHIFT                    24
+#endif
+    NAMER(NV_097_SET_END_PATCH),
+    NAMER(NV_097_SET_BEGIN_END_SWATCH),
+#if 0
+NV_097_SET_BEGIN_END_SWATCH_SWATCH_CMD                          0x0000000f
+NV_097_SET_BEGIN_END_SWATCH_SWATCH_CMD__BITSHIFT                0
+NV_097_SET_BEGIN_END_SWATCH_SWATCH_CMD_END                      0
+NV_097_SET_BEGIN_END_SWATCH_SWATCH_CMD_BEGIN                    1
+NV_097_SET_BEGIN_END_SWATCH_NEW_SWATH                           0x000000f0
+NV_097_SET_BEGIN_END_SWATCH_NEW_SWATH__BITSHIFT                 4
+NV_097_SET_BEGIN_END_SWATCH_NEW_SWATH_CONTINUE                  0
+NV_097_SET_BEGIN_END_SWATCH_NEW_SWATH_NEW                       1
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_ROW                      0x00000f00
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_ROW__BITSHIFT            8
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_ROW_FALSE                0
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_ROW_TRUE                 1
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_COL                      0x0000f000
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_COL__BITSHIFT            12
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_COL_FALSE                0
+NV_097_SET_BEGIN_END_SWATCH_SKIP_FIRST_COL_TRUE                 1
+NV_097_SET_BEGIN_END_SWATCH_SHORT_SWATCH                        0x000f0000
+NV_097_SET_BEGIN_END_SWATCH_SHORT_SWATCH__BITSHIFT              16
+NV_097_SET_BEGIN_END_SWATCH_SHORT_SWATCH_FULL_HEIGHT            0
+NV_097_SET_BEGIN_END_SWATCH_SHORT_SWATCH_PARTIAL_HEIGHT         1
+NV_097_SET_BEGIN_END_SWATCH_NARROW_SWATCH                       0xfff00000
+NV_097_SET_BEGIN_END_SWATCH_NARROW_SWATCH__BITSHIFT             20
+NV_097_SET_BEGIN_END_SWATCH_NARROW_SWATCH_FULL_WIDTH            0
+NV_097_SET_BEGIN_END_SWATCH_NARROW_SWATCH_PARTIAL_WIDTH         1
+#endif
+    NAMER(NV_097_SET_BEGIN_END_CURVE),
+#if 0
+NV_097_SET_BEGIN_END_CURVE_CMD                                  0x0000000f
+NV_097_SET_BEGIN_END_CURVE_CMD__BITSHIFT                        0
+NV_097_SET_BEGIN_END_CURVE_CMD_END_CURVE_DATA                   0
+NV_097_SET_BEGIN_END_CURVE_CMD_STRIP_CURVE                      1
+NV_097_SET_BEGIN_END_CURVE_CMD_LEFT_GUARD_CURVE                 2
+NV_097_SET_BEGIN_END_CURVE_CMD_RIGHT_GUARD_CURVE                3
+NV_097_SET_BEGIN_END_CURVE_CMD_OUTER_TRANSITION_CURVE           4
+NV_097_SET_BEGIN_END_CURVE_CMD_INNER_TRANSITION_CURVE           5
+NV_097_SET_BEGIN_END_CURVE_CMD_OUTER_END_PT                     6
+NV_097_SET_BEGIN_END_CURVE_CMD_INNER_END_PT                     7
+#endif
+    NAMER(NV_097_SET_CURVE_COEFFICIENTS_0),
+    NAMER(NV_097_SET_CURVE_COEFFICIENTS_1),
+    NAMER(NV_097_SET_CURVE_COEFFICIENTS_2),
+    NAMER(NV_097_SET_CURVE_COEFFICIENTS_3),
+    NAMER(NV_097_SET_BEGIN_TRANSITION0),
+#if 0
+NV_097_SET_BEGIN_TRANSITION0_POSITION_DEGREE                    0x0000000f
+NV_097_SET_BEGIN_TRANSITION0_POSITION_DEGREE__BITSHIFT          0
+NV_097_SET_BEGIN_TRANSITION0_PARAM1_DEGREE                      0x000000f0
+NV_097_SET_BEGIN_TRANSITION0_PARAM1_DEGREE__BITSHIFT            4
+NV_097_SET_BEGIN_TRANSITION0_PARAM2_DEGREE                      0x00000f00
+NV_097_SET_BEGIN_TRANSITION0_PARAM2_DEGREE__BITSHIFT            8
+NV_097_SET_BEGIN_TRANSITION0_PARAM3_DEGREE                      0x0000f000
+NV_097_SET_BEGIN_TRANSITION0_PARAM3_DEGREE__BITSHIFT            12
+NV_097_SET_BEGIN_TRANSITION0_PARAM4_DEGREE                      0x000f0000
+NV_097_SET_BEGIN_TRANSITION0_PARAM4_DEGREE__BITSHIFT            16
+NV_097_SET_BEGIN_TRANSITION0_PARAM5_DEGREE                      0x00f00000
+NV_097_SET_BEGIN_TRANSITION0_PARAM5_DEGREE__BITSHIFT            20
+NV_097_SET_BEGIN_TRANSITION0_PARAM6_DEGREE                      0x0f000000
+NV_097_SET_BEGIN_TRANSITION0_PARAM6_DEGREE__BITSHIFT            24
+NV_097_SET_BEGIN_TRANSITION0_PARAM7_DEGREE                      0xf0000000
+NV_097_SET_BEGIN_TRANSITION0_PARAM7_DEGREE__BITSHIFT            28
+#endif
+    NAMER(NV_097_SET_BEGIN_TRANSITION1),
+#if 0
+NV_097_SET_BEGIN_TRANSITION1_PARAM8_DEGREE                      0x0000000f
+NV_097_SET_BEGIN_TRANSITION1_PARAM8_DEGREE__BITSHIFT            0
+NV_097_SET_BEGIN_TRANSITION1_PARAM9_DEGREE                      0x000000f0
+NV_097_SET_BEGIN_TRANSITION1_PARAM9_DEGREE__BITSHIFT            4
+NV_097_SET_BEGIN_TRANSITION1_PARAM10_DEGREE                     0x00000f00
+NV_097_SET_BEGIN_TRANSITION1_PARAM10_DEGREE__BITSHIFT           8
+NV_097_SET_BEGIN_TRANSITION1_PARAM11_DEGREE                     0x0000f000
+NV_097_SET_BEGIN_TRANSITION1_PARAM11_DEGREE__BITSHIFT           12
+NV_097_SET_BEGIN_TRANSITION1_PARAM12_DEGREE                     0x000f0000
+NV_097_SET_BEGIN_TRANSITION1_PARAM12_DEGREE__BITSHIFT           16
+NV_097_SET_BEGIN_TRANSITION1_PARAM13_DEGREE                     0x00f00000
+NV_097_SET_BEGIN_TRANSITION1_PARAM13_DEGREE__BITSHIFT           20
+NV_097_SET_BEGIN_TRANSITION1_PARAM14_DEGREE                     0x0f000000
+NV_097_SET_BEGIN_TRANSITION1_PARAM14_DEGREE__BITSHIFT           24
+NV_097_SET_BEGIN_TRANSITION1_PARAM15_DEGREE                     0xf0000000
+NV_097_SET_BEGIN_TRANSITION1_PARAM15_DEGREE__BITSHIFT           28
+#endif
+    NAMER(NV_097_SET_BEGIN_TRANSITION2),
+#if 0
+NV_097_SET_BEGIN_TRANSITION2_INSIDE_SEGMENTS                    0x000003ff
+NV_097_SET_BEGIN_TRANSITION2_INSIDE_SEGMENTS__BITSHIFT          0
+NV_097_SET_BEGIN_TRANSITION2_OUTSIDE_SEGMENTS                   0x000ffc00
+NV_097_SET_BEGIN_TRANSITION2_OUTSIDE_SEGMENTS__BITSHIFT         10
+NV_097_SET_BEGIN_TRANSITION2_NUM_COEFFS                         0xff000000
+NV_097_SET_BEGIN_TRANSITION2_NUM_COEFFS__BITSHIFT               24
+#endif
+    NAMER(NV_097_SET_END_TRANSITION),
+    NAMER(NV_097_SET_SHADOW_ZSLOPE_THRESHOLD),
+    NAMER(NV_097_SET_SHADOW_DEPTH_FUNC),
+#if 0
+NV_097_SET_SHADOW_DEPTH_FUNC_V_NEVER                            0
+NV_097_SET_SHADOW_DEPTH_FUNC_V_LESS                             1
+NV_097_SET_SHADOW_DEPTH_FUNC_V_EQUAL                            2
+NV_097_SET_SHADOW_DEPTH_FUNC_V_LEQUAL                           3
+NV_097_SET_SHADOW_DEPTH_FUNC_V_GREATER                          4
+NV_097_SET_SHADOW_DEPTH_FUNC_V_NOTEQUAL                         5
+NV_097_SET_SHADOW_DEPTH_FUNC_V_GEQUAL                           6
+NV_097_SET_SHADOW_DEPTH_FUNC_V_ALWAYS                           7
+#endif
+    NAMER(NV_097_SET_SHADER_STAGE_PROGRAM),
+#if 0
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0                          0x0000001f
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0__BITSHIFT                0
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0_PROGRAM_NONE             0
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0_2D_PROJECTIVE            1
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0_3D_PROJECTIVE            2
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0_CUBE_MAP                 3
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0_PASS_THROUGH             4
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE0_CLIP_PLANE               5
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1                          0x000003e0
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1__BITSHIFT                5
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_PROGRAM_NONE             0
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_2D_PROJECTIVE            1
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_3D_PROJECTIVE            2
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_CUBE_MAP                 3
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_PASS_THROUGH             4
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_CLIP_PLANE               5
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_BUMPENVMAP               6
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_BUMPENVMAP_LUMINANCE     7
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_DEPENDENT_AR             15
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_DEPENDENT_GB             16
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE1_DOT_PRODUCT              17
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2                          0x00007c00
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2__BITSHIFT                10
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_PROGRAM_NONE             0
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_2D_PROJECTIVE            1
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_3D_PROJECTIVE            2
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_CUBE_MAP                 3
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_PASS_THROUGH             4
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_CLIP_PLANE               5
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_BUMPENVMAP               6
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_BUMPENVMAP_LUMINANCE     7
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_BRDF                     8
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_DOT_ST                   9
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_DOT_ZW                   10
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_DOT_REFLECT_DIFFUSE      11
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_DEPENDENT_AR             15
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_DEPENDENT_GB             16
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE2_DOT_PRODUCT              17
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3                          0x000f8000
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3__BITSHIFT                15
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_PROGRAM_NONE             0
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_2D_PROJECTIVE            1
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_3D_PROJECTIVE            2
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_CUBE_MAP                 3
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_PASS_THROUGH             4
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_CLIP_PLANE               5
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_BUMPENVMAP               6
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_BUMPENVMAP_LUMINANCE     7
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_BRDF                     8
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DOT_ST                   9
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DOT_ZW                   10
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DOT_REFLECT_SPECULAR     12
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DOT_STR_3D               13
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DOT_STR_CUBE             14
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DEPENDENT_AR             15
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DEPENDENT_GB             16
+NV_097_SET_SHADER_STAGE_PROGRAM_STAGE3_DOT_REFLECT_SPECULAR_CONST 18
+#endif
+    NAMER(NV_097_SET_EYE_VECTOR_0),
+    NAMER(NV_097_SET_EYE_VECTOR_1),
+    NAMER(NV_097_SET_EYE_VECTOR_2),
+    NAMER(NV_097_SET_DOT_RGBMAPPING),
+#if 0
+NV_097_SET_DOT_RGBMAPPING_STAGE1                                0x0000000f
+NV_097_SET_DOT_RGBMAPPING_STAGE1__BITSHIFT                      0
+NV_097_SET_DOT_RGBMAPPING_STAGE1_ZERO_TO_1                      0
+NV_097_SET_DOT_RGBMAPPING_STAGE1_MINUS_1_TO_1_MS                1
+NV_097_SET_DOT_RGBMAPPING_STAGE1_MINUS_1_TO_1_GL                2
+NV_097_SET_DOT_RGBMAPPING_STAGE1_MINUS_1_TO_1_NV                3
+NV_097_SET_DOT_RGBMAPPING_STAGE1_HILO_1                         4
+NV_097_SET_DOT_RGBMAPPING_STAGE1_HILO_HEMISPHERE_MS             5
+NV_097_SET_DOT_RGBMAPPING_STAGE1_HILO_HEMISPHERE_GL             6
+NV_097_SET_DOT_RGBMAPPING_STAGE1_HILO_HEMISPHERE_NV             7
+NV_097_SET_DOT_RGBMAPPING_STAGE2                                0x000000f0
+NV_097_SET_DOT_RGBMAPPING_STAGE2__BITSHIFT                      4
+NV_097_SET_DOT_RGBMAPPING_STAGE2_ZERO_TO_1                      0
+NV_097_SET_DOT_RGBMAPPING_STAGE2_MINUS_1_TO_1_MS                1
+NV_097_SET_DOT_RGBMAPPING_STAGE2_MINUS_1_TO_1_GL                2
+NV_097_SET_DOT_RGBMAPPING_STAGE2_MINUS_1_TO_1_NV                3
+NV_097_SET_DOT_RGBMAPPING_STAGE2_HILO_1                         4
+NV_097_SET_DOT_RGBMAPPING_STAGE2_HILO_HEMISPHERE_MS             5
+NV_097_SET_DOT_RGBMAPPING_STAGE2_HILO_HEMISPHERE_GL             6
+NV_097_SET_DOT_RGBMAPPING_STAGE2_HILO_HEMISPHERE_NV             7
+NV_097_SET_DOT_RGBMAPPING_STAGE3                                0x00000f00
+NV_097_SET_DOT_RGBMAPPING_STAGE3__BITSHIFT                      8
+NV_097_SET_DOT_RGBMAPPING_STAGE3_ZERO_TO_1                      0
+NV_097_SET_DOT_RGBMAPPING_STAGE3_MINUS_1_TO_1_MS                1
+NV_097_SET_DOT_RGBMAPPING_STAGE3_MINUS_1_TO_1_GL                2
+NV_097_SET_DOT_RGBMAPPING_STAGE3_MINUS_1_TO_1_NV                3
+NV_097_SET_DOT_RGBMAPPING_STAGE3_HILO_1                         4
+NV_097_SET_DOT_RGBMAPPING_STAGE3_HILO_HEMISPHERE_MS             5
+NV_097_SET_DOT_RGBMAPPING_STAGE3_HILO_HEMISPHERE_GL             6
+NV_097_SET_DOT_RGBMAPPING_STAGE3_HILO_HEMISPHERE_NV             7
+#endif
+    NAMER(NV_097_SET_SHADER_CLIP_PLANE_MODE),
+#if 0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_S                      0x00000001
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_S__BITSHIFT            0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_S_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_S_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_T                      0x00000002
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_T__BITSHIFT            1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_T_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_T_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_R                      0x00000004
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_R__BITSHIFT            2
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_R_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_R_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_Q                      0x00000008
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_Q__BITSHIFT            3
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_Q_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE0_Q_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_S                      0x00000010
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_S__BITSHIFT            4
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_S_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_S_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_T                      0x00000020
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_T__BITSHIFT            5
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_T_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_T_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_R                      0x00000040
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_R__BITSHIFT            6
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_R_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_R_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_Q                      0x00000080
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_Q__BITSHIFT            7
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_Q_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE1_Q_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_S                      0x00000100
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_S__BITSHIFT            8
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_S_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_S_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_T                      0x00000200
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_T__BITSHIFT            9
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_T_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_T_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_R                      0x00000400
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_R__BITSHIFT            10
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_R_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_R_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_Q                      0x00000800
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_Q__BITSHIFT            11
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_Q_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE2_Q_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_S                      0x00001000
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_S__BITSHIFT            12
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_S_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_S_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_T                      0x00002000
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_T__BITSHIFT            13
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_T_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_T_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_R                      0x00004000
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_R__BITSHIFT            14
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_R_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_R_CLIPGEZ              1
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_Q                      0x00008000
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_Q__BITSHIFT            15
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_Q_CLIPLTZ              0
+NV_097_SET_SHADER_CLIP_PLANE_MODE_STAGE3_Q_CLIPGEZ              1
+#endif
+    NAMER(NV_097_SET_SHADER_OTHER_STAGE_INPUT),
+#if 0
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE1                      0x0000ffff
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE1__BITSHIFT            0
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE1_INSTAGE_0            0
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE2                      0x000f0000
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE2__BITSHIFT            16
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE2_INSTAGE_0            0
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE2_INSTAGE_1            1
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE3                      0x00f00000
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE3__BITSHIFT            20
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE3_INSTAGE_0            0
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE3_INSTAGE_1            1
+NV_097_SET_SHADER_OTHER_STAGE_INPUT_STAGE3_INSTAGE_2            2
+#endif
+    NAMER(NV_097_SET_SPECULAR_FOG_FACTOR_0),
+    NAMER(NV_097_SET_SPECULAR_FOG_FACTOR_1),
+#if 0
+NV_097_SET_SPECULAR_FOG_FACTOR_BLUE                             0x000000ff
+NV_097_SET_SPECULAR_FOG_FACTOR_BLUE__BITSHIFT                   0
+NV_097_SET_SPECULAR_FOG_FACTOR_GREEN                            0x0000ff00
+NV_097_SET_SPECULAR_FOG_FACTOR_GREEN__BITSHIFT                  8
+NV_097_SET_SPECULAR_FOG_FACTOR_RED                              0x00ff0000
+NV_097_SET_SPECULAR_FOG_FACTOR_RED__BITSHIFT                    16
+NV_097_SET_SPECULAR_FOG_FACTOR_ALPHA                            0xff000000
+NV_097_SET_SPECULAR_FOG_FACTOR_ALPHA__BITSHIFT                  24
+#endif
+    NAMER(NV_097_SET_COMBINER_CONTROL),
+#if 0
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT                     0x000000ff
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT__BITSHIFT           0
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_ONE                 1
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_TWO                 2
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_THREE               3
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_FOUR                4
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_FIVE                5
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_SIX                 6
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_SEVEN               7
+NV_097_SET_COMBINER_CONTROL_ITERATION_COUNT_EIGHT               8
+NV_097_SET_COMBINER_CONTROL_MUX_SELECT                          0x00000f00
+NV_097_SET_COMBINER_CONTROL_MUX_SELECT__BITSHIFT                8
+NV_097_SET_COMBINER_CONTROL_MUX_SELECT_LSB                      0
+NV_097_SET_COMBINER_CONTROL_MUX_SELECT_MSB                      1
+NV_097_SET_COMBINER_CONTROL_FACTOR0                             0x0000f000
+NV_097_SET_COMBINER_CONTROL_FACTOR0__BITSHIFT                   12
+NV_097_SET_COMBINER_CONTROL_FACTOR0_SAME_FACTOR_ALL             0
+NV_097_SET_COMBINER_CONTROL_FACTOR0_EACH_STAGE                  1
+NV_097_SET_COMBINER_CONTROL_FACTOR1                             0xffff0000
+NV_097_SET_COMBINER_CONTROL_FACTOR1__BITSHIFT                   16
+NV_097_SET_COMBINER_CONTROL_FACTOR1_SAME_FACTOR_ALL             0
+NV_097_SET_COMBINER_CONTROL_FACTOR1_EACH_STAGE                  1
+#endif
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_0),
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_1),
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_2),
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_3),
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_4),
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_5),
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_6),
+    NAMER(NV_097_SET_COMBINER_COLOR_OCW_7),
+#if 0
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_AB                    0x00080000
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_AB__BITSHIFT          19
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_AB_DISABLE            0
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_AB_AB_DST_ENABLE      1
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_CD                    0x00040000
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_CD__BITSHIFT          18
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_CD_DISABLE            0
+NV_097_SET_COMBINER_COLOR_OCW_BLUETOALPHA_CD_CD_DST_ENABLE      1
+NV_097_SET_COMBINER_COLOR_OCW_OP                                0x00008000
+NV_097_SET_COMBINER_COLOR_OCW_OP__BITSHIFT                      15
+NV_097_SET_COMBINER_COLOR_OCW_OP_NOSHIFT                        0
+NV_097_SET_COMBINER_COLOR_OCW_OP_NOSHIFT_BIAS                   1
+NV_097_SET_COMBINER_COLOR_OCW_OP_SHIFTLEFTBY1                   2
+NV_097_SET_COMBINER_COLOR_OCW_OP_SHIFTLEFTBY1_BIAS              3
+NV_097_SET_COMBINER_COLOR_OCW_OP_SHIFTLEFTBY2                   4
+NV_097_SET_COMBINER_COLOR_OCW_OP_SHIFTRIGHTBY1                  6
+NV_097_SET_COMBINER_COLOR_OCW_MUX_ENABLE                        0x00004000
+NV_097_SET_COMBINER_COLOR_OCW_MUX_ENABLE__BITSHIFT              14
+NV_097_SET_COMBINER_COLOR_OCW_MUX_ENABLE_FALSE                  0
+NV_097_SET_COMBINER_COLOR_OCW_MUX_ENABLE_TRUE                   1
+NV_097_SET_COMBINER_COLOR_OCW_AB_DOT_ENABLE                     0x00002000
+NV_097_SET_COMBINER_COLOR_OCW_AB_DOT_ENABLE__BITSHIFT           13
+NV_097_SET_COMBINER_COLOR_OCW_AB_DOT_ENABLE_FALSE               0
+NV_097_SET_COMBINER_COLOR_OCW_AB_DOT_ENABLE_TRUE                1
+NV_097_SET_COMBINER_COLOR_OCW_CD_DOT_ENABLE                     0x00001000
+NV_097_SET_COMBINER_COLOR_OCW_CD_DOT_ENABLE__BITSHIFT           12
+NV_097_SET_COMBINER_COLOR_OCW_CD_DOT_ENABLE_FALSE               0
+NV_097_SET_COMBINER_COLOR_OCW_CD_DOT_ENABLE_TRUE                1
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST                           0x00000f00
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST__BITSHIFT                 8
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_0                     0
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_4                     4
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_5                     5
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_8                     8
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_9                     9
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_A                     10
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_B                     11
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_C                     12
+NV_097_SET_COMBINER_COLOR_OCW_SUM_DST_REG_D                     13
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST                            0x000000f0
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST__BITSHIFT                  4
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_0                      0
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_4                      4
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_5                      5
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_8                      8
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_9                      9
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_A                      10
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_B                      11
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_C                      12
+NV_097_SET_COMBINER_COLOR_OCW_AB_DST_REG_D                      13
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST                            0x0000000f
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST__BITSHIFT                  0
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_0                      0
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_4                      4
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_5                      5
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_8                      8
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_9                      9
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_A                      10
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_B                      11
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_C                      12
+NV_097_SET_COMBINER_COLOR_OCW_CD_DST_REG_D                      13
+#endif
+    NAMER(NV_097_SET_TRANSFORM_EXECUTION_MODE),
+#if 0
+NV_097_SET_TRANSFORM_EXECUTION_MODE_MODE                        0x00000003
+NV_097_SET_TRANSFORM_EXECUTION_MODE_MODE__BITSHIFT              0
+NV_097_SET_TRANSFORM_EXECUTION_MODE_MODE_FIXED                  0
+NV_097_SET_TRANSFORM_EXECUTION_MODE_MODE_PROGRAM                2
+NV_097_SET_TRANSFORM_EXECUTION_MODE_RANGE_MODE                  0xfffffffc
+NV_097_SET_TRANSFORM_EXECUTION_MODE_RANGE_MODE__BITSHIFT        2
+NV_097_SET_TRANSFORM_EXECUTION_MODE_RANGE_MODE_USER             0
+NV_097_SET_TRANSFORM_EXECUTION_MODE_RANGE_MODE_PRIV             1
+#endif
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_CXT_WRITE_EN),
+#if 0
+NV_097_SET_TRANSFORM_PROGRAM_CXT_WRITE_EN_V_READ_ONLY           0
+NV_097_SET_TRANSFORM_PROGRAM_CXT_WRITE_EN_V_READ_WRITE          1
+#endif
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_LOAD),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_START),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_0),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_1),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_2),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_3),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_4),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_5),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_6),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_7),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_8),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_9),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_10),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_11),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_12),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_13),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_14),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_15),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_16),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_17),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_18),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_19),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_20),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_21),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_22),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_23),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_24),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_25),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_26),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_27),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_28),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_29),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_30),
+    NAMER(NV_097_SET_TRANSFORM_PROGRAM_31),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_LOAD),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_0),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_1),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_2),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_3),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_4),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_5),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_6),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_7),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_8),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_9),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_10),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_11),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_12),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_13),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_14),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_15),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_16),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_17),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_18),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_19),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_20),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_21),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_22),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_23),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_24),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_25),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_26),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_27),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_28),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_29),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_30),
+    NAMER(NV_097_SET_TRANSFORM_CONSTANT_31),
+    NAMER(NV_097_SET_TRANSFORM_DATA_0),
+    NAMER(NV_097_SET_TRANSFORM_DATA_1),
+    NAMER(NV_097_SET_TRANSFORM_DATA_2),
+    NAMER(NV_097_SET_TRANSFORM_DATA_3),
+    NAMER(NV_097_LAUNCH_TRANSFORM_PROGRAM),
+    NAMER(NV_097_SET_TWO_SIDE_LIGHT_EN),
+#if 0
+NV_097_SET_TWO_SIDE_LIGHT_EN_V_FALSE                            0
+NV_097_SET_TWO_SIDE_LIGHT_EN_V_TRUE                             1
+#endif
+    NAMER(NV_097_SET_BACK_SCENE_AMBIENT_COLOR_0),
+    NAMER(NV_097_SET_BACK_SCENE_AMBIENT_COLOR_1),
+    NAMER(NV_097_SET_BACK_SCENE_AMBIENT_COLOR_2),
+    NAMER(NV_097_SET_BACK_MATERIAL_EMISSION_0),
+    NAMER(NV_097_SET_BACK_MATERIAL_EMISSION_1),
+    NAMER(NV_097_SET_BACK_MATERIAL_EMISSION_2),
+    NAMER(NV_097_CLEAR_REPORT_VALUE),
+#if 0
+NV_097_CLEAR_REPORT_VALUE_TYPE_ZPASS_PIXEL_CNT                  1
+#endif
+    NAMER(NV_097_SET_ZPASS_PIXEL_COUNT_ENABLE),
+#if 0
+NV_097_SET_ZPASS_PIXEL_COUNT_ENABLE_V_FALSE                     0
+NV_097_SET_ZPASS_PIXEL_COUNT_ENABLE_V_TRUE                      1
+#endif
+    NAMER(NV_097_GET_REPORT),
+#if 0
+NV_097_GET_REPORT_OFFSET                                        0x00ffffff
+NV_097_GET_REPORT_OFFSET__BITSHIFT                              0
+NV_097_GET_REPORT_TYPE                                          0xff000000
+NV_097_GET_REPORT_TYPE__BITSHIFT                                24
+NV_097_GET_REPORT_TYPE_ZPASS_PIXEL_CNT                          1
+#endif
+    NAMER(NV_097_DEBUG_INIT_0),
+    NAMER(NV_097_DEBUG_INIT_1),
+    NAMER(NV_097_DEBUG_INIT_2),
+    NAMER(NV_097_DEBUG_INIT_3),
+    NAMER(NV_097_DEBUG_INIT_4),
+    NAMER(NV_097_DEBUG_INIT_5),
+    NAMER(NV_097_DEBUG_INIT_6),
+    NAMER(NV_097_DEBUG_INIT_7),
+    NAMER(NV_097_DEBUG_INIT_8),
+    NAMER(NV_097_DEBUG_INIT_9),
+};
 
