@@ -1,4 +1,22 @@
-/* gcc -m32 -g -Wall -Wextra loader.c -o loader -pthread */
+/*
+ *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
+ *
+ *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 
 #ifndef __i386__
 # error "Compile with `gcc -m32'"
@@ -24,6 +42,11 @@
 
 static int dbg = 1;
 
+int xboxkrnl_tsc_on(void);
+int xboxkrnl_tsc_off(void);
+void xboxkrnl_clock_local(struct timeval *tv);
+void xboxkrnl_clock_wall(struct timespec *tp);
+
 void
 debug(const char *format, ...) {
     va_list args;
@@ -42,7 +65,7 @@ debug(const char *format, ...) {
 
     if (ret > 0) {
         buf[ret] = 0;
-        gettimeofday(&tv, NULL);
+        xboxkrnl_clock_local(&tv);
         if (!(tm = localtime(&tv.tv_sec)) || !strftime(time, sizeof(time), "%T", tm)) {
             fprintf(stderr, "%s\n", buf);
         } else {
@@ -97,12 +120,12 @@ void nv2a_pfifo_puller(register void *p);
 int nv2a_init(void);
 void nv2a_irq_restore(register int mask);
 int nv2a_irq(void);
-void nv2a_pcrtc_start(register uint32_t v);
+void nv2a_framebuffer_set(uint32_t addr);
 int nv2a_write(uint32_t addr, const void *val, size_t sz);
 int nv2a_read(uint32_t addr, void *val, size_t sz);
 #include "xboxkrnl.c"
 #include "sw/xbe.c"
-#include "gloffscreen.c"
+#include "sw/gloffscreen.c"
 #include "hw/usb/ohci.c"
 #include "hw/apu/apu.c"
 #include "hw/aci/aci.c"
@@ -202,6 +225,7 @@ xboxkrnl_patch_seh(void *addr, size_t size) {
     return ret;
 }
 #endif
+
 static const char *const greg_names[] = {
     NAME(REG_GS),
     NAME(REG_FS),
@@ -285,7 +309,7 @@ C7 87 0C 18 00 00 00 F8 00 00   // mov     dword ptr [edi+180Ch], 0F800h
                 if (*(uint8_t *)*ip == 0xf3) {                      // rep
 // rep movsd // F3 A5
                     if (*(uint8_t *)(*ip + 1) == 0xa5) {            // rep movsd
-//break;//XXX turok dirty disc
+//break;//XXX turok dirty disc break trigger
 //INT3;//XXX
                         register uint32_t *c   = (void *)&uc->uc_mcontext.gregs[REG_ECX];
                         register uint32_t *di  = (void *)&uc->uc_mcontext.gregs[REG_EDI];
@@ -1933,7 +1957,45 @@ C7 87 0C 18 00 00 00 F8 00 00   // mov     dword ptr [edi+180Ch], 0F800h
             }
         } while (0);
     } else if (i == 128) {
-#if 0 //XXX turok
+        if (*(uint16_t *)*ip == 0x310f) {                           // rdtsc
+#if 0 //XXX rdtsc emulation
+uint64_t t1,t2;
+uint32_t lo,hi;
+xboxkrnl_tsc(&lo, &hi, &t1, 0);
+PRINT("%llu", t1);
+xboxkrnl_tsc(&lo, &hi, &t1, 1);
+PRINT("%llu", t1);
+//PRINT("HIT! lo 0x%.08x | hi 0x%.08x | 0x%.016llx", lo, hi, t1);//XXX
+int t;
+for (t=0;t<10;++t){
+sleep(1);
+xboxkrnl_tsc(&lo, &hi, &t2, 1);
+PRINT("%llu (%llu)", t2 - t1,t2);
+t1 = t2;
+}
+_exit(0);//XXX
+#endif
+            xboxkrnl_tsc(
+                (void *)&uc->uc_mcontext.gregs[REG_EAX],
+                (void *)&uc->uc_mcontext.gregs[REG_EDX],
+                NULL,
+                1);
+            *ip += 2;                                               //   opcode: 0x0f 0x31
+            return;
+        }
+        if (*(uint8_t *)*ip == 0xee) {                              // out     dx, al
+            i  = uc->uc_mcontext.gregs[REG_EAX] & 0xff;
+            bp = (void **)&uc->uc_mcontext.gregs[REG_EDX];
+            PRINT("out: "
+                "[0x%.04hx], "
+                "al (0x%.02hhx)",
+                *(uint16_t *)bp,                                    // dx
+                i);                                                 // al
+            //TODO
+            *ip += 1;                                               //   opcode: 0xee
+            return;
+        }
+#if 0 //XXX turok - started here
 # if 0
                                     // SetLastError()
 *(short *)0x118f2 = 0xc031;         // movzx   eax, large byte ptr fs:24h
@@ -2153,19 +2215,6 @@ C7 87 0C 18 00 00 00 F8 00 00   // mov     dword ptr [edi+180Ch], 0F800h
             "\x90\x90");                            // 1: nop
 
 #undef EIP_PATCH
-
-        if (*(uint8_t *)*ip == 0xee) {                              // out     dx, al
-            i  = uc->uc_mcontext.gregs[REG_EAX] & 0xff;
-            bp = (void **)&uc->uc_mcontext.gregs[REG_EDX];
-            PRINT("out: "
-                "[0x%.04hx], "
-                "al (0x%.02hhx)",
-                *(uint16_t *)bp,                                    // dx
-                i);                                                 // al
-            //TODO
-            *ip += 1;                                               //   opcode: 0xee
-            return;
-        }
     }
 
     PRINT("Segmentation Fault!", 0);
@@ -2349,8 +2398,10 @@ main(int argc, char **argv) {
 
     if (argc >= 3) INT3;
 
-    pthread_create(&entry, NULL, (void *)xbeh->dwEntryAddr, NULL);
+    pthread_create(&entry, NULL, xboxkrnl_entry_thread, (void *)xbeh->dwEntryAddr);
     pthread_join(entry, NULL);
+
+    /* TODO: do other stuff */
 
     return 0;
 }

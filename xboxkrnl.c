@@ -1,25 +1,33 @@
+/*
+ *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
+ *
+ *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/prctl.h>
 #include <execinfo.h>
 #include <iconv.h>
 
-#include <windef.h>
-#include <winbase.h>
-
-#define SYNC_THREADS        1   /* debugging */
-
-#if SYNC_THREADS
-static pthread_mutex_t *    xboxkrnl_thread_mutex = NULL;
-static pthread_mutexattr_t *xboxkrnl_thread_mattr = NULL;
-# define THREAD_LOCK        pthread_mutex_lock(xboxkrnl_thread_mutex)
-# define THREAD_UNLOCK      pthread_mutex_unlock(xboxkrnl_thread_mutex)
-#else
-# define THREAD_LOCK
-# define THREAD_UNLOCK
-#endif
+#include "sw/int128.h"
 
 #define REG08(x)            *(uint8_t  *)((x))
 #define REG16(x)            *(uint16_t *)((x))
@@ -132,7 +140,7 @@ xboxkrnl_vardump(
 
     if (!dbg) return;
 
-    if (v >> 32 == ~0UL) v &= ~0UL;
+    if (v >> 32 == ~0UL) v &= ~0UL; /* sign extension from 32-bit to 64-bit */
     a = *(char **)&v;
 
     if (nsz) {
@@ -240,7 +248,7 @@ xboxkrnl_backtrace(void) {
 }
 
 static void
-xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix, int lock) {
+xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix) {
     register void *bt = xboxkrnl_backtrace();
     register char *s;
 
@@ -258,7 +266,7 @@ xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix, int lock) {
 }
 
 static void
-xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix, int lock) {
+xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix) {
     register void *bt = xboxkrnl_backtrace();
     register char *s;
 
@@ -311,15 +319,15 @@ xboxkrnl_print(int8_t stack, const char *format, ...) {
 
 static void *               xboxkrnl_mem_contiguous = NULL;
 
-#define ENTER               xboxkrnl_enter(&xboxkrnl_stack, __func__, NULL, 0)
-#define LEAVE               xboxkrnl_leave(&xboxkrnl_stack, __func__, NULL, 0)
+#define ENTER               xboxkrnl_enter(&xboxkrnl_stack, __func__, NULL)
+#define LEAVE               xboxkrnl_leave(&xboxkrnl_stack, __func__, NULL)
 #define PRINT(x,...)        xboxkrnl_print(xboxkrnl_stack, (x), __VA_ARGS__)
 #define HEXDUMP(x)          xboxkrnl_hexdump(xboxkrnl_stack, (x), sizeof(x), #x)
 #define HEXDUMPN(x,y)       xboxkrnl_hexdump(xboxkrnl_stack, (x), (y), #x)
 static int8_t               xboxkrnl_stack = 0;
 
-#define ENTER_DPC           xboxkrnl_enter(&xboxkrnl_dpc_stack, __func__, "dpc", 0)
-#define LEAVE_DPC           xboxkrnl_leave(&xboxkrnl_dpc_stack, __func__, "dpc", 0)
+#define ENTER_DPC           xboxkrnl_enter(&xboxkrnl_dpc_stack, __func__, "dpc")
+#define LEAVE_DPC           xboxkrnl_leave(&xboxkrnl_dpc_stack, __func__, "dpc")
 #define PRINT_DPC(x,...)    xboxkrnl_print(xboxkrnl_dpc_stack, (x), __VA_ARGS__)
 #define HEXDUMP_DPC(x)      xboxkrnl_hexdump(xboxkrnl_dpc_stack, (x), sizeof(x), #x)
 #define HEXDUMPN_DPC(x,y)   xboxkrnl_hexdump(xboxkrnl_dpc_stack, (x), (y), #x)
@@ -331,7 +339,152 @@ static pthread_cond_t *     xboxkrnl_dpc_cond = NULL;
 #define DPC_LOCK            pthread_mutex_lock(xboxkrnl_dpc_mutex)
 #define DPC_UNLOCK          pthread_mutex_unlock(xboxkrnl_dpc_mutex)
 #define DPC_WAIT            pthread_cond_wait(xboxkrnl_dpc_cond, xboxkrnl_dpc_mutex)
-#define DPC_SIGNAL          pthread_cond_broadcast(xboxkrnl_dpc_cond)
+#define DPC_SIGNAL          DPC_LOCK, \
+                            pthread_cond_broadcast(xboxkrnl_dpc_cond), \
+                            DPC_UNLOCK
+
+static void                 (*xboxkrnl_entry)(void) = NULL;
+
+static int                  xboxkrnl_tsc_intercept = 0;
+static uint128_t            xboxkrnl_tsc_hz = uint128_0;
+static uint128_t            xboxkrnl_tsc_scaler = uint128_0;
+
+int
+xboxkrnl_tsc_on(void) {
+    return (xboxkrnl_tsc_intercept) ? prctl(PR_SET_TSC, PR_TSC_ENABLE) : -1;
+}
+
+int
+xboxkrnl_tsc_off(void) {
+    return (xboxkrnl_tsc_intercept) ? prctl(PR_SET_TSC, PR_TSC_SIGSEGV) : -1;
+}
+
+int
+xboxkrnl_tsc_init(void) {
+    char buf[4096];
+    uint32_t mhz;
+    uint32_t khz;
+    uint128_t host;
+    uint128_t freq;
+    register int fd = -1;
+    register int tmp;
+    register char *x;
+    register char *y;
+    register int ret = 1;
+    ENTER;
+
+    do {
+        xboxkrnl_tsc_intercept = 1;
+        if (xboxkrnl_tsc_off() < 0) {
+            PRINT("error: failed to intercept TSC register: prctl(): '%s'", strerror(errno));
+            break;
+        }
+        xboxkrnl_tsc_on();
+        if ((fd = open("/proc/cpuinfo", O_RDONLY)) < 0) {
+            PRINT("error: failed to query TSC frequency: open(): '%s'", strerror(errno));
+            break;
+        }
+        if ((tmp = read(fd, buf, sizeof(buf))) <= 0) {
+            PRINT("error: failed to query TSC frequency: read(): '%s'", (!tmp) ? "empty read" : strerror(errno));
+            break;
+        }
+        if (!(x = strstr(buf, "cpu MHz")) ||
+            !(y = strchr(x, '\n')) ||
+            (*y = 0) ||
+            !(x = strrchr(x, ' ')) ||
+            sscanf(x + 1, "%u.%03u", &mhz, &khz) != 2) {
+            PRINT("error: failed to query TSC frequency: string not found", 0);
+            break;
+        }
+        PRINT("/* TSC frequency is %u.%.03u MHz */", mhz, khz);
+        if (mhz < 733 || (mhz == 733 && khz <= 333)) break;
+        uint128_set(xboxkrnl_tsc_hz, mhz * 1000000 + khz * 1000);
+        VARDUMP(DUMP, xboxkrnl_tsc_hz.lo);
+    } while ((ret = 0));
+
+    if (fd >= 0) close(fd);
+
+    if (ret) {
+        xboxkrnl_tsc_intercept = 0;
+        PRINT("/* TSC scaling is disabled */", 0);
+    } else {
+        xboxkrnl_tsc_intercept = 1;
+        PRINT("/* TSC scaling is enabled */", 0);
+        uint128_set(host, 1000000000);
+        uint128_set(freq, 733333333);
+        host = uint128_mul(&host, &xboxkrnl_tsc_hz);
+        uint128_divmod(&host, &freq, &xboxkrnl_tsc_scaler, NULL);
+        PRINT("/* TSC scaling factor: %llu.%.09llu per 733 MHz tick */",
+            xboxkrnl_tsc_scaler.lo / 1000000000,
+            xboxkrnl_tsc_scaler.lo % 1000000000);
+    }
+
+    LEAVE;
+    return ret;
+}
+
+void
+xboxkrnl_tsc(uint32_t *lo, uint32_t *hi, uint64_t *v, int xbox) {
+    uint128_t host;
+    uint128_t tick;
+    register uint32_t a;
+    register uint32_t d;
+
+    xboxkrnl_tsc_on();
+
+    __asm__ __volatile__("rdtsc" : "=a" (a), "=d" (d));
+
+    xboxkrnl_tsc_off();
+
+    if (xbox && xboxkrnl_tsc_scaler.lo) {
+        uint128_set(host, 1000000000);
+        uint128_set(tick, ((uint64_t)d << 32) | a);
+        host = uint128_mul(&host, &tick);
+        uint128_divmod(&host, &xboxkrnl_tsc_scaler, &tick, NULL);
+        if (tick.hi) {
+            fprintf(stderr, "xboxkrnl: FATAL: TSC scaler overflow\n");
+            _exit(-1);
+        }
+        if (lo) *lo = tick.lo & 0xffffffff;
+        if (hi) *hi = tick.lo >> 32;
+        if (v) *v = tick.lo;
+        return;
+    }
+
+    if (lo) *lo = a;
+    if (hi) *hi = d;
+    if (v) *v = ((uint64_t)d << 32) | a;
+}
+
+void
+xboxkrnl_clock_local(struct timeval *tv) {
+    if (xboxkrnl_entry) xboxkrnl_tsc_on();
+
+    gettimeofday(tv, NULL);
+
+    if (xboxkrnl_entry) xboxkrnl_tsc_off();
+}
+
+void
+xboxkrnl_clock_wall(struct timespec *tp) {
+    if (xboxkrnl_entry) xboxkrnl_tsc_on();
+
+    clock_gettime(CLOCK_MONOTONIC, tp);
+
+    if (xboxkrnl_entry) xboxkrnl_tsc_off();
+}
+
+void *
+xboxkrnl_entry_thread(void *arg) {
+    if (arg) {
+        xboxkrnl_entry = arg;
+        xboxkrnl_tsc_off();
+        xboxkrnl_entry();
+    }
+
+    pthread_exit(NULL);
+    return NULL;
+}
 
 /* winnt */
 typedef struct _listentry {
@@ -379,8 +532,8 @@ static pthread_mutex_t      xboxkrnl_dpc_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define DPC_LIST_LOCK       pthread_mutex_lock(&xboxkrnl_dpc_list_mutex)
 #define DPC_LIST_UNLOCK     pthread_mutex_unlock(&xboxkrnl_dpc_list_mutex)
 
-#define ENTER_EVENT         xboxkrnl_enter(&xboxkrnl_event_stack, __func__, "event", 0)
-#define LEAVE_EVENT         xboxkrnl_leave(&xboxkrnl_event_stack, __func__, "event", 0)
+#define ENTER_EVENT         xboxkrnl_enter(&xboxkrnl_event_stack, __func__, "event")
+#define LEAVE_EVENT         xboxkrnl_leave(&xboxkrnl_event_stack, __func__, "event")
 #define PRINT_EVENT(x,...)  xboxkrnl_print(xboxkrnl_event_stack, (x), __VA_ARGS__)
 #define HEXDUMP_EVENT(x)    xboxkrnl_hexdump(xboxkrnl_event_stack, (x), sizeof(x), #x)
 #define HEXDUMPN_EVENT(x,y) xboxkrnl_hexdump(xboxkrnl_event_stack, (x), (y), #x)
@@ -392,10 +545,12 @@ static pthread_cond_t *     xboxkrnl_event_cond = NULL;
 #define EVENT_LOCK          pthread_mutex_lock(xboxkrnl_event_mutex)
 #define EVENT_UNLOCK        pthread_mutex_unlock(xboxkrnl_event_mutex)
 #define EVENT_WAIT          pthread_cond_wait(xboxkrnl_event_cond, xboxkrnl_event_mutex)
-#define EVENT_SIGNAL        pthread_cond_broadcast(xboxkrnl_event_cond)
+#define EVENT_SIGNAL        EVENT_LOCK, \
+                            pthread_cond_broadcast(xboxkrnl_event_cond), \
+                            EVENT_UNLOCK
 
-#define ENTER_IRQ_NV2A      xboxkrnl_enter(&xboxkrnl_irq_nv2a_stack, __func__, "irq_nv2a", 0)
-#define LEAVE_IRQ_NV2A      xboxkrnl_leave(&xboxkrnl_irq_nv2a_stack, __func__, "irq_nv2a", 0)
+#define ENTER_IRQ_NV2A      xboxkrnl_enter(&xboxkrnl_irq_nv2a_stack, __func__, "irq_nv2a")
+#define LEAVE_IRQ_NV2A      xboxkrnl_leave(&xboxkrnl_irq_nv2a_stack, __func__, "irq_nv2a")
 #define PRINT_IRQ_NV2A(x,...) xboxkrnl_print(xboxkrnl_irq_nv2a_stack, (x), __VA_ARGS__)
 #define HEXDUMP_IRQ_NV2A(x) xboxkrnl_hexdump(xboxkrnl_irq_nv2a_stack, (x), sizeof(x), #x)
 #define HEXDUMPN_IRQ_NV2A(x,y) xboxkrnl_hexdump(xboxkrnl_irq_nv2a_stack, (x), (y), #x)
@@ -407,7 +562,9 @@ static pthread_cond_t *     xboxkrnl_irq_nv2a_cond = NULL;
 #define IRQ_NV2A_LOCK       pthread_mutex_lock(xboxkrnl_irq_nv2a_mutex)
 #define IRQ_NV2A_UNLOCK     pthread_mutex_unlock(xboxkrnl_irq_nv2a_mutex)
 #define IRQ_NV2A_WAIT       pthread_cond_wait(xboxkrnl_irq_nv2a_cond, xboxkrnl_irq_nv2a_mutex)
-#define IRQ_NV2A_SIGNAL     pthread_cond_broadcast(xboxkrnl_irq_nv2a_cond)
+#define IRQ_NV2A_SIGNAL     IRQ_NV2A_LOCK, \
+                            pthread_cond_broadcast(xboxkrnl_irq_nv2a_cond), \
+                            IRQ_NV2A_UNLOCK
 
 typedef struct {
     uint8_t                 Type;
@@ -591,16 +748,6 @@ static struct xpci *const   nv2a = &xpci[XPCI_GPU];
 
 static void *               xboxkrnl_gpuinstmem = NULL;
 static size_t               xboxkrnl_gpuinstsz = 0;
-
-#if 0
-#define XBOXKRNL_FLASH_BASE         0xfffc0000 /* 256 kB rom */
-//#define XBOXKRNL_FLASH_BASE         0xfff00000 /* 1 MB rom */
-#define XBOXKRNL_FLASH_SIZE         (0xffffffff - XBOXKRNL_FLASH_BASE)
-
-#define LD_SECTION(x,y) char x[y] __attribute__((section("." #x),used))
-LD_SECTION(xboxkrnl_flash, XBOXKRNL_FLASH_SIZE - 0x2000); // could disable ASLR for this to work but affects the whole OS; most likely not needed; use `setarch -R` ?
-#undef LD_SECTION
-#endif
 
 typedef struct {
     void *                  BaseAddress;
@@ -1624,14 +1771,14 @@ xboxkrnl_init_hw(void) {
     for (i = 0; i < ARRAY_SIZE(xpci) && xpci[i].name; ++i) {
         if ((ptr = (typeof(ptr))xpci[i].memreg_base)) {
             sz = xpci[i].memreg_size;
-            PRINT("mmap(): '%s': reserve: address 0x%.08x size 0x%.08x (%lu)", xpci[i].name, ptr, sz, sz);
+            PRINT("/* reserve: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, ptr, sz, sz);
             if (mmap(ptr,
                     sz,
                     PROT_NONE,
                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE,
                     -1,
                     0) != ptr) {
-                PRINT("error: mmap(): failed to reserve emulated hardware: address %p size %p (%lu): '%s'",
+                PRINT("error: failed to reserve hardware memory: mmap(): address %p size %p (%lu): '%s'",
                     ptr,
                     sz,
                     sz,
@@ -1650,7 +1797,7 @@ xboxkrnl_init_hw(void) {
                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
                     -1,
                     0)) == MAP_FAILED) {
-                PRINT("error: mmap(): failed to allocate emulated hardware: size %p (%lu): '%s'",
+                PRINT("error: failed to allocate hardware memory: mmap(): size %p (%lu): '%s'",
                     sz,
                     sz,
                     strerror(errno));
@@ -1658,7 +1805,7 @@ xboxkrnl_init_hw(void) {
                 return ret;
             }
             xpci[i].memreg = ptr;
-            PRINT("mmap(): '%s': mapped to address: %p", xpci[i].name, ptr);
+            PRINT("/* allocate: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, ptr, sz, sz);
         }
     }
     do {
@@ -1675,19 +1822,19 @@ static int xboxkrnl_init_var(void);
 void
 xboxkrnl_destroy(void/* *x*/) {
     ENTER;
-
+#if 0
     if (!xboxkrnl_thread_mutex) {
         LEAVE;
         return;
     }
-
+#endif
     xboxkrnl_destroy_var();
-
+#if 0
     pthread_mutex_destroy(xboxkrnl_thread_mutex);
     xboxkrnl_thread_mutex = NULL;
     pthread_mutexattr_destroy(xboxkrnl_thread_mattr);
     xboxkrnl_thread_mattr = NULL;
-
+#endif
     if (xboxkrnl_c_wc != (iconv_t)-1) {
         iconv_close(xboxkrnl_c_wc);
         xboxkrnl_c_wc = (iconv_t)-1;
@@ -1704,21 +1851,23 @@ int
 xboxkrnl_init(void/* **x*/) {
     register int ret = 1;
     ENTER;
-
+#if 0
     if (xboxkrnl_thread_mutex) {
         LEAVE;
         return ret;
     }
+#endif
+    xboxkrnl_tsc_init();
 
     xboxkrnl_wc_c = iconv_open("UTF-8", "UTF-16LE");
     xboxkrnl_c_wc = iconv_open("UTF-16LE", "UTF-8");
-
+#if 0
     xboxkrnl_thread_mutex = calloc(1, sizeof(*xboxkrnl_thread_mutex));
     xboxkrnl_thread_mattr = calloc(1, sizeof(*xboxkrnl_thread_mattr));
     pthread_mutexattr_init(xboxkrnl_thread_mattr);
     pthread_mutexattr_settype(xboxkrnl_thread_mattr, PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(xboxkrnl_thread_mutex, xboxkrnl_thread_mattr);
-
+#endif
     if (!(ret = xboxkrnl_init_hw()) &&
         !(ret = xboxkrnl_init_var())) xboxkrnl_worker(0);
 
@@ -1859,7 +2008,7 @@ xboxkrnl_path_resolve_insensitive(char *path) {
         if ((d = opendir(buf))) {
             while ((e = readdir(d))) {
                 if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
-PRINT("'%s' '%s'",(t) ? t : p,e->d_name);//XXX
+//PRINT("'%s' '%s'",(t) ? t : p,e->d_name);//XXX
                 if (!strncasecmp((t) ? t : p, e->d_name, l + 1)) {
                     if (name) {
                         closedir(d);
@@ -1882,7 +2031,7 @@ PRINT("'%s' '%s'",(t) ? t : p,e->d_name);//XXX
         free(t);
     }
 
-PRINT("'%s'",&buf[2]);//XXX
+//PRINT("'%s'",&buf[2]);//XXX
     if (buf[2]) strcpy(path, &buf[2]);
     free(buf);
 }
@@ -2085,7 +2234,7 @@ xboxkrnl_AvSetDisplayMode( /* 003 (0x003) */
 #endif
     Pitch /= 8;
 
-    nv2a_pcrtc_start(FrameBuffer);
+    nv2a_framebuffer_set(FrameBuffer);
 
     if (xboxkrnl_AvpCurrentMode == Mode) {
         xboxkrnl_AvSendTVEncoderOption(RegisterBase, /* AV_OPTION_FLICKER_FILTER */ 11, 5, NULL);
@@ -2104,7 +2253,6 @@ xboxkrnl_AvSetSavedDataAddress( /* 004 (0x004) */
     VARDUMP(VAR_IN, Address);
 
     xboxkrnl_AvpSavedDataAddress = Address;
-INT3;//XXX
     LEAVE;
 }
 static STDCALL void
@@ -2345,7 +2493,7 @@ xboxkrnl_ExQueryNonVolatileSetting( /* 024 (0x018) */
             break;
         }
         if (ResultLength) *ResultLength = sizeof(val);
-        *Type = REG_DWORD;//FIXME
+        *Type = /* REG_DWORD */ 4;
         val = xboxkrnl_os[ValueIndex];
         *(typeof(val) *)Value = val;
         break;
@@ -4115,7 +4263,7 @@ xboxkrnl_KiUnlockDispatcherDatabase() { /* 163 (0x0a3) */
 }
 #if 0
 #define LDT_LAUNCH_DASHBOARD 1
-#define LDT_NONE             0xFFFFFFFF
+#define LDT_NONE             0xffffffff
 
 #define LDF_HAS_BEEN_READ    0x00000001
 #endif
@@ -4129,8 +4277,8 @@ typedef struct {
     char                    Pad[492];               /*  532 */
     char                    LaunchData[3072];       /* 1024 */
 } PACKED xboxkrnl_LaunchDataPage_t;
-static xboxkrnl_LaunchDataPage_t *
-xboxkrnl_LaunchDataPage = NULL; /* 164 (0x0a4) */
+static xboxkrnl_LaunchDataPage_t
+xboxkrnl_LaunchDataPage = { }; /* 164 (0x0a4) */
 static STDCALL void *
 xboxkrnl_MmAllocateContiguousMemory( /* 165 (0x0a5) */
         /* in */ size_t NumberOfBytes) {
@@ -5526,7 +5674,7 @@ xboxkrnl_NtWriteFile( /* 236 (0x0ec) */
     VARDUMP(DUMP, IoStatusBlock->Status);
     VARDUMP(DUMP, IoStatusBlock->Information);
     VARDUMP(DUMP, ret);
-INT3;//XXX
+//INT3;//XXX
     LEAVE;
     return ret;
 }
@@ -5777,7 +5925,7 @@ xboxkrnl_PsCreateSystemThreadEx( /* 255 (0x0ff) */
     VARDUMP(VAR_IN,  DebuggerThread);
     VARDUMP(VAR_IN,  SystemRoutine);
 
-    PRINT("/* protected calling thread is system kernel thread */", 0);
+    PRINT("/* calling thread is system thread */", 0);
     LEAVE;
     ((void (*)(void *))StartRoutine)(StartContext);
 
@@ -5995,6 +6143,7 @@ xboxkrnl_RtlEnterCriticalSection( /* 277 (0x115) */
     VARDUMP(VAR_IN, CriticalSection);
     VARDUMP(VAR_IN, *CriticalSection);
 
+    /* FIXME: some locks are passed from the stack in game code */
     pthread_mutex_lock(*CriticalSection);
 
     LEAVE;
@@ -7086,9 +7235,7 @@ static const void *const xboxkrnl_thunk[] = {
     /* 162 */ [0x0a2] = &xboxkrnl_KiBugCheckData,                       /* variable */
 #endif
     /* 163 */ [0x0a3] = &xboxkrnl_KiUnlockDispatcherDatabase,           /* fastcall */
-#if 0
     /* 164 */ [0x0a4] = &xboxkrnl_LaunchDataPage,                       /* variable */
-#endif
     /* 165 */ [0x0a5] = &xboxkrnl_MmAllocateContiguousMemory,           /* stdcall */
     /* 166 */ [0x0a6] = &xboxkrnl_MmAllocateContiguousMemoryEx,         /* stdcall */
     /* 167 */ [0x0a7] = &xboxkrnl_MmAllocateSystemMemory,               /* stdcall */

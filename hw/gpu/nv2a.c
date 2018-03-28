@@ -1,3 +1,22 @@
+/*
+ *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
+ *
+ *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 
 #include "nv2a.h"
 
@@ -132,20 +151,26 @@ static pthread_cond_t       nv2a_pgraph_fifo_cond = PTHREAD_COND_INITIALIZER;
 #define PGRAPH_FIFO_LOCK    pthread_mutex_lock(&nv2a_pgraph_fifo_mutex)
 #define PGRAPH_FIFO_UNLOCK  pthread_mutex_unlock(&nv2a_pgraph_fifo_mutex)
 #define PGRAPH_FIFO_WAIT    pthread_cond_wait(&nv2a_pgraph_fifo_cond, &nv2a_pgraph_fifo_mutex)
-#define PGRAPH_FIFO_SIGNAL  pthread_cond_broadcast(&nv2a_pgraph_fifo_cond)
+#define PGRAPH_FIFO_SIGNAL  PGRAPH_FIFO_LOCK, \
+                            pthread_cond_broadcast(&nv2a_pgraph_fifo_cond), \
+                            PGRAPH_FIFO_UNLOCK
 static pthread_mutex_t      nv2a_pgraph_intr_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t       nv2a_pgraph_intr_cond = PTHREAD_COND_INITIALIZER;
 #define PGRAPH_INTR_LOCK    pthread_mutex_lock(&nv2a_pgraph_intr_mutex)
 #define PGRAPH_INTR_UNLOCK  pthread_mutex_unlock(&nv2a_pgraph_intr_mutex)
 #define PGRAPH_INTR_WAIT    pthread_cond_wait(&nv2a_pgraph_intr_cond, &nv2a_pgraph_intr_mutex)
-#define PGRAPH_INTR_SIGNAL  pthread_cond_broadcast(&nv2a_pgraph_intr_cond)
+#define PGRAPH_INTR_SIGNAL  PGRAPH_INTR_LOCK, \
+                            pthread_cond_broadcast(&nv2a_pgraph_intr_cond), \
+                            PGRAPH_INTR_UNLOCK
 
 static pthread_mutex_t      nv2a_flip_stall_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t       nv2a_flip_stall_cond = PTHREAD_COND_INITIALIZER;
 #define FLIP_STALL_LOCK     pthread_mutex_lock(&nv2a_flip_stall_mutex)
 #define FLIP_STALL_UNLOCK   pthread_mutex_unlock(&nv2a_flip_stall_mutex)
 #define FLIP_STALL_WAIT     pthread_cond_wait(&nv2a_flip_stall_cond, &nv2a_flip_stall_mutex)
-#define FLIP_STALL_SIGNAL   pthread_cond_broadcast(&nv2a_flip_stall_cond)
+#define FLIP_STALL_SIGNAL   FLIP_STALL_LOCK, \
+                            pthread_cond_broadcast(&nv2a_flip_stall_cond), \
+                            FLIP_STALL_UNLOCK
 
 static void
 nv2a_pfifo_cache_enqueue(register const nv2a_pfifo_cache *c, register uint32_t param) {
@@ -1381,7 +1406,7 @@ nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
         CASEV(SET_TEXTURE_MATRIX_ENABLE_1, CSV1_A, T1_ENABLE);
         CASEV(SET_TEXTURE_MATRIX_ENABLE_2, CSV1_B, T2_ENABLE);
         CASEV(SET_TEXTURE_MATRIX_ENABLE_3, CSV1_B, T3_ENABLE);
-#if 0
+#if 0 //XXX
 
 #endif
 #undef CASE3V2
@@ -1669,10 +1694,10 @@ nv2a_pfifo_pusher(register void *p) {
 }
 
 void
-nv2a_pcrtc_start(register uint32_t v) {
+nv2a_framebuffer_set(uint32_t addr) {
     ENTER_NV2A;
 
-    NV2A_REG32(nv2a->memreg, NV_PCRTC, START) = v;
+    NV2A_REG32(nv2a->memreg, NV_PCRTC, START) = addr;
 
     LEAVE_NV2A;
 }
@@ -2184,7 +2209,6 @@ int
 nv2a_init(void) {
     GLint tmp;
     register int ret = 1;
-
     ENTER_NV2A;
 
     nv2a_destroy();

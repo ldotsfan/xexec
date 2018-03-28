@@ -1,6 +1,5 @@
 /* g++ -fPIC -shared -o libsigsegv.so -ldl sigsegv.c */
 /* export LD_PRELOAD=/path/to/libsigsegv.so */
-
 /**
  * This source file is used to print out a stack-trace when your program
  * segfaults. It is relatively reliable and spot-on accurate.
