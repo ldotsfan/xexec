@@ -1579,7 +1579,7 @@ xboxkrnl_mem_dirty_enable(xboxkrnl_mem **m, size_t *sz, const void *addr, int en
 
     MEM_LOCK;
 
-    if ((mem = xboxkrnl_mem_ret_locked(m, sz, addr))) {
+    if ((mem = xboxkrnl_mem_ret_locked(m, sz, addr)) && mem->dirty.enable != !!enable) {
         if (mprotect(mem->AllocationBase, mem->RegionSize, (enable) ? mem->prot & PROT_READ : mem->prot)) INT3;
         mem->dirty.bits   = 0;
         mem->dirty.enable = !!enable;
@@ -1598,7 +1598,7 @@ xboxkrnl_mem_dirty_set(xboxkrnl_mem **m, size_t *sz, const void *addr, int set) 
 
     MEM_LOCK;
 
-    if ((mem = xboxkrnl_mem_ret_locked(m, sz, addr)) && mem->dirty.enable) {
+    if ((mem = xboxkrnl_mem_ret_locked(m, sz, addr)) && mem->dirty.enable && mem->dirty.bit != !!set) {
         if (mprotect(mem->AllocationBase, mem->RegionSize, (set) ? mem->prot : mem->prot & PROT_READ)) INT3;
         mem->dirty.bit = !!set;
         ret = 1;
