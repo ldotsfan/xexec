@@ -249,6 +249,9 @@ nv2a_block_lookup(register uint32_t addr, register const char **reg) {
                 case NV_PMC:
                     ARRAY(*reg, nv2a_pmc_name, i);
                     break;
+                case NV_PVIDEO:
+                    ARRAY(*reg, nv2a_pvideo_name, i);
+                    break;
                 case NV_PGRAPH:
                     ARRAY(*reg, nv2a_pgraph_name, i);
                     break;
@@ -262,6 +265,7 @@ nv2a_block_lookup(register uint32_t addr, register const char **reg) {
     return b;
 }
 
+#define NV2A_IRQ_BUSY   (1 << 0)
 #define NV2A_IRQ_PGRAPH (1 << 1)
 #define NV2A_IRQ_FIFO   (1 << 2)
 
@@ -282,7 +286,7 @@ nv2a_block_lookup(register uint32_t addr, register const char **reg) {
 
 void
 nv2a_irq_restore(register int mask) {
-    if (!mask) return;
+    if (!mask || !(mask & ~NV2A_IRQ_BUSY)) return;
     if (mask & NV2A_IRQ_PGRAPH) PGRAPH_INTR_SIGNAL;
     if (mask & NV2A_IRQ_FIFO) PGRAPH_FIFO_SIGNAL;
 }
@@ -1846,10 +1850,19 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
 //        switch (r) {
 //        }
 //        break;
-//    case NV_PVIDEO:
-//        switch (r) {
-//        }
-//        break;
+    case NV_PVIDEO:
+        switch (r) {
+        case NV_PVIDEO_BUFFER:
+//            d->vga.enable_overlay = true;
+//            pvideo_vga_invalidate(d);
+            break;
+        case NV_PVIDEO_STOP:
+            NV2A_REG32(p, NV_PVIDEO, BUFFER) = 0;
+//            d->vga.enable_overlay = false;
+//            pvideo_vga_invalidate(d);
+            break;
+        }
+        break;
     case NV_PTIMER:
         switch (r) {
         case NV_PTIMER_INTR_0:
@@ -2036,10 +2049,13 @@ nv2a_read(uint32_t addr, void *val, size_t sz) {
 //        switch (r) {
 //        }
 //        break;
-//    case NV_PVIDEO:
-//        switch (r) {
-//        }
-//        break;
+    case NV_PVIDEO:
+        switch (r) {
+        case NV_PVIDEO_STOP:
+            v = 0;
+            break;
+        }
+        break;
 //    case NV_PTIMER:
 //        switch (r) {
 //        }

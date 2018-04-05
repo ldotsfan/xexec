@@ -131,101 +131,6 @@ int nv2a_read(uint32_t addr, void *val, size_t sz);
 #include "hw/aci/aci.c"
 #include "hw/gpu/nv2a.c"
 
-#if 0
-#define X86_SEH_PROLOG \
-        "\x68\xb0\x6a\x0f\x00\x64\xa1\x00\x00\x00\x00\x50\x8b\x44\x24\x10" \
-        "\x89\x6c\x24\x10\x8d\x6c\x24\x10\x2b\xe0\x53\x56\x57\x8b\x45\xf8" \
-        "\x89\x65\xe8\x50\x8b\x45\xfc\xc7\x45\xfc\xff\xff\xff\xff\x89\x45" \
-        "\xf8\x8d\x45\xf0\x64\xa3\x00\x00\x00\x00\xc3"
-#define X86_SEH_PROLOG_PATCH \
-        "\x68\xb0\x6a\x0f\x00\x90\x90\x90\x90\x90\x90\x50\x8b\x44\x24\x10" \
-        "\x89\x6c\x24\x10\x8d\x6c\x24\x10\x2b\xe0\x53\x56\x57\x8b\x45\xf8" \
-        "\x89\x65\xe8\x50\x8b\x45\xfc\xc7\x45\xfc\xff\xff\xff\xff\x89\x45" \
-        "\xf8\x90\x90\x90\x90\x90\x90\x90\x90\x90\xc3"
-#define X86_SEH_EPILOG \
-        "\x8b\x4d\xf0\x64\x89\x0d\x00\x00\x00\x00\x59\x5f\x5e\x5b\xc9\x51" \
-        "\xc3"
-#define X86_SEH_EPILOG_PATCH \
-        "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x59\x5f\x5e\x5b\xc9\x51" \
-        "\xc3"
-
-int
-xboxkrnl_patch_seh(void *addr, size_t size) {
-    size_t i;
-    size_t tmp;
-    int ret = 0;
-    ENTER;
-
-    PRINT("/* searching & patching SEH prolog & epilog routines... */", 0);
-
-    for (i = 0; !ret && i <= size; ++i) {
-        if (i >= size) {
-            PRINT("/* ... not found. */", 0);
-            break;
-        }
-        for (tmp = 0; i + tmp < size && tmp <= sizeof(X86_SEH_PROLOG) - 1; ++tmp) {
-            if (tmp >= sizeof(X86_SEH_PROLOG) - 1) {
-                if (!memcmp(addr + i + tmp,
-                        X86_SEH_EPILOG,
-                        sizeof(X86_SEH_EPILOG) - 1)) {
-                    PRINT("/* ... found! */", 0);
-                    PRINT("/* SEH prolog & epilog @ %p */", addr + i);
-//                    *((char *)addr + i)             = 0xc3;
-                    memcpy(addr + i,
-                            X86_SEH_PROLOG_PATCH,
-                            sizeof(X86_SEH_PROLOG_PATCH) - 1);
-                    PRINT("/* SEH prolog patched @ %p */", addr + i);
-//                    *((char *)addr + i + tmp)       = 0xc3;
-                    memcpy(addr + i + tmp,
-                            X86_SEH_EPILOG_PATCH,
-                            sizeof(X86_SEH_EPILOG_PATCH) - 1);
-                    PRINT("/* SEH epilog patched @ %p */", addr + i + tmp);
-                    ret = 2;
-                } else {
-                    PRINT("/* ... found! */", 0);
-                    PRINT("/* SEH prolog @ %p */", addr + i);
-//                    *((char *)addr + i)             = 0xc3;
-                    memcpy(addr + i,
-                            X86_SEH_PROLOG_PATCH,
-                            sizeof(X86_SEH_PROLOG_PATCH) - 1);
-                    PRINT("/* SEH prolog patched @ %p */", addr + i);
-                    ret = 1;
-                }
-                break;
-            }
-            if (((char *)addr)[i + tmp] != X86_SEH_PROLOG[tmp]) break;
-        }
-    }
-    if (ret == 1) {
-        PRINT("/* searching & patching SEH epilog routine... */", 0);
-
-        for (i = 0; ret == 1 && i <= size; ++i) {
-            if (i >= size) {
-                PRINT("/* ... not found. */", 0);
-                break;
-            }
-            for (tmp = 0; i + tmp < size && tmp <= sizeof(X86_SEH_EPILOG) - 1; ++tmp) {
-                if (tmp >= sizeof(X86_SEH_EPILOG) - 1) {
-                    PRINT("/* ... found! */", 0);
-                    PRINT("/* SEH epilog @ %p */", addr + i);
-//                    *((char *)addr + i)             = 0xc3;
-                    memcpy(addr + i,
-                            X86_SEH_EPILOG_PATCH,
-                            sizeof(X86_SEH_EPILOG_PATCH) - 1);
-                    PRINT("/* SEH epilog patched @ %p */", addr + i);
-                    ret = 2;
-                    break;
-                }
-                if (((char *)addr)[i + tmp] != X86_SEH_EPILOG[tmp]) break;
-            }
-        }
-    }
-
-    LEAVE;
-    return ret;
-}
-#endif
-
 static const char *const greg_names[] = {
     NAME(REG_GS),
     NAME(REG_FS),
@@ -291,25 +196,15 @@ signal_segv(int signum, siginfo_t *info, void *ptr) {
     register uint32_t i = info->si_code;
     uint32_t v;
 
-    if (i == SEGV_ACCERR ||
-        i == SEGV_MAPERR) {
-#if 0
-A1 04 18 00 FD                  // mov     eax, ds:0FD001804h
-A3 04 18 00 FD                  // mov     ds:0FD001804h, eax
-C7 05 40 01 60 FD 00 00 00 00   // mov     dword ptr ds:0FD600140h, 0
-C7 05 40 91 00 FD 00 00 00 00   // mov     dword ptr ds:0FD009140h, 0
-89 9E 00 02 00 00               // mov     [esi+200h], ebx
-89 86 40 01 00 00               // mov     [esi+140h], eax
-89 AE 00 94 00 00               // mov     [esi+9400h], ebp
-C7 87 0C 18 00 00 00 F8 00 00   // mov     dword ptr [edi+180Ch], 0F800h
-#endif
+    if (i == SEGV_ACCERR && MEM_MAP_DIRTY_SET(info->si_addr, 1)) return;
+    if (i == SEGV_ACCERR || i == SEGV_MAPERR) {
         do {
             i = (typeof(i))info->si_addr;
             if (xboxkrnl_address_validate(i)) {
                 if (*(uint8_t *)*ip == 0xf3) {                      // rep
 // rep movsd // F3 A5
                     if (*(uint8_t *)(*ip + 1) == 0xa5) {            // rep movsd
-//break;//XXX turok dirty disc break trigger
+//break;//XXX turok dirty disc trigger
 //INT3;//XXX
                         register uint32_t *c   = (void *)&uc->uc_mcontext.gregs[REG_ECX];
                         register uint32_t *di  = (void *)&uc->uc_mcontext.gregs[REG_EDI];
@@ -1995,125 +1890,7 @@ _exit(0);//XXX
             *ip += 1;                                               //   opcode: 0xee
             return;
         }
-#if 0 //XXX turok - started here
-# if 0
-                                    // SetLastError()
-*(short *)0x118f2 = 0xc031;         // movzx   eax, large byte ptr fs:24h
-*(int *)  0x118f4 = 0x90909090;     // 64 0F B6 05 24 00 00 00
-*(short *)0x118f8 = 0x9090;
 
-*(short *)0x118fe = 0xc031;         // mov     eax, large fs:28h
-*(int *)  0x11900 = 0x90909090;     // 64 A1 28 00 00 00
-
-*(short *)0x11904 = 0xc931;         // mov     ecx, large fs:4
-*(int *)  0x11906 = 0x90909090;     // 64 8B 0D 04 00 00 00
-*(char *) 0x1190a = 0x90;
-# else
-                                    // SetLastError()
-*(int *)  0x118f2 = 0xcc0004c2;     // movzx   eax, large byte ptr fs:24h
-                                    // 64 0F B6 05 24 00 00 00
-# endif
-                                    // GetLastError()
-*(char *) 0x118ca = 0xc3;           // movzx   eax, large byte ptr fs:24h
-                                    // 64 0F B6 05 24 00 00 00
-
-*(short *)0x11005 = 0xc031;         // mov     eax, large fs:20h
-*(int *)  0x11007 = 0x90909090;     // 64 A1 20 00 00 00
-*(int *)  0x1100b = 0x90909090;     // mov     eax, [eax+250h]
-*(short *)0x1100f = 0x9090;         // 8B 80 50 02 00 00
-
-*(short *)0x141b0 = 0xc031;         // mov     eax, large fs:20h
-*(int *)  0x141b2 = 0x90909090;     // 64 A1 20 00 00 00
-*(int *)  0x141b6 = 0x90909090;     // mov     eax, [eax+250h]
-*(short *)0x141ba = 0x9090;         // 8B 80 50 02 00 00
-
-*(int *)  0xf8ba7 = 0x90909090;     // mov     ecx, large fs:4
-*(int *)  0xf8bab = 0x90909090;     // 64 8B 0D 04 00 00 00
-*(short *)0xf8baf = 0x9090;         // mov     eax, [ecx+eax*4]
-                                    // 8B 04 81
-*(int *)  0xf8bb1 = 0x90909090;     // mov     [eax+8], esi
-*(short *)0xf8bb5 = 0x9090;         // 89 B0 08 00 00 00
-
-*(short *)0x11bec = 0xc031;         // mov     eax, large fs:28h
-*(int *)  0x11bee = 0x90909090;     // 64 A1 28 00 00 00
-*(int *)  0x11bf2 = 0x90909090;     // mov     eax, [eax+12Ch]
-*(short *)0x11bf6 = 0x9090;         // 8B 80 2C 01 00 00
-
-*(short *)0x14227 = 0xc031;         // mov     eax, large fs:20h
-*(int *)  0x14229 = 0x90909090;     // 64 A1 20 00 00 00
-*(int *)  0x1422d = 0x90909090;     // mov     eax, [eax+250h]
-*(short *)0x14231 = 0x9090;         // 8B 80 50 02 00 00
-
-*(short *)0x101797 = 0xc031;        // mov     eax, large fs:0
-*(int *)  0x101799 = 0x90909090;    // 64 A1 00 00 00 00
-
-*(int *)  0x10179e = 0x90909090;    // mov     large fs:0, esp
-*(short *)0x1017a2 = 0x9090;        // 64 89 25 00 00 00 00
-*(char *) 0x1017a4 = 0x90;
-
-*(int *)  0x101814 = 0x90909090;    // mov     large fs:0, ecx
-*(short *)0x101818 = 0x9090;        // 64 89 0D 00 00 00 00
-*(char *) 0x10181a = 0x90;
-
-*(int *)  0x10182d = 0x90909090;    // mov     large fs:0, ecx
-*(short *)0x101831 = 0x9090;        // 64 89 0D 00 00 00 00
-*(char *) 0x101833 = 0x90;
-
-*(short *)0x1014f0 = 0xc031;        // mov     eax, large fs:0
-*(int *)  0x1014f2 = 0x90909090;    // 64 A1 00 00 00 00
-
-*(int *)  0x101502 = 0x90909090;    // mov     large fs:0, esp
-*(short *)0x101506 = 0x9090;        // 64 89 25 00 00 00 00
-*(char *) 0x101508 = 0x90;
-
-*(int *)  0x101594 = 0x90909090;    // mov     large fs:0, ecx
-*(short *)0x101598 = 0x9090;        // 64 89 0D 00 00 00 00
-*(char *) 0x10159a = 0x90;
-
-*(short *)0x98b47 = 0xc031;         // mov     eax, large fs:0
-*(int *)  0x98b49 = 0x90909090;     // 64 A1 00 00 00 00
-
-*(int *)  0x98b4e = 0x90909090;     // mov     large fs:0, esp
-*(short *)0x98b52 = 0x9090;         // 64 89 25 00 00 00 00
-*(char *) 0x98b54 = 0x90;
-
-*(int *)  0x98be9 = 0x90909090;     // mov     large fs:0, ecx
-*(short *)0x98bed = 0x9090;         // 64 89 0D 00 00 00 00
-*(char *) 0x98bef = 0x90;
-
-*(short *)0x16b50 = 0xc031;         // mov     eax, large fs:0
-*(int *)  0x16b52 = 0x90909090;     // 64 A1 00 00 00 00
-
-*(int *)  0x16b5e = 0x90909090;     // mov     large fs:0, esp
-*(short *)0x16b62 = 0x9090;         // 64 89 25 00 00 00 00
-*(char *) 0x16b64 = 0x90;
-
-*(int *)  0x16d64 = 0x90909090;     // mov     large fs:0, ecx
-*(short *)0x16d68 = 0x9090;         // 64 89 0D 00 00 00 00
-*(char *) 0x16d6a = 0x90;
-
-*(short *)0x17b32 = 0xc031;         // mov     eax, large fs:0
-*(int *)  0x17b34 = 0x90909090;     // 64 A1 00 00 00 00
-
-*(int *)  0x17b3e = 0x90909090;     // mov     large fs:0, esp
-*(short *)0x17b42 = 0x9090;         // 64 89 25 00 00 00 00
-*(char *) 0x17b44 = 0x90;
-
-*(int *)  0x17d64 = 0x90909090;     // mov     large fs:0, ecx
-*(short *)0x17d68 = 0x9090;         // 64 89 0D 00 00 00 00
-*(char *) 0x17d6a = 0x90;
-
-*(short *)0x25337 = 0xc031;         // mov     eax, large fs:0
-*(int *)  0x25339 = 0x90909090;     // 64 A1 00 00 00 00
-
-*(int *)  0x2533e = 0x90909090;     // mov     large fs:0, esp
-*(short *)0x25342 = 0x9090;         // 64 89 25 00 00 00 00
-*(char *) 0x25344 = 0x90;
-
-*(int *)  0x2553f = 0x90909090;     // mov     large fs:0, ecx
-*(short *)0x25543 = 0x9090;         // 64 89 0D 00 00 00 00
-*(char *) 0x25545 = 0x90;
-#endif
 #define EIP_PATCH(x,y,z) do { \
             if (!memcmp((x), (y), sizeof((y)) - 1)) { \
                 memcpy((x), (z), sizeof((z)) - 1); \
@@ -2370,8 +2147,7 @@ main(int argc, char **argv) {
                     return 1;
                 }
                 if (!strncmp(sname, ".text", sizeof(".text"))) {
-                    xbeh->dwEntryAddr = vaddr;
-//                    xboxkrnl_patch_seh((void *)vaddr, rsize);//XXX
+                    xbeh->dwEntryAddr = vaddr;//FIXME
                 }
             }
         }

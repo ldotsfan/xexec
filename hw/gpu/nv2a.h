@@ -273,7 +273,8 @@ static const char *const nv2a_pfifo_intr_name[] = {
 };
                             /*  3: NV_PFIFO_CACHE */    /* 3 */
                             /*  4: NV_PRMA */           /* 4 */     /* access to BAR0/BAR1 from real mode */
-                            /*  5: NV_PVIDEO */         /* 5 */     /* video overlay */
+/*  5: NV_PVIDEO - video overlay */
+#include "reg/pvideo.h"
 enum {                      /*  6: NV_PTIMER */         /* 6 */     /* time measurement and time-based alarms */
         NV_PTIMER_INTR_0                            = 0x00000100,
 #define NV_PTIMER_INTR_0_ALARM                          (1 << 0)        /* 0x00000001 */

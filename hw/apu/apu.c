@@ -223,14 +223,20 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
 //        switch (r) {
 //        }
 //        break;
-//    case NV_PAPU_GP:
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PAPU_EP:
-//        switch (r) {
-//        }
-//        break;
+    case NV_PAPU_GP:
+        switch (r) {
+        case NV_PAPU_GPRST:
+//            proc_rst_write(d->gp.dsp, d->gp.regs[NV_PAPU_GPRST], val);
+            break;
+        }
+        break;
+    case NV_PAPU_EP:
+        switch (r) {
+        case NV_PAPU_EPRST:
+//            proc_rst_write(d->ep.dsp, d->ep.regs[NV_PAPU_EPRST], val);
+            break;
+        }
+        break;
     }
 
     LEAVE_APU;
