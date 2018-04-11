@@ -1,21 +1,29 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *  Offscreen OpenGL abstraction layer for GLX (X11)
  *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License
- *  as published by the Free Software Foundation; either version 2
- *  of the License, or (at your option) any later version.
+ *  Copyright (c) 2013 Wayo
+ *  Copyright (c) 2014 Jannik Vogel
+ *  Copyright (c) 2017 Michael Saga. All rights reserved.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ *  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
  */
 
 #include <X11/Xlib.h>
@@ -23,6 +31,8 @@
 #include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glxext.h>
+
+static int glo_glewInit = 1;
 
 typedef struct {
     void *      x_display;
@@ -39,6 +49,7 @@ static const int fb_attribute_list[] = {
     GLX_DEPTH_SIZE,    24,
     GLX_STENCIL_SIZE,  8,
     GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT,
+//    GLX_DOUBLEBUFFER,  True,
     None
 };
 
@@ -105,7 +116,6 @@ glo_extension(const char *ext) {
 
 int
 glo_create(glo_context **c) {
-    static int glo_glewInit = 1;
     GLXFBConfig *fbc;
     int tmp;
     register int ret = 1;
@@ -167,5 +177,59 @@ glo_create(glo_context **c) {
     if (ret) glo_destroy(c);
 
     return ret;
+}
+
+void
+glo_readpixels(
+        GLenum gl_format,
+        GLenum gl_type,
+        uint32_t bytes_per_pixel,
+        uint32_t stride,
+        uint32_t width,
+        uint32_t height,
+        void *out) {
+    register void *a, *b, *c;
+    register int i, h;
+    register size_t w;
+    GLint prl, pa;
+
+    if (!bytes_per_pixel || !stride || !width || !height || !out) INT3;
+    if (stride % bytes_per_pixel) INT3; //TODO: weird strides
+
+    /* save GL state */
+    glGetIntegerv(GL_PACK_ROW_LENGTH, &prl);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &pa);
+
+    glPixelStorei(GL_PACK_ROW_LENGTH, stride / bytes_per_pixel);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    if (height % 2) {
+        /* slow flip */
+        w = width;
+        a = out;
+        for (i = height - 1; i >= 0; --i) {
+            glReadPixels(0, i, w, 1, gl_format, gl_type, a);
+            a += stride;
+        }
+    } else {
+        /* fast flip */
+        glReadPixels(0, 0, width, height, gl_format, gl_type, out);
+        w = width * bytes_per_pixel;
+        a = out;
+        b = a + stride * (height - 1);
+        if (!(c = malloc(w))) INT3;
+        for (h = height / 2, i = 0; i < h; ++i) {
+            memcpy(c, a, w);
+            memcpy(a, b, w);
+            memcpy(b, c, w);
+            a += stride;
+            b -= stride;
+        }
+        free(c);
+    }
+
+    /* restore GL state */
+    glPixelStorei(GL_PACK_ROW_LENGTH, prl);
+    glPixelStorei(GL_PACK_ALIGNMENT, pa);
 }
 

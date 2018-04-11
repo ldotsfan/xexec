@@ -80,6 +80,7 @@ typedef struct {
     uint32_t                frame;
 } PACKED nv2a_dma;
 
+#define NV2A_DMA(x) *(nv2a_dma *)(x)
 #define NV2A_DMA_ADDRESS(x) ((((x)->frame & /* NV_DMA_ADDRESS */ 0xfffff000) | ((x)->adjust << 20)) & (host->memreg_size - 1))
 
 typedef struct {
@@ -137,9 +138,9 @@ typedef struct {
         struct {
             uint32_t        instance : 16;          /*  0 */
             uint32_t        engine   : 2;           /* 16 */
-#define NV_RAMHT_ENGINE_SW                              0
-#define NV_RAMHT_ENGINE_GRAPHICS                        1
-#define NV_RAMHT_ENGINE_DVD                             2
+#define NV_RAMHT_ENGINE_SW       0
+#define NV_RAMHT_ENGINE_GRAPHICS 1
+#define NV_RAMHT_ENGINE_DVD      2
             uint32_t        pad1     : 6;           /* 18 */
             uint32_t        chid     : 5;           /* 24 */
             uint32_t        pad2     : 2;           /* 29 */
@@ -249,11 +250,26 @@ nv2a_block_lookup(register uint32_t addr, register const char **reg) {
                 case NV_PMC:
                     ARRAY(*reg, nv2a_pmc_name, i);
                     break;
+                case NV_PBUS:
+                    ARRAY(*reg, nv2a_pbus_name, i);
+                    break;
                 case NV_PVIDEO:
                     ARRAY(*reg, nv2a_pvideo_name, i);
                     break;
+                case NV_PTIMER:
+                    ARRAY(*reg, nv2a_ptimer_name, i);
+                    break;
+                case NV_PFB:
+                    ARRAY(*reg, nv2a_pfb_name, i);
+                    break;
                 case NV_PGRAPH:
                     ARRAY(*reg, nv2a_pgraph_name, i);
+                    break;
+                case NV_PCRTC:
+                    ARRAY(*reg, nv2a_pcrtc_name, i);
+                    break;
+                case NV_PRAMDAC:
+                    ARRAY(*reg, nv2a_pramdac_name, i);
                     break;
                 }
             }
@@ -395,13 +411,13 @@ INT3;//XXX
 }
 
 static void
-nv2a_pgraph_texture_bind(register void *p, register size_t i) {
+nv2a_pgraph_texture_bind(register void *p, size_t index) {
     ENTER_NV2A;
 
-    if (i >= NV2A_MAX_TEXTURES) INT3;
+    if (index >= NV2A_MAX_TEXTURES) INT3;
 #if 0
     uint32_t ctl_0        = pg->regs[NV_PGRAPH_TEXCTL0_0 + i*4];
-    uint32_t ctl_1        = pg->regs[NV_PGRAPH_TEXCTL1_0 + i*4];
+//    uint32_t ctl_1        = pg->regs[NV_PGRAPH_TEXCTL1_0 + i*4];
     uint32_t fmt          = pg->regs[NV_PGRAPH_TEXFMT0 + i*4];
     uint32_t filter       = pg->regs[NV_PGRAPH_TEXFILTER0 + i*4];
     uint32_t address      = pg->regs[NV_PGRAPH_TEXADDRESS0 + i*4];
@@ -413,7 +429,7 @@ nv2a_pgraph_texture_bind(register void *p, register size_t i) {
     uint32_t border_color = pg->regs[NV_PGRAPH_BORDERCOLOR0 + i*4];
     uint32_t offset       = pg->regs[NV_PGRAPH_TEXOFFSET0 + i*4];
 #endif
-    register size_t pos = i * 64;
+    register size_t pos = index * 64;
     register uint32_t addr;
     register uint32_t offset = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_OFFSET);      //0x00001b00,
     union {
@@ -443,7 +459,7 @@ nv2a_pgraph_texture_bind(register void *p, register size_t i) {
             uint32_t enable              : 2;   /* 30 */
         } PACKED;
     } PACKED ctl0       = { .field = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_CONTROL0) };//0x00001b0c
-    uint32_t ctl1       = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_CONTROL1);    //0x00001b10,
+    uint32_t pitch      = NV2A_REG32_MASK_BITSHIFT_GET(p + pos, NV_097, SET_TEXTURE_CONTROL1, IMAGE_PITCH);//0x00001b10,
     union {
         uint32_t     field;
         struct {
@@ -469,17 +485,13 @@ nv2a_pgraph_texture_bind(register void *p, register size_t i) {
         } PACKED;
     } PACKED palette    = { .field = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_PALETTE) };//0x00001b20
     uint32_t bcolor     = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_BORDER_COLOR);//0x00001b24,
-    uint32_t plength;
-    uint32_t mlevel;
-    uint32_t bsizeu;
-    uint32_t bsizev;
-    uint32_t bsizep;
-    uint32_t maxlod;
+    uint32_t plength, mlevel, bsizeu, bsizev, bsizep, maxlod;
     nv2a_pgraph_texture *t;
-    const nv2a_pgraph_color *c;
+    const nv2a_pgraph_texture_format *tf;
     nv2a_dma dma;
-    void *tdata;
-    void *pdata;
+    void *tfc, *tpc;
+    uint32_t length = 0, w = width, h = height, bsize;
+    register uint32_t i;
 
     if (filter.asigned_enabled ||
         filter.rsigned_enabled ||
@@ -505,7 +517,7 @@ nv2a_pgraph_texture_bind(register void *p, register size_t i) {
     }
 
     do {
-        glActiveTexture(GL_TEXTURE0 + i);
+        glActiveTexture(GL_TEXTURE0 + index);
         if (!ctl0.enable) {
             glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
             glBindTexture(GL_TEXTURE_RECTANGLE, 0);
@@ -514,15 +526,15 @@ nv2a_pgraph_texture_bind(register void *p, register size_t i) {
             glBindTexture(GL_TEXTURE_3D, 0);
             break;
         }
-        t = &nv2a_ctx->texture[i];
+        t = &nv2a_ctx->texture[index];
         if (!t->dirty && t->ref) {
             glBindTexture(t->gl_target, t->gl_texture);
             break;
         }
-        if (format.color >= ARRAY_SIZE(nv2a_colors)) INT3;
-        c = &nv2a_colors[format.color];
-        if (!c->name) INT3;
-        if (c->linear) {
+        if (format.color >= ARRAY_SIZE(nv2a_pgraph_texture_formats)) INT3;
+        tf = &nv2a_pgraph_texture_formats[format.color];
+        if (!tf->name) INT3;
+        if (tf->linear) {
             if (format.dimensionality != 2) INT3;
             depth  = 1;
         } else {
@@ -535,7 +547,7 @@ nv2a_pgraph_texture_bind(register void *p, register size_t i) {
             mlevel = format.mipmap_levels;
             maxlod = ctl0.max_lod_clamp;
             mlevel = MIN(mlevel, maxlod + 1);//FIXME: What about 3D mipmaps?
-            if (c->gl_format) {
+            if (tf->gl_format) {
                 /* Discard mipmap levels that would be smaller than 1x1.
                  * FIXME: Is this actually needed?
                  *
@@ -577,39 +589,82 @@ nv2a_pgraph_texture_bind(register void *p, register size_t i) {
             }
             if (!mlevel) INT3;
         }
-        pdata = tdata = NV2A_REGADDR(p, NV_PRAMIN, BASE);
+        tpc = tfc = NV2A_REGADDR(p, NV_PRAMIN, BASE);
         switch (format.context_dma) {
         case NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_A /* 0 */:
-            tdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
+            tfc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
             break;
         case NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_B /* 1 */:
-            tdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
+            tfc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
             break;
         default:
             INT3;
             break;
         }
-        dma    = *(typeof(dma) *)tdata;
-        addr   = NV2A_DMA_ADDRESS(&dma);
-        if (addr + offset >= dma.limit) INT3;
-        tdata  = (typeof(tdata))(addr + offset);
+        dma  = NV2A_DMA(tfc);
+        addr = NV2A_DMA_ADDRESS(&dma);
+        if (offset > dma.limit) INT3;
+        tfc  = (typeof(tfc))(addr + offset);
         switch (palette.context_dma) {
         case NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_A /* 0 */:
-            pdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
+            tpc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
             break;
         case NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_B /* 1 */:
-            pdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
+            tpc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
             break;
         default:
             INT3;
             break;
         }
-        dma    = *(typeof(dma) *)pdata;
+        dma    = NV2A_DMA(tpc);
         addr   = NV2A_DMA_ADDRESS(&dma);
         offset = palette.offset << 6;
-        if (addr + offset >= dma.limit) INT3;
-        pdata  = (typeof(pdata))(addr + offset);
-//TODO
+        if (offset > dma.limit) INT3;
+        tpc    = (typeof(tpc))(addr + offset);
+        if (tf->linear) {
+            if (format.cubemap_enable) INT3;
+            if (format.dimensionality != 2) INT3;
+            length = height * pitch;
+        } else if (format.dimensionality >= 2) {
+            if (tf->gl_format) {
+                bsize = tf->bytes_per_pixel;
+                for (i = 0; i < format.mipmap_levels; ++i) {
+                    w = MAX(w, 1);
+                    h = MAX(h, 1);
+                    length += w * h * bsize;
+                    w /= 2;
+                    h /= 2;
+                }
+            } else {
+                switch (tf->gl_internal_format) {
+                case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+                    bsize = 8;
+                    break;
+                default:
+                    bsize = 16;
+                    break;
+                }
+                for (i = 0; i < format.mipmap_levels; ++i) {
+                    w = MAX(w, 4);
+                    h = MAX(h, 4);
+                    length += (w / 4) * (h / 4) * bsize;
+                    w /= 2;
+                    h /= 2;
+                }
+            }
+            if (format.cubemap_enable) {
+                if (format.dimensionality != 2) INT3;
+                length *= 6;
+            }
+            if (format.dimensionality >= 3) {
+                length *= depth;
+            }
+        }
+#if 0
+#elif 0
+//XXX dirty page
+
+#endif
     } while (0);
 
     LEAVE_NV2A;
@@ -624,6 +679,85 @@ nv2a_pgraph_texture_bind_all(register void *p) {
 
     LEAVE_NV2A;
 }
+#if 0
+static int
+nv2a_pgraph_ctx_lookup(register void *p, uint32_t grclass, nv2a_pgraph_ctx *ctx) {
+    register size_t i;
+    register size_t pos;
+    nv2a_pgraph_ctx C;
+    register int ret = 1;
+    ENTER_NV2A;
+
+    for (i = 0; i < NV2A_MAX_SUBCHANNELS; ++i) {
+        pos    = NV_PGRAPH_CTX_CACHE__OFFSET(i);
+        C.ctx1 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE1);
+        C.ctx2 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE2);
+        C.ctx3 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE3);
+        C.ctx4 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE4);
+        C.ctx5 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE5);
+        if (C.ctx1->grclass == grclass) {
+            *ctx = C;
+            ret  = 0;
+            break;
+        }
+    }
+
+    LEAVE_NV2A;
+    return ret;
+}
+#endif
+static void
+nv2a_pgraph_blit(register void *p) {
+//    nv2a_pgraph_ctx C;
+    register uint32_t addr;
+    register uint32_t i;
+    register uint8_t *srcr, *destr;
+    uint8_t *src, *dest;
+    uint32_t srcp, destp, inx, iny, outx, outy, w, h;
+    const nv2a_pgraph_surface_format *sf;
+    nv2a_dma dma;
+    ENTER_NV2A;
+
+    if (NV2A_REG32(p, NV_09F, SET_OPERATION) != NV_09F_SET_OPERATION_MODE_SRCCOPY) INT3;
+//    if (nv2a_pgraph_ctx_lookup(p, NV10_CONTEXT_SURFACES_2D, &C)) INT3;
+
+    i = NV2A_REG32(p, NV_062, COLOR_FORMAT);
+    if (i >= ARRAY_SIZE(nv2a_pgraph_context_surfaces_formats)) INT3;
+    sf = &nv2a_pgraph_context_surfaces_formats[i];
+    if (!sf->name) INT3;
+
+    src = dest = NV2A_REGADDR(p, NV_PRAMIN, BASE);
+
+    src  += NV2A_REG32(p, NV_062, SET_CONTEXT_DMA_IMAGE_SOURCE);
+    dma   = NV2A_DMA(src);
+    addr  = NV2A_REG32(p, NV_062, OFFSET_SOURCE);
+    if (addr > dma.limit) INT3;
+    addr += NV2A_DMA_ADDRESS(&dma);
+    src   = (typeof(src))addr;
+    dest += NV2A_REG32(p, NV_062, SET_CONTEXT_DMA_IMAGE_DESTIN);
+    dma   = NV2A_DMA(dest);
+    addr  = NV2A_REG32(p, NV_062, OFFSET_DESTIN);
+    if (addr > dma.limit) INT3;
+    addr += NV2A_DMA_ADDRESS(&dma);
+    dest  = (typeof(dest))addr;
+
+    srcp  = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_062, PITCH, SOURCE);
+    destp = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_062, PITCH, DESTIN);
+    inx   = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_09F, POINT_IN, X);
+    iny   = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_09F, POINT_IN, Y);
+    outx  = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_09F, POINT_OUT, X);
+    outy  = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_09F, POINT_OUT, Y);
+    w     = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_09F, SIZE, WIDTH);
+    h     = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_09F, SIZE, HEIGHT);
+
+    for (i = 0; i < h; ++i) {
+        srcr  = src + (iny + i) * srcp + inx * sf->bytes_per_pixel;
+        destr = dest + (outy + i) * destp + outx * sf->bytes_per_pixel;
+        memmove(destr, srcr, w * sf->bytes_per_pixel);
+    }
+
+    LEAVE_NV2A;
+}
 
 static void
 nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
@@ -631,11 +765,8 @@ nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
     register uint32_t *get;
     register uint32_t v;
     register uint32_t t;
-    nv2a_pgraph_ctx1 *switch1, *cache1;
-    nv2a_pgraph_ctx2 *switch2, *cache2;
-    nv2a_pgraph_ctx3 *switch3, *cache3;
-    nv2a_pgraph_ctx4 *switch4, *cache4;
-    nv2a_pgraph_ctx5 *switch5, *cache5;
+    nv2a_pgraph_ctx S;
+    nv2a_pgraph_ctx C;
     nv2a_dma dma;
     ENTER_NV2A;
 
@@ -643,17 +774,17 @@ nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
 
     VARDUMP_NV2A(VAR_IN, c->subchannel);
 
-    switch1 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH1);
-    switch2 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH2);
-    switch3 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH3);
-    switch4 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH4);
-    switch5 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH5);
-    pos     = NV_PGRAPH_CTX_CACHE__OFFSET(c->subchannel);
-    cache1  = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE1);
-    cache2  = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE2);
-    cache3  = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE3);
-    cache4  = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE4);
-    cache5  = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE5);
+    S.ctx1 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH1);
+    S.ctx2 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH2);
+    S.ctx3 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH3);
+    S.ctx4 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH4);
+    S.ctx5 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH5);
+    pos    = NV_PGRAPH_CTX_CACHE__OFFSET(c->subchannel);
+    C.ctx1 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE1);
+    C.ctx2 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE2);
+    C.ctx3 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE3);
+    C.ctx4 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE4);
+    C.ctx5 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE5);
 
 //fprintf(stderr,"pgraph: method:0x%x | subchannel:%u | param:0x%x | grclass:0x%x\n",c->method,c->subchannel,c->param,cache1->grclass);//XXX
 
@@ -663,39 +794,39 @@ nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
         pos = c->param;
         if (pos + 20 > NV2A_BLOCK_SIZE(NV_PRAMIN) || pos % 4) INT3;
         get = NV2A_REGADDR(p + pos, NV_PRAMIN, BASE);
-        cache1->field = *get++;
-        cache2->field = *get++;
-        cache3->field = *get++;
-        cache4->field = *get++;
-        cache5->field = *get++;
-        *switch1      = *cache1;
-        *switch2      = *cache2;
-        *switch3      = *cache3;
-        *switch4      = *cache4;
-        *switch5      = *cache5;
-        VARDUMP3_NV2A(DUMP, cache1->field, nv2a_pgraph_ctx1_name);
-        VARDUMP2_NV2A(DUMP, cache1->grclass, nv2a_pgraph_ctx1_grclass_name);
-        VARDUMP2_NV2A(DUMP, cache1->patch_config, nv2a_pgraph_ctx1_patch_config_name);
-        VARDUMP2_NV2A(DUMP, cache1->dither_mode, nv2a_pgraph_ctx1_dither_mode_name);
-        VARDUMP2_NV2A(DUMP, cache1->class_type, nv2a_pgraph_ctx1_class_type_name);
-        VARDUMP_NV2A(DUMP,  cache2->field);
-        VARDUMP2_NV2A(DUMP, cache2->mono_format, nv2a_pgraph_ctx2_mono_format_name);
-        VARDUMP2_NV2A(DUMP, cache2->color_format, nv2a_pgraph_ctx2_color_format_name);
-        VARDUMP_NV2A(DUMP,  cache2->notify_instance);
-        VARDUMP_NV2A(DUMP,  cache3->field);
-        VARDUMP_NV2A(DUMP,  cache3->dma_instance0);
-        VARDUMP_NV2A(DUMP,  cache3->dma_instance1);
-        VARDUMP_NV2A(DUMP,  cache4->field);
-        VARDUMP_NV2A(DUMP,  cache4->user_instance);
-        VARDUMP_NV2A(DUMP,  cache5->field);
-        VARDUMP_NV2A(DUMP,  cache5->trap_bits);
+        C.ctx1->field = *get++;
+        C.ctx2->field = *get++;
+        C.ctx3->field = *get++;
+        C.ctx4->field = *get++;
+        C.ctx5->field = *get++;
+        *S.ctx1 = *C.ctx1;
+        *S.ctx2 = *C.ctx2;
+        *S.ctx3 = *C.ctx3;
+        *S.ctx4 = *C.ctx4;
+        *S.ctx5 = *C.ctx5;
+        VARDUMP3_NV2A(DUMP, C.ctx1->field, nv2a_pgraph_ctx1_name);
+        VARDUMP2_NV2A(DUMP, C.ctx1->grclass, nv2a_pgraph_ctx1_grclass_name);
+        VARDUMP2_NV2A(DUMP, C.ctx1->patch_config, nv2a_pgraph_ctx1_patch_config_name);
+        VARDUMP2_NV2A(DUMP, C.ctx1->dither_mode, nv2a_pgraph_ctx1_dither_mode_name);
+        VARDUMP2_NV2A(DUMP, C.ctx1->class_type, nv2a_pgraph_ctx1_class_type_name);
+        VARDUMP_NV2A(DUMP,  C.ctx2->field);
+        VARDUMP2_NV2A(DUMP, C.ctx2->mono_format, nv2a_pgraph_ctx2_mono_format_name);
+        VARDUMP2_NV2A(DUMP, C.ctx2->color_format, nv2a_pgraph_ctx2_color_format_name);
+        VARDUMP_NV2A(DUMP,  C.ctx2->notify_instance);
+        VARDUMP_NV2A(DUMP,  C.ctx3->field);
+        VARDUMP_NV2A(DUMP,  C.ctx3->dma_instance0);
+        VARDUMP_NV2A(DUMP,  C.ctx3->dma_instance1);
+        VARDUMP_NV2A(DUMP,  C.ctx4->field);
+        VARDUMP_NV2A(DUMP,  C.ctx4->user_instance);
+        VARDUMP_NV2A(DUMP,  C.ctx5->field);
+        VARDUMP_NV2A(DUMP,  C.ctx5->trap_bits);
         LEAVE_NV2A;
         return;
     }
 
-    VARDUMP2_NV2A(DUMP, cache1->grclass, nv2a_pgraph_ctx1_grclass_name);
+    VARDUMP2_NV2A(DUMP, C.ctx1->grclass, nv2a_pgraph_ctx1_grclass_name);
 
-    switch (cache1->grclass) {
+    switch (C.ctx1->grclass) {
     case NV10_CONTEXT_SURFACES_2D /* 0x62 */:
         VARDUMP4_NV2A(VAR_IN, c->method, nv2a_062_name);
         pos = c->method;
@@ -720,71 +851,10 @@ nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
             VARDUMP2_NV2A(VAR_IN, c->param, nv2a_09f_set_operation_name);
             break;
         case NV_09F_SIZE:
-            //TODO kick off
-#if 0
-            /* I guess this kicks it off? */
-            if (image_blit->operation == NV09F_SET_OPERATION_SRCCOPY) {
-
-                NV2A_GL_DPRINTF(true, "NV09F_SET_OPERATION_SRCCOPY");
-
-                GraphicsObject *context_surfaces_obj =
-                    lookup_graphics_object(pg, image_blit->context_surfaces);
-                assert(context_surfaces_obj);
-                assert(context_surfaces_obj->graphics_class
-                    == NV_CONTEXT_SURFACES_2D);
-
-                ContextSurfaces2DState *context_surfaces =
-                    &context_surfaces_obj->data.context_surfaces_2d;
-
-                unsigned int bytes_per_pixel;
-                switch (context_surfaces->color_format) {
-                case NV062_SET_COLOR_FORMAT_LE_Y8:
-                    bytes_per_pixel = 1;
-                    break;
-                case NV062_SET_COLOR_FORMAT_LE_R5G6B5:
-                    bytes_per_pixel = 2;
-                    break;
-                case NV062_SET_COLOR_FORMAT_LE_A8R8G8B8:
-                    bytes_per_pixel = 4;
-                    break;
-                default:
-                    fprintf(stderr, "Unknown blit surface format: 0x%x\n", context_surfaces->color_format);
-                    assert(false);
-                    break;
-                }
-
-                hwaddr source_dma_len, dest_dma_len;
-                uint8_t *source, *dest;
-
-                source = nv_dma_map(d, context_surfaces->dma_image_source,
-                                    &source_dma_len);
-                assert(context_surfaces->source_offset < source_dma_len);
-                source += context_surfaces->source_offset;
-
-                dest = nv_dma_map(d, context_surfaces->dma_image_dest,
-                                  &dest_dma_len);
-                assert(context_surfaces->dest_offset < dest_dma_len);
-                dest += context_surfaces->dest_offset;
-
-                NV2A_DPRINTF("  - 0x%tx -> 0x%tx\n", source - d->vram_ptr,
-                                                     dest - d->vram_ptr);
-
-                int y;
-                for (y=0; y<image_blit->height; y++) {
-                    uint8_t *source_row = source
-                        + (image_blit->in_y + y) * context_surfaces->source_pitch
-                        + image_blit->in_x * bytes_per_pixel;
-
-                    uint8_t *dest_row = dest
-                        + (image_blit->out_y + y) * context_surfaces->dest_pitch
-                        + image_blit->out_x * bytes_per_pixel;
-
-                    memmove(dest_row, source_row,
-                            image_blit->width * bytes_per_pixel);
-                }
-
-            }
-#endif
+            VARDUMP_NV2A(VAR_IN, c->param);
+INT3;//XXX
+            nv2a_pgraph_blit(p);
+            break;
         default:
             VARDUMP_NV2A(VAR_IN, c->param);
             break;
@@ -905,9 +975,9 @@ nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
             VARDUMP_NV2A(VAR_IN, c->param);
             pos  = NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_SEMAPHORE);
             get  = NV2A_REGADDR(p + pos, NV_PRAMIN, BASE);
-            dma  = *(typeof(dma) *)get;
+            dma  = NV2A_DMA(get);
             pos  = NV2A_REG32(p, NV_097, SET_SEMAPHORE_OFFSET);
-            if (pos >= dma.limit) INT3;
+            if (pos > dma.limit) INT3;
             pos += NV2A_DMA_ADDRESS(&dma);
             xboxkrnl_dma_write(pos, c->param, 4);
             break;
@@ -1591,7 +1661,7 @@ nv2a_pfifo_pusher(register void *p) {
 //PRINT("    get:%p", get);//XXX
     get  += NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS) << 2;
 //PRINT("    get + instance:%p | instance:%p", get,((NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS)) << 4));//XXX
-    dma   = *(typeof(dma) *)get;
+    dma   = NV2A_DMA(get);
     addr  = NV2A_DMA_ADDRESS(&dma);
 //PRINT("    addr:%p | flags:%p | limit:%p | frame:%p | class:%p | target:%p",addr,dma.flags,dma.limit,dma.frame,dma.class,dma.target);//XXX
 //INT3;//XXX
@@ -1612,7 +1682,7 @@ nv2a_pfifo_pusher(register void *p) {
 
     /* based on the convenient pseudocode in envytools */
     while (*get != *put) {
-        if (*get >= dma.limit) {
+        if (*get > dma.limit) {
             c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_PROTECTION;
             break;
         }
@@ -1703,6 +1773,7 @@ void
 nv2a_framebuffer_set(uint32_t addr) {
     ENTER_NV2A;
 
+    addr &= host->memreg_size - 1;
     NV2A_REG32(nv2a->memreg, NV_PCRTC, START) = addr;
 
     LEAVE_NV2A;
@@ -1842,15 +1913,18 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
             break;
         }
         break;
-//    case NV_PFIFO_CACHE:
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMA: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
     case NV_PVIDEO:
+#if 0 //TODO
+static void pvideo_vga_invalidate(NV2AState *d)
+{
+    int y1 = GET_MASK(d->pvideo.regs[NV_PVIDEO_POINT_OUT],
+                      NV_PVIDEO_POINT_OUT_Y);
+    int y2 = y1 + GET_MASK(d->pvideo.regs[NV_PVIDEO_SIZE_OUT],
+                           NV_PVIDEO_SIZE_OUT_HEIGHT);
+    NV2A_DPRINTF("pvideo_vga_invalidate %d %d\n", y1, y2);
+    vga_invalidate_scanlines(&d->vga, y1, y2);
+}
+#endif
         switch (r) {
         case NV_PVIDEO_BUFFER:
 //            d->vga.enable_overlay = true;
@@ -1872,31 +1946,7 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
             break;
         }
         break;
-//    case NV_PCOUNTER: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PVPE: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PTV: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMFB: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMVIO:
-//        switch (r) {
-//        }
-//        break;
 //    case NV_PFB:
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PSTRAPS: /* not implemented */
 //        switch (r) {
 //        }
 //        break;
@@ -1907,8 +1957,8 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
             nv2a_irq_raise(NV2A_IRQ_PGRAPH);
             break;
         case NV_PGRAPH_INCREMENT:
-            if (NV2A_MASK_BITSHIFT_GET(v, NV_PGRAPH_INCREMENT_READ_3D) ==
-                NV_PGRAPH_INCREMENT_READ_3D_TRIGGER) {
+            v = NV2A_MASK_BITSHIFT_GET(v, NV_PGRAPH_INCREMENT_READ_3D);
+            if (v == NV_PGRAPH_INCREMENT_READ_3D_TRIGGER) {
                 v = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, READ_3D) + 1;
                 o = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, MODULO_3D);
                 if (o) v %= o;
@@ -1918,7 +1968,9 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
             break;
         case NV_PGRAPH_FIFO:
             if (!NV2A_MASK_GET(o, NV_PGRAPH_FIFO_ACCESS_ENABLED) &&
-                NV2A_MASK_GET(v, NV_PGRAPH_FIFO_ACCESS_ENABLED)) nv2a_irq_raise(NV2A_IRQ_FIFO);
+                NV2A_MASK_GET(v, NV_PGRAPH_FIFO_ACCESS_ENABLED)) {
+                nv2a_irq_raise(NV2A_IRQ_FIFO);
+            }
             break;
         }
         break;
@@ -1929,17 +1981,12 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
         case NV_PCRTC_INTR_EN_0:
             IRQ_NV2A_SIGNAL;
             break;
+        case NV_PCRTC_START:
+            nv2a_framebuffer_set(v);
+            break;
         }
         break;
-//    case NV_PRMCIO:
-//        switch (r) {
-//        }
-//        break;
 //    case NV_PRAMDAC:
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMDIO: /* not implemented */
 //        switch (r) {
 //        }
 //        break;
@@ -1996,14 +2043,56 @@ nv2a_read(uint32_t addr, void *val, size_t sz) {
     case NV_PMC:
         switch (r) {
         case NV_PMC_BOOT_0:
-            v = 0x02a000a2; /* NV2A, A02, Rev 0 */
+            v = NV_PMC_BOOT_0_ID_NV2A_A2_DEVID0; /* NV2A, A02, Rev 0 */
             break;
         }
         break;
-//    case NV_PBUS:
-//        switch (r) {
-//        }
-//        break;
+    case NV_PBUS:
+        switch (r) {
+        case NV_PBUS_FBIO_RAM:
+            v = 0x00000114; /* RAM capabilities */
+            break;
+        case NV_PBUS_PCI_NV_0:
+            v = 0x02a010de; /* NV2A, NVIDIA */
+            break;
+        case NV_PBUS_PCI_NV_2:
+            v = 0x030000a1; /* VGA, A01 */
+            break;
+        case NV_PBUS_PCI_NV_4:
+            v = 0xfd000000; /* BAR descriptor */
+            break;
+        case NV_PBUS_PCI_NV_5:
+            v = 0xf0000008; /* BAR descriptor */
+            break;
+        case NV_PBUS_PCI_NV_6:
+            v = 0x00000008; /* BAR descriptor */
+            break;
+        case NV_PBUS_PCI_NV_15:
+            v = 0x01050103; /* IRQ, latency */
+            break;
+        case NV_PBUS_PCI_NV_17:
+            v = 0x00200002; /* AGP revision */
+            break;
+        case NV_PBUS_PCI_NV_18:
+            v = 0x1f000017; /* AGP status */
+            break;
+        case NV_PBUS_PCI_NV_19:
+            v = 0x00000114; /* AGP command */
+            break;
+        case NV_PBUS_PCI_NV_21:
+            v = 0x00000001; /* VGA enabled */
+            break;
+        case NV_PBUS_PCI_NV_22:
+            v = NV_PBUS_PCI_NV_22_SCRATCH_DEFAULT;
+            break;
+        case NV_PBUS_PCI_NV_23:
+            v = NV_PBUS_PCI_NV_23_DT_TIMEOUT_16;
+            break;
+        case NV_PBUS_PCI_NV_24:
+            v = 0x00024401;
+            break;
+        }
+        break;
     case NV_PFIFO:
         switch (r) {
         case NV_PFIFO_RUNOUT_STATUS:
@@ -2041,14 +2130,6 @@ nv2a_read(uint32_t addr, void *val, size_t sz) {
             break;
         }
         break;
-//    case NV_PFIFO_CACHE:
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMA: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
     case NV_PVIDEO:
         switch (r) {
         case NV_PVIDEO_STOP:
@@ -2056,30 +2137,24 @@ nv2a_read(uint32_t addr, void *val, size_t sz) {
             break;
         }
         break;
-//    case NV_PTIMER:
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PCOUNTER: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PVPE: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PTV: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMFB: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMVIO:
-//        switch (r) {
-//        }
-//        break;
+#if 0 //TODO
+static uint64_t ptimer_get_clock(NV2AState *d)
+{
+    return muldiv64(qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL),
+                    d->pramdac.core_clock_freq * d->ptimer.numerator,
+                    get_ticks_per_sec() * d->ptimer.denominator);
+}
+    case NV_PTIMER:
+        switch (r) {
+        case NV_PTIMER_TIME_0:
+            r = (ptimer_get_clock(d) & 0x7ffffff) << 5;
+            break;
+        case NV_PTIMER_TIME_1:
+            r = (ptimer_get_clock(d) >> 27) & 0x1fffffff;
+            break;
+        }
+        break;
+#endif
     case NV_PFB:
         switch (r) {
         case NV_PFB_CFG0:
@@ -2093,10 +2168,6 @@ nv2a_read(uint32_t addr, void *val, size_t sz) {
             break;
         }
         break;
-//    case NV_PSTRAPS: /* not implemented */
-//        switch (r) {
-//        }
-//        break;
 //    case NV_PGRAPH:
 //        switch (r) {
 //        }
@@ -2105,15 +2176,7 @@ nv2a_read(uint32_t addr, void *val, size_t sz) {
 //        switch (r) {
 //        }
 //        break;
-//    case NV_PRMCIO:
-//        switch (r) {
-//        }
-//        break;
 //    case NV_PRAMDAC:
-//        switch (r) {
-//        }
-//        break;
-//    case NV_PRMDIO: /* not implemented */
 //        switch (r) {
 //        }
 //        break;

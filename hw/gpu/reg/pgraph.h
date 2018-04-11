@@ -10095,6 +10095,14 @@ typedef union {
     } PACKED;
 } PACKED nv2a_pgraph_ctx5;
 
+typedef struct {
+    nv2a_pgraph_ctx1 *ctx1;
+    nv2a_pgraph_ctx2 *ctx2;
+    nv2a_pgraph_ctx3 *ctx3;
+    nv2a_pgraph_ctx4 *ctx4;
+    nv2a_pgraph_ctx5 *ctx5;
+} nv2a_pgraph_ctx;
+
 static const char *const nv2a_pgraph_intr_name[] = {
     NAMEB(0,  notify),
     NAMEB(4,  missing_hw),

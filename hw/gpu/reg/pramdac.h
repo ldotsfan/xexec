@@ -1,0 +1,889 @@
+
+enum {
+        NV_PRAMDAC_CU_START_POS                     = 0x00000300,
+#define NV_PRAMDAC_CU_START_POS_X                                               0x00000fff
+#define NV_PRAMDAC_CU_START_POS_X__BITSHIFT                                     0
+#define NV_PRAMDAC_CU_START_POS_Y                                               0x0fff0000
+#define NV_PRAMDAC_CU_START_POS_Y__BITSHIFT                                     16
+        NV_PRAMDAC_CURSOR_CNTRL                     = 0x00000320,
+#define NV_PRAMDAC_CURSOR_CNTRL_ADDRESS                                         0x0000000f
+#define NV_PRAMDAC_CURSOR_CNTRL_ADDRESS__BITSHIFT                               0
+#define NV_PRAMDAC_CURSOR_CNTRL_RAM                                             0x00000100
+#define NV_PRAMDAC_CURSOR_CNTRL_RAM__BITSHIFT                                   8
+#define NV_PRAMDAC_CURSOR_CNTR_TESTMODE                                         0x00010000
+#define NV_PRAMDAC_CURSOR_CNTR_TESTMODE__BITSHIFT                               16
+#define NV_PRAMDAC_CURSOR_CNTR_TESTMODE_ENABLE                                  0x00000001
+#define NV_PRAMDAC_CURSOR_CNTR_TESTMODE_DISABLE                                 0x00000000
+        NV_PRAMDAC_CURSOR_DATA_31_0                 = 0x00000324,
+        NV_PRAMDAC_CURSOR_DATA_63_32                = 0x00000328,
+        NV_PRAMDAC_CURSOR_DATA_95_64                = 0x0000032c,
+        NV_PRAMDAC_CURSOR_DATA_127_96               = 0x00000330,
+        NV_PRAMDAC_NVPLL_COEFF                      = 0x00000500,
+#define NV_PRAMDAC_NVPLL_COEFF_MDIV                                             0x000000ff
+#define NV_PRAMDAC_NVPLL_COEFF_MDIV__BITSHIFT                                   0
+#define NV_PRAMDAC_NVPLL_COEFF_NDIV                                             0x0000ff00
+#define NV_PRAMDAC_NVPLL_COEFF_NDIV__BITSHIFT                                   8
+#define NV_PRAMDAC_NVPLL_COEFF_PDIV                                             0x00070000
+#define NV_PRAMDAC_NVPLL_COEFF_PDIV__BITSHIFT                                   16
+        NV_PRAMDAC_MPLL_COEFF                       = 0x00000504,
+#define NV_PRAMDAC_MPLL_COEFF_MDIV                                              0x000000ff
+#define NV_PRAMDAC_MPLL_COEFF_MDIV__BITSHIFT                                    0
+#define NV_PRAMDAC_MPLL_COEFF_NDIV                                              0x0000ff00
+#define NV_PRAMDAC_MPLL_COEFF_NDIV__BITSHIFT                                    8
+#define NV_PRAMDAC_MPLL_COEFF_PDIV                                              0x00070000
+#define NV_PRAMDAC_MPLL_COEFF_PDIV__BITSHIFT                                    16
+        NV_PRAMDAC_VPLL_COEFF                       = 0x00000508,
+#define NV_PRAMDAC_VPLL_COEFF_MDIV                                              0x000000ff
+#define NV_PRAMDAC_VPLL_COEFF_MDIV__BITSHIFT                                    0
+#define NV_PRAMDAC_VPLL_COEFF_NDIV                                              0x0000ff00
+#define NV_PRAMDAC_VPLL_COEFF_NDIV__BITSHIFT                                    8
+#define NV_PRAMDAC_VPLL_COEFF_PDIV                                              0x00070000
+#define NV_PRAMDAC_VPLL_COEFF_PDIV__BITSHIFT                                    16
+        NV_PRAMDAC_VPLL2_COEFF                      = 0x00000520,
+#define NV_PRAMDAC_VPLL2_COEFF_MDIV                                             0x000000ff
+#define NV_PRAMDAC_VPLL2_COEFF_MDIV__BITSHIFT                                   0
+#define NV_PRAMDAC_VPLL2_COEFF_NDIV                                             0x0000ff00
+#define NV_PRAMDAC_VPLL2_COEFF_NDIV__BITSHIFT                                   8
+#define NV_PRAMDAC_VPLL2_COEFF_PDIV                                             0x00070000
+#define NV_PRAMDAC_VPLL2_COEFF_PDIV__BITSHIFT                                   16
+        NV_PRAMDAC_PLL_COEFF_SELECT                 = 0x0000050c,
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL_SOURCE                                 0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL_SOURCE__BITSHIFT                       0
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL_SOURCE_XTAL                            0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL_SOURCE_VIP                             0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL2_SOURCE                                0x00000004
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL2_SOURCE__BITSHIFT                      2
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL2_SOURCE_XTAL                           0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VPLL2_SOURCE_VIP                            0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_MSOURCE                                     0x00000100
+#define NV_PRAMDAC_PLL_COEFF_SELECT_MSOURCE__BITSHIFT                           8
+#define NV_PRAMDAC_PLL_COEFF_SELECT_MSOURCE_DEFAULT                             0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_MSOURCE_PROG                                0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V1SOURCE                                    0x00000200
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V1SOURCE__BITSHIFT                          9
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V1SOURCE_DEFAULT                            0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V1SOURCE_PROG                               0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_NVSOURCE                                    0x00000400
+#define NV_PRAMDAC_PLL_COEFF_SELECT_NVSOURCE__BITSHIFT                          10
+#define NV_PRAMDAC_PLL_COEFF_SELECT_NVSOURCE_DEFAULT                            0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_NVSOURCE_PROG                               0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V2SOURCE                                    0x00000800
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V2SOURCE__BITSHIFT                          11
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V2SOURCE_DEFAULT                            0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_V2SOURCE_PROG                               0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK_TV                                  0x00030000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK_TV__BITSHIFT                        16
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK_TV_NONE                             0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK_TV_VSCLK                            0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK_TV_PCLK                             0x00000002
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK_TV_BOTH                             0x00000003
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK2_TV                                 0x000c0000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK2_TV__BITSHIFT                       18
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK2_TV_NONE                            0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK2_TV_VSCLK                           0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK2_TV_PCLK                            0x00000002
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VS_PCLK2_TV_BOTH                            0x00000003
+#define NV_PRAMDAC_PLL_COEFF_SELECT_TVCLK_RATIO                                 0x01000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_TVCLK_RATIO__BITSHIFT                       24
+#define NV_PRAMDAC_PLL_COEFF_SELECT_TVCLK_RATIO_DB1                             0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_TVCLK_RATIO_DB2                             0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK_RATIO                                  0x10000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK_RATIO__BITSHIFT                        28
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK_RATIO_DB1                              0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK_RATIO_DB2                              0x00000001
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK2_RATIO                                 0x20000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK2_RATIO__BITSHIFT                       29
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK2_RATIO_DB1                             0x00000000
+#define NV_PRAMDAC_PLL_COEFF_SELECT_VCLK2_RATIO_DB2                             0x00000001
+        NV_PRAMDAC_PLL_SETUP_CONTROL                = 0x00000510,
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_VALUE                                      0x000001ff
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_VALUE__BITSHIFT                            0
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_VAL                                        0x0000011c
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN                                     0x0000f000
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN__BITSHIFT                           12
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_NONE                                0x00000000
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_MPLL                                0x00000001
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_VPLL                                0x00000002
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_NVPLL                               0x00000004
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_VPLL2                               0x00000008
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_ALL                                 0x0000000f
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_ON                                  0x00000000
+#define NV_PRAMDAC_PLL_SETUP_CONTROL_PWRDWN_OFF                                 0x0000000f
+        NV_PRAMDAC_PLL_TEST_COUNTER                 = 0x00000514,
+#define NV_PRAMDAC_PLL_TEST_COUNTER_NOOFIPCLKS                                  0x000003ff
+#define NV_PRAMDAC_PLL_TEST_COUNTER_NOOFIPCLKS__BITSHIFT                        0
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VALUE                                       0x0000ffff
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VALUE__BITSHIFT                             0
+#define NV_PRAMDAC_PLL_TEST_COUNTER_ENABLE                                      0x00010000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_ENABLE__BITSHIFT                            16
+#define NV_PRAMDAC_PLL_TEST_COUNTER_ENABLE_DEASSERTED                           0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_ENABLE_ASSERTED                             0x00000001
+#define NV_PRAMDAC_PLL_TEST_COUNTER_RESET                                       0x00100000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_RESET__BITSHIFT                             20
+#define NV_PRAMDAC_PLL_TEST_COUNTER_RESET_DEASSERTED                            0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_RESET_ASSERTED                              0x00000001
+#define NV_PRAMDAC_PLL_TEST_COUNTER_SOURCE                                      0x07000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_SOURCE__BITSHIFT                            24
+#define NV_PRAMDAC_PLL_TEST_COUNTER_SOURCE_NVCLK                                0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_SOURCE_VCLK                                 0x00000001
+#define NV_PRAMDAC_PLL_TEST_COUNTER_SOURCE_MCLK                                 0x00000002
+#define NV_PRAMDAC_PLL_TEST_COUNTER_SOURCE_VCLK2                                0x00000004
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL2_LOCK                                  0x08000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL2_LOCK__BITSHIFT                        27
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL2_NOTLOCKED                             0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL2_LOCKED                                0x00000001
+#define NV_PRAMDAC_PLL_TEST_COUNTER_PDIV_RST                                    0x10000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_PDIV_RST__BITSHIFT                          28
+#define NV_PRAMDAC_PLL_TEST_COUNTER_PDIVRST_DEASSERTED                          0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_PDIVRST_ASSERTED                            0x00000001
+#define NV_PRAMDAC_PLL_TEST_COUNTER_NVPLL_LOCK                                  0x20000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_NVPLL_LOCK__BITSHIFT                        29
+#define NV_PRAMDAC_PLL_TEST_COUNTER_NVPLL_NOTLOCKED                             0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_NVPLL_LOCKED                                0x00000001
+#define NV_PRAMDAC_PLL_TEST_COUNTER_MPLL_LOCK                                   0x40000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_MPLL_LOCK__BITSHIFT                         30
+#define NV_PRAMDAC_PLL_TEST_COUNTER_MPLL_NOTLOCKED                              0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_MPLL_LOCKED                                 0x00000001
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL_LOCK                                   0x80000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL_LOCK__BITSHIFT                         31
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL_NOTLOCKED                              0x00000000
+#define NV_PRAMDAC_PLL_TEST_COUNTER_VPLL_LOCKED                                 0x00000001
+        NV_PRAMDAC_PALETTE_TEST                     = 0x00000518,
+#define NV_PRAMDAC_PALETTE_TEST_BLUE_DATA                                       0x000000ff
+#define NV_PRAMDAC_PALETTE_TEST_BLUE_DATA__BITSHIFT                             0
+#define NV_PRAMDAC_PALETTE_TEST_GREEN_DATA                                      0x0000ff00
+#define NV_PRAMDAC_PALETTE_TEST_GREEN_DATA__BITSHIFT                            8
+#define NV_PRAMDAC_PALETTE_TEST_RED_DATA                                        0x00ff0000
+#define NV_PRAMDAC_PALETTE_TEST_RED_DATA__BITSHIFT                              16
+#define NV_PRAMDAC_PALETTE_TEST_MODE                                            0x01000000
+#define NV_PRAMDAC_PALETTE_TEST_MODE__BITSHIFT                                  24
+#define NV_PRAMDAC_PALETTE_TEST_MODE_8BIT                                       0x00000000
+#define NV_PRAMDAC_PALETTE_TEST_MODE_24BIT                                      0x00000001
+#define NV_PRAMDAC_PALETTE_TEST_ADDRINC                                         0x10000000
+#define NV_PRAMDAC_PALETTE_TEST_ADDRINC__BITSHIFT                               28
+#define NV_PRAMDAC_PALETTE_TEST_ADDRINC_READWRITE                               0x00000000
+#define NV_PRAMDAC_PALETTE_TEST_ADDRINC_WRITEONLY                               0x00000001
+        NV_PRAMDAC_SEL_CLK                          = 0x00000524,
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_NVPLL                                0x00000001
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_NVPLL__BITSHIFT                      0
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_NVPLL_OFF                            0x00000000
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_NVPLL_ON                             0x00000001
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_MPLL                                 0x00000004
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_MPLL__BITSHIFT                       2
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_MPLL_OFF                             0x00000000
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_MPLL_ON                              0x00000001
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL1                                0x00000010
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL1__BITSHIFT                      4
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL1_OFF                            0x00000000
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL1_ON                             0x00000001
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL2                                0x00000040
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL2__BITSHIFT                      6
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL2_OFF                            0x00000000
+#define NV_PRAMDAC_SEL_CLK_SPREAD_SPECTRUM_VPLL2_ON                             0x00000001
+#define NV_PRAMDAC_SEL_CLK_IFPCLK1                                              0x00010000
+#define NV_PRAMDAC_SEL_CLK_IFPCLK1__BITSHIFT                                    16
+#define NV_PRAMDAC_SEL_CLK_IFPCLK1_SEL_FPCLK1                                   0x00000000
+#define NV_PRAMDAC_SEL_CLK_IFPCLK1_SEL_FPCLK2                                   0x00000001
+#define NV_PRAMDAC_SEL_CLK_IFPCLK2                                              0x00040000
+#define NV_PRAMDAC_SEL_CLK_IFPCLK2__BITSHIFT                                    18
+#define NV_PRAMDAC_SEL_CLK_IFPCLK2_SEL_FPCLK1                                   0x00000000
+#define NV_PRAMDAC_SEL_CLK_IFPCLK2_SEL_FPCLK2                                   0x00000001
+        NV_PRAMDAC_PLL_COMPAT                       = 0x00000528,
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_MODE                                    0x00000003
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_MODE__BITSHIFT                          0
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_MODE_MULTOFF                            0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_MODE_AUTO                               0x00000002
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_MODE_MULTON                             0x00000003
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_STAT                                    0x00000008
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_STAT__BITSHIFT                          3
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_STAT_OFF                                0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_NVPLL_DET_STAT_ON                                 0x00000001
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_MODE                                     0x00000030
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_MODE__BITSHIFT                           4
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_MODE_MULTOFF                             0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_MODE_AUTO                                0x00000002
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_MODE_MULTON                              0x00000003
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_STAT                                     0x00000080
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_STAT__BITSHIFT                           7
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_STAT_OFF                                 0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_MPLL_DET_STAT_ON                                  0x00000001
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_MODE                                     0x00000300
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_MODE__BITSHIFT                           8
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_MODE_MULTOFF                             0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_MODE_AUTO                                0x00000002
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_MODE_MULTON                              0x00000003
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_STAT                                     0x00000800
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_STAT__BITSHIFT                           11
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_STAT_OFF                                 0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_VPLL_DET_STAT_ON                                  0x00000001
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_MODE                                    0x00003000
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_MODE__BITSHIFT                          12
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_MODE_MULTOFF                            0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_MODE_AUTO                               0x00000002
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_MODE_MULTON                             0x00000003
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_STAT                                    0x00008000
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_STAT__BITSHIFT                          15
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_STAT_OFF                                0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_VPLL2_DET_STAT_ON                                 0x00000001
+#define NV_PRAMDAC_PLL_COMPAT_BLEND                                             0x00800000
+#define NV_PRAMDAC_PLL_COMPAT_BLEND__BITSHIFT                                   23
+#define NV_PRAMDAC_PLL_COMPAT_BLEND_NORMAL                                      0x00000000
+#define NV_PRAMDAC_PLL_COMPAT_BLEND_LSBBYPASS                                   0x00000001
+#define NV_PRAMDAC_PLL_COMPAT_MPDIV_XOR                                         0x07000000
+#define NV_PRAMDAC_PLL_COMPAT_MPDIV_XOR__BITSHIFT                               24
+#define NV_PRAMDAC_PLL_COMPAT_MPDIV_XOR_DISABLED                                0x00000000
+        NV_PRAMDAC_GENERAL_CONTROL                  = 0x00000600,
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX32_BIT                                 0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX32_BIT__BITSHIFT                       0
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX32_BIT_24                              0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX32_BIT_31                              0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX                                       0x00000030
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX__BITSHIFT                             4
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX_OFF                                   0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX_POS                                   0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX_NEG                                   0x00000002
+#define NV_PRAMDAC_GENERAL_CONTROL_PIXMIX_ON                                    0x00000003
+#define NV_PRAMDAC_GENERAL_CONTROL_VGA_STATE                                    0x00000100
+#define NV_PRAMDAC_GENERAL_CONTROL_VGA_STATE__BITSHIFT                          8
+#define NV_PRAMDAC_GENERAL_CONTROL_VGA_STATE_NOTSEL                             0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_VGA_STATE_SEL                                0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE                                     0x00001000
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE__BITSHIFT                           12
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE_NOTSEL                              0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE_SEL                                 0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE_15                                  0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE_16                                  0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE_24                                  0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_ALT_MODE_30                                  0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_BLK_PEDSTL                                   0x00010000
+#define NV_PRAMDAC_GENERAL_CONTROL_BLK_PEDSTL__BITSHIFT                         16
+#define NV_PRAMDAC_GENERAL_CONTROL_BLK_PEDSTL_OFF                               0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_BLK_PEDSTL_ON                                0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_TERMINATION                                  0x00020000
+#define NV_PRAMDAC_GENERAL_CONTROL_TERMINATION__BITSHIFT                        17
+#define NV_PRAMDAC_GENERAL_CONTROL_TERMINATION_37OHM                            0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_TERMINATION_75OHM                            0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_BPC                                          0x00100000
+#define NV_PRAMDAC_GENERAL_CONTROL_BPC__BITSHIFT                                20
+#define NV_PRAMDAC_GENERAL_CONTROL_BPC_6BITS                                    0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_BPC_8BITS                                    0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_LUT                                          0x00200000
+#define NV_PRAMDAC_GENERAL_CONTROL_LUT__BITSHIFT                                21
+#define NV_PRAMDAC_GENERAL_CONTROL_LUT_8BITS                                    0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_LUT_10BITS                                   0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_DAC_SLEEP                                    0x01000000
+#define NV_PRAMDAC_GENERAL_CONTROL_DAC_SLEEP__BITSHIFT                          24
+#define NV_PRAMDAC_GENERAL_CONTROL_DAC_SLEEP_DIS                                0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_DAC_SLEEP_EN                                 0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_PALETTE_CLK                                  0x10000000
+#define NV_PRAMDAC_GENERAL_CONTROL_PALETTE_CLK__BITSHIFT                        28
+#define NV_PRAMDAC_GENERAL_CONTROL_PALETTE_CLK_EN                               0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_PALETTE_CLK_DIS                              0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_PIPE                                         0x20000000
+#define NV_PRAMDAC_GENERAL_CONTROL_PIPE__BITSHIFT                               29
+#define NV_PRAMDAC_GENERAL_CONTROL_PIPE_SHORT                                   0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_PIPE_LONG                                    0x00000001
+#define NV_PRAMDAC_GENERAL_CONTROL_CUR_32B_ROP                                  0x40000000
+#define NV_PRAMDAC_GENERAL_CONTROL_CUR_32B_ROP__BITSHIFT                        30
+#define NV_PRAMDAC_GENERAL_CONTROL_CUR_32B_ROP_DISABLE                          0x00000000
+#define NV_PRAMDAC_GENERAL_CONTROL_CUR_32B_ROP_ENABLE                           0x00000001
+        NV_PRAMDAC_PALETTE_RECOVERY                 = 0x00000604,
+#define NV_PRAMDAC_PALETTE_RECOVERY_ACTIVE_ADDRESS                              0x000000ff
+#define NV_PRAMDAC_PALETTE_RECOVERY_ACTIVE_ADDRESS__BITSHIFT                    0
+#define NV_PRAMDAC_PALETTE_RECOVERY_RGB_POINTER                                 0x00000700
+#define NV_PRAMDAC_PALETTE_RECOVERY_RGB_POINTER__BITSHIFT                       8
+#define NV_PRAMDAC_PALETTE_RECOVERY_RGB_POINTER_RED                             0x00000001
+#define NV_PRAMDAC_PALETTE_RECOVERY_RGB_POINTER_GREEN                           0x00000002
+#define NV_PRAMDAC_PALETTE_RECOVERY_RGB_POINTER_BLUE                            0x00000004
+#define NV_PRAMDAC_PALETTE_RECOVERY_DAC_STATE                                   0x00003000
+#define NV_PRAMDAC_PALETTE_RECOVERY_DAC_STATE__BITSHIFT                         12
+#define NV_PRAMDAC_PALETTE_RECOVERY_DAC_STATE_WRITE                             0x00000000
+#define NV_PRAMDAC_PALETTE_RECOVERY_DAC_STATE_READ                              0x00000003
+#define NV_PRAMDAC_PALETTE_RECOVERY_RED_DATA                                    0x00ff0000
+#define NV_PRAMDAC_PALETTE_RECOVERY_RED_DATA__BITSHIFT                          16
+#define NV_PRAMDAC_PALETTE_RECOVERY_GREEN_DATA                                  0xff000000
+#define NV_PRAMDAC_PALETTE_RECOVERY_GREEN_DATA__BITSHIFT                        24
+        NV_PRAMDAC_PALETTE_LUT_INDEX                = 0x00000620,
+#define NV_PRAMDAC_PALETTE_LUT_INDEX_ADDR                                       0x000000ff
+#define NV_PRAMDAC_PALETTE_LUT_INDEX_ADDR__BITSHIFT                             0
+#define NV_PRAMDAC_PALETTE_LUT_INDEX_ADDRINC                                    0x00001000
+#define NV_PRAMDAC_PALETTE_LUT_INDEX_ADDRINC__BITSHIFT                          12
+#define NV_PRAMDAC_PALETTE_LUT_INDEX_ADDRINC_ENABLE                             0x00000000
+#define NV_PRAMDAC_PALETTE_LUT_INDEX_ADDRINC_DISABLE                            0x00000001
+        NV_PRAMDAC_PALETTE_LUT_DATA                 = 0x00000624,
+#define NV_PRAMDAC_PALETTE_LUT_DATA_BLUE                                        0x000003ff
+#define NV_PRAMDAC_PALETTE_LUT_DATA_BLUE__BITSHIFT                              0
+#define NV_PRAMDAC_PALETTE_LUT_DATA_GREEN                                       0x000ffc00
+#define NV_PRAMDAC_PALETTE_LUT_DATA_GREEN__BITSHIFT                             10
+#define NV_PRAMDAC_PALETTE_LUT_DATA_RED                                         0x3ff00000
+#define NV_PRAMDAC_PALETTE_LUT_DATA_RED__BITSHIFT                               20
+        NV_PRAMDAC_TEST_CONTROL                     = 0x00000608,
+#define NV_PRAMDAC_TEST_CONTROL_CRC_RESET                                       0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_CRC_RESET__BITSHIFT                             0
+#define NV_PRAMDAC_TEST_CONTROL_CRC_RESET_DEASSERTED                            0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_CRC_RESET_ASSERTED                              0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_CRC_ENABLE                                      0x00000010
+#define NV_PRAMDAC_TEST_CONTROL_CRC_ENABLE__BITSHIFT                            4
+#define NV_PRAMDAC_TEST_CONTROL_CRC_ENABLE_DEASSERTED                           0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_CRC_ENABLE_ASSERTED                             0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CHANNEL                                     0x00000300
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CHANNEL__BITSHIFT                           8
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CHANNEL_BLUE                                0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CHANNEL_GREEN                               0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CHANNEL_RED                                 0x00000002
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CAPTURE                                     0x00000400
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CAPTURE__BITSHIFT                           10
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CAPTURE_ALWAYS                              0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_CRC_CAPTURE_ONE                                 0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_TP_INS_EN                                       0x00001000
+#define NV_PRAMDAC_TEST_CONTROL_TP_INS_EN__BITSHIFT                             12
+#define NV_PRAMDAC_TEST_CONTROL_TP_INS_EN_DEASSERTED                            0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_TP_INS_EN_ASSERTED                              0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_PWRDWN_DAC                                      0x00010000
+#define NV_PRAMDAC_TEST_CONTROL_PWRDWN_DAC__BITSHIFT                            16
+#define NV_PRAMDAC_TEST_CONTROL_PWRDWN_DAC_ON                                   0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_PWRDWN_DAC_OFF                                  0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_DACTM                                           0x00100000
+#define NV_PRAMDAC_TEST_CONTROL_DACTM__BITSHIFT                                 20
+#define NV_PRAMDAC_TEST_CONTROL_DACTM_NORMAL                                    0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_DACTM_TEST                                      0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_TPATH1                                          0x01000000
+#define NV_PRAMDAC_TEST_CONTROL_TPATH1__BITSHIFT                                24
+#define NV_PRAMDAC_TEST_CONTROL_TPATH1_CLEAR                                    0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_TPATH1_SET                                      0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_TPATH31                                         0x02000000
+#define NV_PRAMDAC_TEST_CONTROL_TPATH31__BITSHIFT                               25
+#define NV_PRAMDAC_TEST_CONTROL_TPATH31_CLEAR                                   0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_TPATH31_SET                                     0x00000001
+#define NV_PRAMDAC_TEST_CONTROL_SENSEB                                          0x10000000
+#define NV_PRAMDAC_TEST_CONTROL_SENSEB__BITSHIFT                                28
+#define NV_PRAMDAC_TEST_CONTROL_SENSEB_SOMELO                                   0x00000000
+#define NV_PRAMDAC_TEST_CONTROL_SENSEB_ALLHI                                    0x00000001
+        NV_PRAMDAC_CHECKSUM                         = 0x0000060c,
+#define NV_PRAMDAC_CHECKSUM_STATUS                                              0x01000000
+#define NV_PRAMDAC_CHECKSUM_STATUS__BITSHIFT                                    24
+#define NV_PRAMDAC_CHECKSUM_STATUS_CAPTURED                                     0x00000001
+#define NV_PRAMDAC_CHECKSUM_STATUS_WAITING                                      0x00000000
+#define NV_PRAMDAC_CHECKSUM_VALUE                                               0x00ffffff
+#define NV_PRAMDAC_CHECKSUM_VALUE__BITSHIFT                                     0
+        NV_PRAMDAC_TESTPOINT_DATA                   = 0x00000610,
+#define NV_PRAMDAC_TESTPOINT_DATA_RED                                           0x000003ff
+#define NV_PRAMDAC_TESTPOINT_DATA_RED__BITSHIFT                                 0
+#define NV_PRAMDAC_TESTPOINT_DATA_GREEN                                         0x000ffc00
+#define NV_PRAMDAC_TESTPOINT_DATA_GREEN__BITSHIFT                               10
+#define NV_PRAMDAC_TESTPOINT_DATA_BLUE                                          0x3ff00000
+#define NV_PRAMDAC_TESTPOINT_DATA_BLUE__BITSHIFT                                20
+#define NV_PRAMDAC_TESTPOINT_DATA_BLACK                                         0x40000000
+#define NV_PRAMDAC_TESTPOINT_DATA_BLACK__BITSHIFT                               30
+#define NV_PRAMDAC_TESTPOINT_DATA_NOTBLANK                                      0x80000000
+#define NV_PRAMDAC_TESTPOINT_DATA_NOTBLANK__BITSHIFT                            31
+        NV_PRAMDAC_COMPOSITE                        = 0x00000630,
+#define NV_PRAMDAC_COMPOSITE_MODE                                               0x00000003
+#define NV_PRAMDAC_COMPOSITE_MODE__BITSHIFT                                     0
+#define NV_PRAMDAC_COMPOSITE_MODE_RGB                                           0x00000000
+#define NV_PRAMDAC_COMPOSITE_MODE_RESERVED                                      0x00000001
+#define NV_PRAMDAC_COMPOSITE_MODE_YCBCR_601_OUT                                 0x00000002
+#define NV_PRAMDAC_COMPOSITE_MODE_YCBCR_709_OUT                                 0x00000003
+#define NV_PRAMDAC_COMPOSITE_RESERVED                                           0xfffffffc
+#define NV_PRAMDAC_COMPOSITE_RESERVED__BITSHIFT                                 2
+#define NV_PRAMDAC_COMPOSITE_RESERVED_INITIAL                                   0x00000000
+        NV_PRAMDAC_LGS_HSYNC_NUMERATOR              = 0x00000680,
+#define NV_PRAMDAC_LGS_HSYNC_NUMERATOR_VALUE                                    0x00ffffff
+#define NV_PRAMDAC_LGS_HSYNC_NUMERATOR_VALUE__BITSHIFT                          0
+#define NV_PRAMDAC_LGS_HSYNC_NUMERATOR_VALUE_ZERO                               0x00000000
+        NV_PRAMDAC_LGS_HSYNC_DENOMINATOR            = 0x00000684,
+#define NV_PRAMDAC_LGS_HSYNC_DENOMINATOR_VALUE                                  0x000007ff
+#define NV_PRAMDAC_LGS_HSYNC_DENOMINATOR_VALUE__BITSHIFT                        0
+#define NV_PRAMDAC_LGS_HSYNC_DENOMINATOR_VALUE_ZERO                             0x00000000
+        NV_PRAMDAC_LGS_HSYNC_HIGH                   = 0x00000688,
+#define NV_PRAMDAC_LGS_HSYNC_HIGH_CYCLES                                        0x00000fff
+#define NV_PRAMDAC_LGS_HSYNC_HIGH_CYCLES__BITSHIFT                              0
+#define NV_PRAMDAC_LGS_HSYNC_HIGH_CYCLES_ZERO                                   0x00000000
+        NV_PRAMDAC_LGS_HSYNC_HIGH_VSYNC             = 0x0000068c,
+#define NV_PRAMDAC_LGS_HSYNC_HIGH_VSYNC_CYCLES                                  0x00000fff
+#define NV_PRAMDAC_LGS_HSYNC_HIGH_VSYNC_CYCLES__BITSHIFT                        0
+#define NV_PRAMDAC_LGS_HSYNC_HIGH_VSYNC_CYCLES_ZERO                             0x00000000
+        NV_PRAMDAC_LGS_SWITCHES                     = 0x00000690,
+#define NV_PRAMDAC_LGS_SWITCHES_ENCODER_MODE                                    0x00000001
+#define NV_PRAMDAC_LGS_SWITCHES_ENCODER_MODE__BITSHIFT                          0
+#define NV_PRAMDAC_LGS_SWITCHES_ENCODER_MODE_NON_BYPASS                         0x00000000
+#define NV_PRAMDAC_LGS_SWITCHES_ENCODER_MODE_BYPASS                             0x00000001
+        NV_PRAMDAC_LGS_TRANSFER                     = 0x000006a0,
+#define NV_PRAMDAC_LGS_TRANSFER_LOAD_VALUES                                     0x00000001
+#define NV_PRAMDAC_LGS_TRANSFER_LOAD_VALUES__BITSHIFT                           0
+#define NV_PRAMDAC_LGS_TRANSFER_LOAD_VALUES_ZERO                                0x00000000
+#define NV_PRAMDAC_LGS_TRANSFER_LOAD_VALUES_ONE                                 0x00000001
+#define NV_PRAMDAC_LGS_TRANSFER_LOADED_VALUES                                   0x00000010
+#define NV_PRAMDAC_LGS_TRANSFER_LOADED_VALUES__BITSHIFT                         4
+#define NV_PRAMDAC_LGS_TRANSFER_LOADED_VALUES_ZERO                              0x00000000
+#define NV_PRAMDAC_LGS_TRANSFER_LOADED_VALUES_ONE                               0x00000001
+        NV_PRAMDAC_TV_SETUP                         = 0x00000700,
+#define NV_PRAMDAC_TV_SETUP_DEV_TYPE                                            0x00000003
+#define NV_PRAMDAC_TV_SETUP_DEV_TYPE__BITSHIFT                                  0
+#define NV_PRAMDAC_TV_SETUP_DEV_TYPE_SLAVE                                      0x00000000
+#define NV_PRAMDAC_TV_SETUP_DEV_TYPE_MASTER                                     0x00000001
+#define NV_PRAMDAC_TV_SETUP_DEV_TYPE_SLAVE_ALT                                  0x00000002
+#define NV_PRAMDAC_TV_SETUP_DEV_TYPE_MASTER_ALT                                 0x00000003
+#define NV_PRAMDAC_TV_SETUP_DATA_SRC                                            0x00000300
+#define NV_PRAMDAC_TV_SETUP_DATA_SRC__BITSHIFT                                  8
+#define NV_PRAMDAC_TV_SETUP_DATA_SRC_COMP                                       0x00000000
+#define NV_PRAMDAC_TV_SETUP_DATA_SRC_SCALER                                     0x00000001
+#define NV_PRAMDAC_TV_SETUP_DATA_SRC_VIP                                        0x00000002
+#define NV_PRAMDAC_TV_SETUP_DATA_SRC_NONE                                       0x00000003
+#define NV_PRAMDAC_TV_SETUP_SYNC_POL                                            0x00030000
+#define NV_PRAMDAC_TV_SETUP_SYNC_POL__BITSHIFT                                  16
+#define NV_PRAMDAC_TV_SETUP_SYNC_POL_NEG_NONE                                   0x00000000
+#define NV_PRAMDAC_TV_SETUP_SYNC_POL_NEG_HSYNC                                  0x00000001
+#define NV_PRAMDAC_TV_SETUP_SYNC_POL_NEG_VSYNC                                  0x00000002
+#define NV_PRAMDAC_TV_SETUP_SYNC_POL_NEG_BOTH                                   0x00000003
+        NV_PRAMDAC_BLANK_COLOR                      = 0x00000714,
+#define NV_PRAMDAC_BLANK_COLOR_VAL                                              0x00ffffff
+#define NV_PRAMDAC_BLANK_COLOR_VAL__BITSHIFT                                    0
+#define NV_PRAMDAC_BLANK_COLOR_EN                                               0xc0000000
+#define NV_PRAMDAC_BLANK_COLOR_EN__BITSHIFT                                     30
+#define NV_PRAMDAC_BLANK_COLOR_EN_DEFAULT                                       0x00000000
+#define NV_PRAMDAC_BLANK_COLOR_EN_BLANK                                         0x00000001
+#define NV_PRAMDAC_BLANK_COLOR_EN_ALWAYS                                        0x00000003
+        NV_PRAMDAC_TV_VTOTAL                        = 0x00000720,
+#define NV_PRAMDAC_TV_VTOTAL_VAL                                                0x000007ff
+#define NV_PRAMDAC_TV_VTOTAL_VAL__BITSHIFT                                      0
+        NV_PRAMDAC_TV_VSYNC_START                   = 0x00000724,
+#define NV_PRAMDAC_TV_VSYNC_START_VAL                                           0x000007ff
+#define NV_PRAMDAC_TV_VSYNC_START_VAL__BITSHIFT                                 0
+        NV_PRAMDAC_TV_VSYNC_END                     = 0x00000728,
+#define NV_PRAMDAC_TV_VSYNC_END_VAL                                             0x000007ff
+#define NV_PRAMDAC_TV_VSYNC_END_VAL__BITSHIFT                                   0
+        NV_PRAMDAC_TV_HTOTAL                        = 0x0000072c,
+#define NV_PRAMDAC_TV_HTOTAL_VAL                                                0x000007ff
+#define NV_PRAMDAC_TV_HTOTAL_VAL__BITSHIFT                                      0
+        NV_PRAMDAC_TV_HSYNC_START                   = 0x00000730,
+#define NV_PRAMDAC_TV_HSYNC_START_VAL                                           0x000007ff
+#define NV_PRAMDAC_TV_HSYNC_START_VAL__BITSHIFT                                 0
+        NV_PRAMDAC_TV_HSYNC_END                     = 0x00000734,
+#define NV_PRAMDAC_TV_HSYNC_END_VAL                                             0x000007ff
+#define NV_PRAMDAC_TV_HSYNC_END_VAL__BITSHIFT                                   0
+        NV_PRAMDAC_TV_CHECKSUM                      = 0x00000718,
+#define NV_PRAMDAC_TV_CHECKSUM_VAL                                              0x00ffffff
+#define NV_PRAMDAC_TV_CHECKSUM_VAL__BITSHIFT                                    0
+#define NV_PRAMDAC_TV_CHECKSUM_STATUS                                           0x01000000
+#define NV_PRAMDAC_TV_CHECKSUM_STATUS__BITSHIFT                                 24
+#define NV_PRAMDAC_TV_CHECKSUM_STATUS_CAPTURED                                  0x00000001
+#define NV_PRAMDAC_TV_CHECKSUM_STATUS_WAITING                                   0x00000000
+#define NV_PRAMDAC_TV_VSYNC                                                     0x10000000
+#define NV_PRAMDAC_TV_VSYNC__BITSHIFT                                           28
+#define NV_PRAMDAC_TV_VSYNC_LOW                                                 0x00000000
+#define NV_PRAMDAC_TV_VSYNC_HIGH                                                0x00000001
+        NV_PRAMDAC_TV_TEST_CONTROL                  = 0x0000071c,
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_RESET                                    0x00000001
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_RESET__BITSHIFT                          0
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_RESET_DEASSERTED                         0x00000000
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_RESET_ASSERTED                           0x00000001
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_ENABLE                                   0x00000010
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_ENABLE__BITSHIFT                         4
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_ENABLE_DEASSERTED                        0x00000000
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_ENABLE_ASSERTED                          0x00000001
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CHANNEL                                  0x00000300
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CHANNEL__BITSHIFT                        8
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CHANNEL_7_0                              0x00000000
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CHANNEL_15_8                             0x00000001
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CHANNEL_23_16                            0x00000002
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CAPTURE                                  0x00000400
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CAPTURE__BITSHIFT                        10
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CAPTURE_ALWAYS                           0x00000000
+#define NV_PRAMDAC_TV_TEST_CONTROL_CRC_CAPTURE_ONE                              0x00000001
+        NV_PRAMDAC_TV_SYNC_DELAY                    = 0x00000738,
+#define NV_PRAMDAC_TV_SYNC_DELAY_HSYNC                                          0x000000ff
+#define NV_PRAMDAC_TV_SYNC_DELAY_HSYNC__BITSHIFT                                0
+#define NV_PRAMDAC_TV_SYNC_DELAY_VSYNC                                          0x00ff0000
+#define NV_PRAMDAC_TV_SYNC_DELAY_VSYNC__BITSHIFT                                16
+        NV_PRAMDAC_FP_VDISPLAY_END                  = 0x00000800,
+#define NV_PRAMDAC_FP_VDISPLAY_END_VAL                                          0x0000ffff
+#define NV_PRAMDAC_FP_VDISPLAY_END_VAL__BITSHIFT                                0
+        NV_PRAMDAC_FP_VTOTAL                        = 0x00000804,
+#define NV_PRAMDAC_FP_VTOTAL_VAL                                                0x0000ffff
+#define NV_PRAMDAC_FP_VTOTAL_VAL__BITSHIFT                                      0
+        NV_PRAMDAC_FP_VCRTC                         = 0x00000808,
+#define NV_PRAMDAC_FP_VCRTC_VAL                                                 0x0000ffff
+#define NV_PRAMDAC_FP_VCRTC_VAL__BITSHIFT                                       0
+        NV_PRAMDAC_FP_VSYNC_START                   = 0x0000080c,
+#define NV_PRAMDAC_FP_VSYNC_START_VAL                                           0x0000ffff
+#define NV_PRAMDAC_FP_VSYNC_START_VAL__BITSHIFT                                 0
+        NV_PRAMDAC_FP_VSYNC_END                     = 0x00000810,
+#define NV_PRAMDAC_FP_VSYNC_END_VAL                                             0x0000ffff
+#define NV_PRAMDAC_FP_VSYNC_END_VAL__BITSHIFT                                   0
+        NV_PRAMDAC_FP_VVALID_START                  = 0x00000814,
+#define NV_PRAMDAC_FP_VVALID_START_VAL                                          0x0000ffff
+#define NV_PRAMDAC_FP_VVALID_START_VAL__BITSHIFT                                0
+        NV_PRAMDAC_FP_VVALID_END                    = 0x00000818,
+#define NV_PRAMDAC_FP_VVALID_END_VAL                                            0x0000ffff
+#define NV_PRAMDAC_FP_VVALID_END_VAL__BITSHIFT                                  0
+        NV_PRAMDAC_FP_HDISPLAY_END                  = 0x00000820,
+#define NV_PRAMDAC_FP_HDISPLAY_END_VAL                                          0x0000ffff
+#define NV_PRAMDAC_FP_HDISPLAY_END_VAL__BITSHIFT                                0
+        NV_PRAMDAC_FP_HTOTAL                        = 0x00000824,
+#define NV_PRAMDAC_FP_HTOTAL_VAL                                                0x0000ffff
+#define NV_PRAMDAC_FP_HTOTAL_VAL__BITSHIFT                                      0
+        NV_PRAMDAC_FP_HCRTC                         = 0x00000828,
+#define NV_PRAMDAC_FP_HCRTC_VAL                                                 0x0000ffff
+#define NV_PRAMDAC_FP_HCRTC_VAL__BITSHIFT                                       0
+        NV_PRAMDAC_FP_HSYNC_START                   = 0x0000082c,
+#define NV_PRAMDAC_FP_HSYNC_START_VAL                                           0x0000ffff
+#define NV_PRAMDAC_FP_HSYNC_START_VAL__BITSHIFT                                 0
+        NV_PRAMDAC_FP_HSYNC_END                     = 0x00000830,
+#define NV_PRAMDAC_FP_HSYNC_END_VAL                                             0x0000ffff
+#define NV_PRAMDAC_FP_HSYNC_END_VAL__BITSHIFT                                   0
+        NV_PRAMDAC_FP_HVALID_START                  = 0x00000834,
+#define NV_PRAMDAC_FP_HVALID_START_VAL                                          0x0000ffff
+#define NV_PRAMDAC_FP_HVALID_START_VAL__BITSHIFT                                0
+        NV_PRAMDAC_FP_HVALID_END                    = 0x00000838,
+#define NV_PRAMDAC_FP_HVALID_END_VAL                                            0x0000ffff
+#define NV_PRAMDAC_FP_HVALID_END_VAL__BITSHIFT                                  0
+        NV_PRAMDAC_FP_CHECKSUM                      = 0x00000840,
+#define NV_PRAMDAC_FP_CHECKSUM_VAL                                              0x00ffffff
+#define NV_PRAMDAC_FP_CHECKSUM_VAL__BITSHIFT                                    0
+#define NV_PRAMDAC_FP_CHECKSUM_STATUS                                           0x01000000
+#define NV_PRAMDAC_FP_CHECKSUM_STATUS__BITSHIFT                                 24
+#define NV_PRAMDAC_FP_CHECKSUM_STATUS_CAPTURED                                  0x00000001
+#define NV_PRAMDAC_FP_CHECKSUM_STATUS_WAITING                                   0x00000000
+#define NV_PRAMDAC_FP_VSYNC                                                     0x10000000
+#define NV_PRAMDAC_FP_VSYNC__BITSHIFT                                           28
+#define NV_PRAMDAC_FP_VSYNC_LOW                                                 0x00000000
+#define NV_PRAMDAC_FP_VSYNC_HIGH                                                0x00000001
+        NV_PRAMDAC_FP_TEST_CONTROL                  = 0x00000844,
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_RESET                                    0x00000001
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_RESET__BITSHIFT                          0
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_RESET_DEASSERTED                         0x00000000
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_RESET_ASSERTED                           0x00000001
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_ENABLE                                   0x00000010
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_ENABLE__BITSHIFT                         4
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_ENABLE_DEASSERTED                        0x00000000
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_ENABLE_ASSERTED                          0x00000001
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CHANNEL                                  0x00000300
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CHANNEL__BITSHIFT                        8
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CHANNEL_7_0                              0x00000000
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CHANNEL_15_8                             0x00000001
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CHANNEL_23_16                            0x00000002
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CAPTURE                                  0x00000400
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CAPTURE__BITSHIFT                        10
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CAPTURE_ALWAYS                           0x00000000
+#define NV_PRAMDAC_FP_TEST_CONTROL_CRC_CAPTURE_ONE                              0x00000001
+        NV_PRAMDAC_FP_TG_CONTROL                    = 0x00000848,
+#define NV_PRAMDAC_FP_TG_CONTROL_VSYNC                                          0x00000003
+#define NV_PRAMDAC_FP_TG_CONTROL_VSYNC__BITSHIFT                                0
+#define NV_PRAMDAC_FP_TG_CONTROL_VSYNC_NEG                                      0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_VSYNC_POS                                      0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_VSYNC_DISABLE                                  0x00000002
+#define NV_PRAMDAC_FP_TG_CONTROL_VSYNC_RSVD                                     0x00000003
+#define NV_PRAMDAC_FP_TG_CONTROL_HSYNC                                          0x00000030
+#define NV_PRAMDAC_FP_TG_CONTROL_HSYNC__BITSHIFT                                4
+#define NV_PRAMDAC_FP_TG_CONTROL_HSYNC_NEG                                      0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_HSYNC_POS                                      0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_HSYNC_DISABLE                                  0x00000002
+#define NV_PRAMDAC_FP_TG_CONTROL_HSYNC_RSVD                                     0x00000003
+#define NV_PRAMDAC_FP_TG_CONTROL_MODE                                           0x00000300
+#define NV_PRAMDAC_FP_TG_CONTROL_MODE__BITSHIFT                                 8
+#define NV_PRAMDAC_FP_TG_CONTROL_MODE_SCALE                                     0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_MODE_CENTER                                    0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_MODE_NATIVE                                    0x00000002
+#define NV_PRAMDAC_FP_TG_CONTROL_CENTER                                         0x00003000
+#define NV_PRAMDAC_FP_TG_CONTROL_CENTER__BITSHIFT                               12
+#define NV_PRAMDAC_FP_TG_CONTROL_CENTER_NONE                                    0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_CENTER_HORIZ                                   0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_CENTER_VERT                                    0x00000002
+#define NV_PRAMDAC_FP_TG_CONTROL_CENTER_BOTH                                    0x00000003
+#define NV_PRAMDAC_FP_TG_CONTROL_NATIVE                                         0x00030000
+#define NV_PRAMDAC_FP_TG_CONTROL_NATIVE__BITSHIFT                               16
+#define NV_PRAMDAC_FP_TG_CONTROL_NATIVE_NONE                                    0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_NATIVE_HORIZ                                   0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_NATIVE_VERT                                    0x00000002
+#define NV_PRAMDAC_FP_TG_CONTROL_NATIVE_BOTH                                    0x00000003
+#define NV_PRAMDAC_FP_TG_CONTROL_READ                                           0x00100000
+#define NV_PRAMDAC_FP_TG_CONTROL_READ__BITSHIFT                                 20
+#define NV_PRAMDAC_FP_TG_CONTROL_READ_ACTUAL                                    0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_READ_PROG                                      0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_WIDTH                                          0x01000000
+#define NV_PRAMDAC_FP_TG_CONTROL_WIDTH__BITSHIFT                                24
+#define NV_PRAMDAC_FP_TG_CONTROL_WIDTH_24                                       0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_WIDTH_12                                       0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_DISPEN                                         0x30000000
+#define NV_PRAMDAC_FP_TG_CONTROL_DISPEN__BITSHIFT                               28
+#define NV_PRAMDAC_FP_TG_CONTROL_DISPEN_NEG                                     0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_DISPEN_POS                                     0x00000001
+#define NV_PRAMDAC_FP_TG_CONTROL_DISPEN_DISABLE                                 0x00000002
+#define NV_PRAMDAC_FP_TG_CONTROL_DISPEN_RSVD                                    0x00000003
+#define NV_PRAMDAC_FP_TG_CONTROL_FPCLK_RATIO                                    0x80000000
+#define NV_PRAMDAC_FP_TG_CONTROL_FPCLK_RATIO__BITSHIFT                          31
+#define NV_PRAMDAC_FP_TG_CONTROL_FPCLK_RATIO_DB1                                0x00000000
+#define NV_PRAMDAC_FP_TG_CONTROL_FPCLK_RATIO_DB2                                0x00000001
+        NV_PRAMDAC_FP_INACTIVE_PXL_COLOR            = 0x0000084c,
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_BLUE                                   0x000000ff
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_BLUE__BITSHIFT                         0
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_BLUE_DEFAULT                           0x00000080
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_GREEN                                  0x0000ff00
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_GREEN__BITSHIFT                        8
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_GREEN_DEFAULT                          0x00000010
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_RED                                    0x00ff0000
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_RED__BITSHIFT                          16
+#define NV_PRAMDAC_FP_INACTIVE_PXL_COLOR_RED_DEFAULT                            0x00000080
+        NV_PRAMDAC_FP_DEBUG_0                       = 0x00000880,
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE                                            0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE__BITSHIFT                                  0
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE_DISABLE                                    0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE_ENABLE                                     0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE_STEP_AUTO                                  0x00000004
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE_STEP_AUTO__BITSHIFT                        2
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE_STEP_AUTO_EN                               0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_XSCALE_STEP_AUTO_DIS                              0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE                                            0x00000010
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE__BITSHIFT                                  4
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE_DISABLE                                    0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE_ENABLE                                     0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE_STEP_AUTO                                  0x00000040
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE_STEP_AUTO__BITSHIFT                        6
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE_STEP_AUTO_EN                               0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_YSCALE_STEP_AUTO_DIS                              0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_XINTERP                                           0x00000100
+#define NV_PRAMDAC_FP_DEBUG_0_XINTERP__BITSHIFT                                 8
+#define NV_PRAMDAC_FP_DEBUG_0_XINTERP_TRUNCATE                                  0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_XINTERP_BILINEAR                                  0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_YINTERP                                           0x00001000
+#define NV_PRAMDAC_FP_DEBUG_0_YINTERP__BITSHIFT                                 12
+#define NV_PRAMDAC_FP_DEBUG_0_YINTERP_TRUNCATE                                  0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_YINTERP_BILINEAR                                  0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_VCNTR                                             0x00030000
+#define NV_PRAMDAC_FP_DEBUG_0_VCNTR__BITSHIFT                                   16
+#define NV_PRAMDAC_FP_DEBUG_0_TEST_NONE                                         0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_TEST_VCNTR                                        0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_TEST_NEWPIX                                       0x00000002
+#define NV_PRAMDAC_FP_DEBUG_0_TEST_BOTH                                         0x00000003
+#define NV_PRAMDAC_FP_DEBUG_0_XWEIGHT                                           0x00100000
+#define NV_PRAMDAC_FP_DEBUG_0_XWEIGHT__BITSHIFT                                 20
+#define NV_PRAMDAC_FP_DEBUG_0_XWEIGHT_TRUNCATE                                  0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_XWEIGHT_ROUND                                     0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_YWEIGHT                                           0x01000000
+#define NV_PRAMDAC_FP_DEBUG_0_YWEIGHT__BITSHIFT                                 24
+#define NV_PRAMDAC_FP_DEBUG_0_YWEIGHT_TRUNCATE                                  0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_YWEIGHT_ROUND                                     0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN                                           0x10000000
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN__BITSHIFT                                 28
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN_NONE                                      0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN_FPCLK                                     0x00000001
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN_TMDS_PLL                                  0x20000000
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN_TMDS_PLL__BITSHIFT                        29
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN_TMDS_PLL_DISABLE                          0x00000000
+#define NV_PRAMDAC_FP_DEBUG_0_PWRDOWN_TMDS_PLL_ENABLE                           0x00000001
+        NV_PRAMDAC_FP_DEBUG_1                       = 0x00000884,
+#define NV_PRAMDAC_FP_DEBUG_1_XSCALE_VALUE                                      0x00000fff
+#define NV_PRAMDAC_FP_DEBUG_1_XSCALE_VALUE__BITSHIFT                            0
+#define NV_PRAMDAC_FP_DEBUG_1_XSCALE_VALUE_ZERO                                 0x00000000
+#define NV_PRAMDAC_FP_DEBUG_1_XSCALE_TESTMODE                                   0x00001000
+#define NV_PRAMDAC_FP_DEBUG_1_XSCALE_TESTMODE__BITSHIFT                         12
+#define NV_PRAMDAC_FP_DEBUG_1_XSCALE_TESTMODE_DISABLE                           0x00000000
+#define NV_PRAMDAC_FP_DEBUG_1_XSCALE_TESTMODE_ENABLE                            0x00000001
+#define NV_PRAMDAC_FP_DEBUG_1_YSCALE_VALUE                                      0x0fff0000
+#define NV_PRAMDAC_FP_DEBUG_1_YSCALE_VALUE__BITSHIFT                            16
+#define NV_PRAMDAC_FP_DEBUG_1_YSCALE_VALUE_ZERO                                 0x00000000
+#define NV_PRAMDAC_FP_DEBUG_1_YSCALE_TESTMODE                                   0x10000000
+#define NV_PRAMDAC_FP_DEBUG_1_YSCALE_TESTMODE__BITSHIFT                         28
+#define NV_PRAMDAC_FP_DEBUG_1_YSCALE_TESTMODE_DISABLE                           0x00000000
+#define NV_PRAMDAC_FP_DEBUG_1_YSCALE_TESTMODE_ENABLE                            0x00000001
+        NV_PRAMDAC_FP_DEBUG_2                       = 0x00000888,
+#define NV_PRAMDAC_FP_DEBUG_2_HTOTAL_VALUE                                      0x00000fff
+#define NV_PRAMDAC_FP_DEBUG_2_HTOTAL_VALUE__BITSHIFT                            0
+#define NV_PRAMDAC_FP_DEBUG_2_HTOTAL_TESTMODE                                   0x00001000
+#define NV_PRAMDAC_FP_DEBUG_2_HTOTAL_TESTMODE__BITSHIFT                         12
+#define NV_PRAMDAC_FP_DEBUG_2_HTOTAL_TESTMODE_DISABLE                           0x00000000
+#define NV_PRAMDAC_FP_DEBUG_2_HTOTAL_TESTMODE_ENABLE                            0x00000001
+#define NV_PRAMDAC_FP_DEBUG_2_VTOTAL_VALUE                                      0x0fff0000
+#define NV_PRAMDAC_FP_DEBUG_2_VTOTAL_VALUE__BITSHIFT                            16
+#define NV_PRAMDAC_FP_DEBUG_2_VTOTAL_TESTMODE                                   0x10000000
+#define NV_PRAMDAC_FP_DEBUG_2_VTOTAL_TESTMODE__BITSHIFT                         28
+#define NV_PRAMDAC_FP_DEBUG_2_VTOTAL_TESTMODE_DISABLE                           0x00000000
+#define NV_PRAMDAC_FP_DEBUG_2_VTOTAL_TESTMODE_ENABLE                            0x00000001
+        NV_PRAMDAC_FP_DEBUG_3                       = 0x0000088c,
+#define NV_PRAMDAC_FP_DEBUG_3_XSTEPSIZE                                         0x00001fff
+#define NV_PRAMDAC_FP_DEBUG_3_XSTEPSIZE__BITSHIFT                               0
+#define NV_PRAMDAC_FP_DEBUG_3_YSTEPSIZE                                         0x1fff0000
+#define NV_PRAMDAC_FP_DEBUG_3_YSTEPSIZE__BITSHIFT                               16
+        NV_PRAMDAC_FP_DEBUG_4                       = 0x00000890,
+#define NV_PRAMDAC_FP_DEBUG_4_XSTEPSIZE                                         0x1ffff800
+#define NV_PRAMDAC_FP_DEBUG_4_XSTEPSIZE__BITSHIFT                               11
+        NV_PRAMDAC_FP_DEBUG_5                       = 0x00000894,
+#define NV_PRAMDAC_FP_DEBUG_5_YSTEPSIZE                                         0x1ffff800
+#define NV_PRAMDAC_FP_DEBUG_5_YSTEPSIZE__BITSHIFT                               11
+        NV_PRAMDAC_FP_DEBUG_6                       = 0x00000898,
+#define NV_PRAMDAC_FP_DEBUG_6_XSCALE_VALUE                                      0x1ffff800
+#define NV_PRAMDAC_FP_DEBUG_6_XSCALE_VALUE__BITSHIFT                            11
+#define NV_PRAMDAC_FP_DEBUG_6_XSCALE_VALUE_NOSCALE                              0x10000000
+        NV_PRAMDAC_FP_DEBUG_7                       = 0x0000089c,
+#define NV_PRAMDAC_FP_DEBUG_7_YSCALE_VALUE                                      0x1ffff800
+#define NV_PRAMDAC_FP_DEBUG_7_YSCALE_VALUE__BITSHIFT                            11
+#define NV_PRAMDAC_FP_DEBUG_7_YSCALE_VALUE_NOSCALE                              0x10000000
+        NV_PRAMDAC_FP_RAM_CONTROL                   = 0x000008a0,
+#define NV_PRAMDAC_FP_RAM_CONTROL_ADDRESS                                       0x000001ff
+#define NV_PRAMDAC_FP_RAM_CONTROL_ADDRESS__BITSHIFT                             0
+#define NV_PRAMDAC_FP_RAM_CONTROL_TESTMODE                                      0x00010000
+#define NV_PRAMDAC_FP_RAM_CONTROL_TESTMODE__BITSHIFT                            16
+#define NV_PRAMDAC_FP_RAM_CONTROL_TESTMODE_DISABLE                              0x00000000
+#define NV_PRAMDAC_FP_RAM_CONTROL_TESTMODE_ENABLE                               0x00000001
+        NV_PRAMDAC_FP_RAM_DATA_0                    = 0x000008a4,
+        NV_PRAMDAC_FP_RAM_DATA_1                    = 0x000008a8,
+        NV_PRAMDAC_FP_RAM_DATA_2                    = 0x000008ac,
+#define NV_PRAMDAC_FP_RAM_DATA_2_VAL                                            0x000000ff
+#define NV_PRAMDAC_FP_RAM_DATA_2_VAL__BITSHIFT                                  0
+        NV_PRAMDAC_FP_TMDS_CONTROL                  = 0x000008b0,
+#define NV_PRAMDAC_FP_TMDS_CONTROL_ADDRESS                                      0x000000ff
+#define NV_PRAMDAC_FP_TMDS_CONTROL_ADDRESS__BITSHIFT                            0
+#define NV_PRAMDAC_FP_TMDS_CONTROL_WRITE                                        0x00010000
+#define NV_PRAMDAC_FP_TMDS_CONTROL_WRITE__BITSHIFT                              16
+#define NV_PRAMDAC_FP_TMDS_CONTROL_WRITE_DISABLE                                0x00000001
+#define NV_PRAMDAC_FP_TMDS_CONTROL_WRITE_ENABLE                                 0x00000000
+        NV_PRAMDAC_FP_TMDS_DATA                     = 0x000008b4,
+#define NV_PRAMDAC_FP_TMDS_DATA_DATA                                            0x000000ff
+#define NV_PRAMDAC_FP_TMDS_DATA_DATA__BITSHIFT                                  0
+        NV_PRAMDAC_TVO_SETUP                        = 0x000008c0,
+#define NV_PRAMDAC_TVO_SETUP_DEV_TYPE                                           0x00000001
+#define NV_PRAMDAC_TVO_SETUP_DEV_TYPE__BITSHIFT                                 0
+#define NV_PRAMDAC_TVO_SETUP_DEV_TYPE_SLAVE                                     0x00000000
+#define NV_PRAMDAC_TVO_SETUP_DEV_TYPE_MASTER                                    0x00000001
+#define NV_PRAMDAC_TVO_SETUP_DATA_FORMAT                                        0x00000030
+#define NV_PRAMDAC_TVO_SETUP_DATA_FORMAT__BITSHIFT                              4
+#define NV_PRAMDAC_TVO_SETUP_DATA_FORMAT_MODE_1X00                              0x00000000
+#define NV_PRAMDAC_TVO_SETUP_DATA_FORMAT_MODE_0110                              0x00000001
+#define NV_PRAMDAC_TVO_SETUP_DATA_FORMAT_MODE_0000                              0x00000002
+#define NV_PRAMDAC_TVO_SETUP_DATA_FORMAT_MODE_RESERVED                          0x00000003
+#define NV_PRAMDAC_TVO_SETUP_DATA_OUT                                           0x00000100
+#define NV_PRAMDAC_TVO_SETUP_DATA_OUT__BITSHIFT                                 8
+#define NV_PRAMDAC_TVO_SETUP_DATA_OUT_IS_TVO                                    0x00000000
+#define NV_PRAMDAC_TVO_SETUP_DATA_OUT_IS_FP                                     0x00000001
+        NV_PRAMDAC_TVO_BLANK_COLOR                  = 0x000008c4,
+#define NV_PRAMDAC_TVO_BLANK_COLOR_VAL                                          0x00ffffff
+#define NV_PRAMDAC_TVO_BLANK_COLOR_VAL__BITSHIFT                                0
+#define NV_PRAMDAC_TVO_BLANK_COLOR_VAL_DEFAULT                                  0x00801080
+#define NV_PRAMDAC_TVO_BLANK_COLOR_EN                                           0xc0000000
+#define NV_PRAMDAC_TVO_BLANK_COLOR_EN__BITSHIFT                                 30
+#define NV_PRAMDAC_TVO_BLANK_COLOR_EN_DEFAULT                                   0x00000000
+#define NV_PRAMDAC_TVO_BLANK_COLOR_EN_BLANK                                     0x00000001
+#define NV_PRAMDAC_TVO_BLANK_COLOR_EN_ALWAYS                                    0x00000003
+        NV_PRAMDAC_TVO_SYNC_DELAY                   = 0x000008c8,
+#define NV_PRAMDAC_TVO_SYNC_DELAY_HSYNC                                         0x000000ff
+#define NV_PRAMDAC_TVO_SYNC_DELAY_HSYNC__BITSHIFT                               0
+#define NV_PRAMDAC_TVO_SYNC_DELAY_VSYNC                                         0x00ff0000
+#define NV_PRAMDAC_TVO_SYNC_DELAY_VSYNC__BITSHIFT                               16
+        NV_PRAMDAC_TVO_TESTMODE_CTRL                = 0x000008cc,
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_BYPASS                               0x00000001
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_BYPASS__BITSHIFT                     0
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_BYPASS_DIS                           0x00000000
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_BYPASS_EN                            0x00000001
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_VAL                                  0x00000010
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_VAL__BITSHIFT                        4
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_VAL_ZERO                             0x00000000
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_HSYNC_VAL_ONE                              0x00000001
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_BYPASS                               0x00010000
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_BYPASS__BITSHIFT                     16
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_BYPASS_DIS                           0x00000000
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_BYPASS_EN                            0x00000001
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_VAL                                  0x00100000
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_VAL__BITSHIFT                        20
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_VAL_ZERO                             0x00000000
+#define NV_PRAMDAC_TVO_TESTMODE_CTRL_VSYNC_VAL_ONE                              0x00000001
+        NV_PRAMDAC_MCHIP_GENERAL_CONTROL            = 0x00000900,
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_DISP                                   0x00000003
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_DISP__BITSHIFT                         0
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_DISP_NEVER                             0x00000000
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_DISP_ODD                               0x00000001
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_DISP_EVEN                              0x00000002
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_DISP_ALWAYS                            0x00000003
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_PROG                                   0x00000010
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_PROG__BITSHIFT                         4
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_PROG_DISABLE                           0x00000000
+#define NV_PRAMDAC_MCHIP_GENERAL_CONTROL_PROG_ENABLE                            0x00000001
+        NV_PRAMDAC_MCHIP_VDISPLAY_FIELD             = 0x00000904,
+#define NV_PRAMDAC_MCHIP_VDISPLAY_FIELD_START                                   0x00000fff
+#define NV_PRAMDAC_MCHIP_VDISPLAY_FIELD_START__BITSHIFT                         0
+#define NV_PRAMDAC_MCHIP_VDISPLAY_FIELD_END                                     0x0fff0000
+#define NV_PRAMDAC_MCHIP_VDISPLAY_FIELD_END__BITSHIFT                           16
+};
+
+static const char *const nv2a_pramdac_name[] = {
+    NAMER(NV_PRAMDAC_CU_START_POS),
+    NAMER(NV_PRAMDAC_CURSOR_CNTRL),
+    NAMER(NV_PRAMDAC_CURSOR_DATA_31_0),
+    NAMER(NV_PRAMDAC_CURSOR_DATA_63_32),
+    NAMER(NV_PRAMDAC_CURSOR_DATA_95_64),
+    NAMER(NV_PRAMDAC_CURSOR_DATA_127_96),
+    NAMER(NV_PRAMDAC_NVPLL_COEFF),
+    NAMER(NV_PRAMDAC_MPLL_COEFF),
+    NAMER(NV_PRAMDAC_VPLL_COEFF),
+    NAMER(NV_PRAMDAC_VPLL2_COEFF),
+    NAMER(NV_PRAMDAC_PLL_COEFF_SELECT),
+    NAMER(NV_PRAMDAC_PLL_SETUP_CONTROL),
+    NAMER(NV_PRAMDAC_PLL_TEST_COUNTER),
+    NAMER(NV_PRAMDAC_PALETTE_TEST),
+    NAMER(NV_PRAMDAC_SEL_CLK),
+    NAMER(NV_PRAMDAC_PLL_COMPAT),
+    NAMER(NV_PRAMDAC_GENERAL_CONTROL),
+    NAMER(NV_PRAMDAC_PALETTE_RECOVERY),
+    NAMER(NV_PRAMDAC_PALETTE_LUT_INDEX),
+    NAMER(NV_PRAMDAC_PALETTE_LUT_DATA),
+    NAMER(NV_PRAMDAC_TEST_CONTROL),
+    NAMER(NV_PRAMDAC_CHECKSUM),
+    NAMER(NV_PRAMDAC_TESTPOINT_DATA),
+    NAMER(NV_PRAMDAC_COMPOSITE),
+    NAMER(NV_PRAMDAC_LGS_HSYNC_NUMERATOR),
+    NAMER(NV_PRAMDAC_LGS_HSYNC_DENOMINATOR),
+    NAMER(NV_PRAMDAC_LGS_HSYNC_HIGH),
+    NAMER(NV_PRAMDAC_LGS_HSYNC_HIGH_VSYNC),
+    NAMER(NV_PRAMDAC_LGS_SWITCHES),
+    NAMER(NV_PRAMDAC_LGS_TRANSFER),
+    NAMER(NV_PRAMDAC_TV_SETUP),
+    NAMER(NV_PRAMDAC_BLANK_COLOR),
+    NAMER(NV_PRAMDAC_TV_VTOTAL),
+    NAMER(NV_PRAMDAC_TV_VSYNC_START),
+    NAMER(NV_PRAMDAC_TV_VSYNC_END),
+    NAMER(NV_PRAMDAC_TV_HTOTAL),
+    NAMER(NV_PRAMDAC_TV_HSYNC_START),
+    NAMER(NV_PRAMDAC_TV_HSYNC_END),
+    NAMER(NV_PRAMDAC_TV_CHECKSUM),
+    NAMER(NV_PRAMDAC_TV_TEST_CONTROL),
+    NAMER(NV_PRAMDAC_TV_SYNC_DELAY),
+    NAMER(NV_PRAMDAC_FP_VDISPLAY_END),
+    NAMER(NV_PRAMDAC_FP_VTOTAL),
+    NAMER(NV_PRAMDAC_FP_VCRTC),
+    NAMER(NV_PRAMDAC_FP_VSYNC_START),
+    NAMER(NV_PRAMDAC_FP_VSYNC_END),
+    NAMER(NV_PRAMDAC_FP_VVALID_START),
+    NAMER(NV_PRAMDAC_FP_VVALID_END),
+    NAMER(NV_PRAMDAC_FP_HDISPLAY_END),
+    NAMER(NV_PRAMDAC_FP_HTOTAL),
+    NAMER(NV_PRAMDAC_FP_HCRTC),
+    NAMER(NV_PRAMDAC_FP_HSYNC_START),
+    NAMER(NV_PRAMDAC_FP_HSYNC_END),
+    NAMER(NV_PRAMDAC_FP_HVALID_START),
+    NAMER(NV_PRAMDAC_FP_HVALID_END),
+    NAMER(NV_PRAMDAC_FP_CHECKSUM),
+    NAMER(NV_PRAMDAC_FP_TEST_CONTROL),
+    NAMER(NV_PRAMDAC_FP_TG_CONTROL),
+    NAMER(NV_PRAMDAC_FP_INACTIVE_PXL_COLOR),
+    NAMER(NV_PRAMDAC_FP_DEBUG_0),
+    NAMER(NV_PRAMDAC_FP_DEBUG_1),
+    NAMER(NV_PRAMDAC_FP_DEBUG_2),
+    NAMER(NV_PRAMDAC_FP_DEBUG_3),
+    NAMER(NV_PRAMDAC_FP_DEBUG_4),
+    NAMER(NV_PRAMDAC_FP_DEBUG_5),
+    NAMER(NV_PRAMDAC_FP_DEBUG_6),
+    NAMER(NV_PRAMDAC_FP_DEBUG_7),
+    NAMER(NV_PRAMDAC_FP_RAM_CONTROL),
+    NAMER(NV_PRAMDAC_FP_RAM_DATA_0),
+    NAMER(NV_PRAMDAC_FP_RAM_DATA_1),
+    NAMER(NV_PRAMDAC_FP_RAM_DATA_2),
+    NAMER(NV_PRAMDAC_FP_TMDS_CONTROL),
+    NAMER(NV_PRAMDAC_FP_TMDS_DATA),
+    NAMER(NV_PRAMDAC_TVO_SETUP),
+    NAMER(NV_PRAMDAC_TVO_BLANK_COLOR),
+    NAMER(NV_PRAMDAC_TVO_SYNC_DELAY),
+    NAMER(NV_PRAMDAC_TVO_TESTMODE_CTRL),
+    NAMER(NV_PRAMDAC_MCHIP_GENERAL_CONTROL),
+    NAMER(NV_PRAMDAC_MCHIP_VDISPLAY_FIELD),
+};
+

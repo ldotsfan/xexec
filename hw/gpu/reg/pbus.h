@@ -1,0 +1,1891 @@
+
+enum {
+        NV_PBUS_DEBUG_0                             = 0x00000080,
+#define NV_PBUS_DEBUG_0_FBIO_SCLK_DELAY                                         0x0000000f
+#define NV_PBUS_DEBUG_0_FBIO_SCLK_DELAY__BITSHIFT                               0
+#define NV_PBUS_DEBUG_0_FBIO_SCLK_DELAY_8                                       0x00000008
+#define NV_PBUS_DEBUG_0_FBIO_SCLK_PC                                            0x00000010
+#define NV_PBUS_DEBUG_0_FBIO_SCLK_PC__BITSHIFT                                  4
+#define NV_PBUS_DEBUG_0_FBIO_SCLK_PC_NORMAL                                     0x00000000
+#define NV_PBUS_DEBUG_0_FBIO_SCLK_PC_OVERRIDE                                   0x00000001
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_DELAY                                        0x00000f00
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_DELAY__BITSHIFT                              8
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_DELAY_4                                      0x00000004
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_DELAY_8                                      0x00000008
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_PC                                           0x00001000
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_PC__BITSHIFT                                 12
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_PC_NORMAL                                    0x00000000
+#define NV_PBUS_DEBUG_0_FBIO_FBCLK_PC_OVERRIDE                                  0x00000001
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_DELAY                                         0x000f0000
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_DELAY__BITSHIFT                               16
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_DELAY_8                                       0x00000008
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_DELAY_10                                      0x0000000a
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_PC                                            0x00100000
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_PC__BITSHIFT                                  20
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_PC_NORMAL                                     0x00000000
+#define NV_PBUS_DEBUG_0_FBIO_ACLK_PC_OVERRIDE                                   0x00000001
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_DELAY                                         0x0f000000
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_DELAY__BITSHIFT                               24
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_DELAY_8                                       0x00000008
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_DELAY_14                                      0x0000000e
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_PC                                            0x10000000
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_PC__BITSHIFT                                  28
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_PC_NORMAL                                     0x00000000
+#define NV_PBUS_DEBUG_0_FBIO_RCLK_PC_OVERRIDE                                   0x00000001
+        NV_PBUS_DEBUG_1                             = 0x00000084,
+#define NV_PBUS_DEBUG_1_PCIM_THROTTLE                                           0x00000001
+#define NV_PBUS_DEBUG_1_PCIM_THROTTLE__BITSHIFT                                 0
+#define NV_PBUS_DEBUG_1_PCIM_THROTTLE_DISABLED                                  0x00000000
+#define NV_PBUS_DEBUG_1_PCIM_THROTTLE_ENABLED                                   0x00000001
+#define NV_PBUS_DEBUG_1_PCIM_CMD                                                0x00000002
+#define NV_PBUS_DEBUG_1_PCIM_CMD__BITSHIFT                                      1
+#define NV_PBUS_DEBUG_1_PCIM_CMD_SIZE_BASED                                     0x00000000
+#define NV_PBUS_DEBUG_1_PCIM_CMD_MRL_ONLY                                       0x00000001
+#define NV_PBUS_DEBUG_1_HASH_DECODE                                             0x00000004
+#define NV_PBUS_DEBUG_1_HASH_DECODE__BITSHIFT                                   2
+#define NV_PBUS_DEBUG_1_HASH_DECODE_1FF                                         0x00000000
+#define NV_PBUS_DEBUG_1_HASH_DECODE_2FF                                         0x00000001
+#define NV_PBUS_DEBUG_1_AGPM_CMD                                                0x00000018
+#define NV_PBUS_DEBUG_1_AGPM_CMD__BITSHIFT                                      3
+#define NV_PBUS_DEBUG_1_AGPM_CMD_HP_ON_1ST                                      0x00000000
+#define NV_PBUS_DEBUG_1_AGPM_CMD_LP_ONLY                                        0x00000001
+#define NV_PBUS_DEBUG_1_AGPM_CMD_HP_ONLY                                        0x00000002
+#define NV_PBUS_DEBUG_1_PCIS_WRITE                                              0x00000020
+#define NV_PBUS_DEBUG_1_PCIS_WRITE__BITSHIFT                                    5
+#define NV_PBUS_DEBUG_1_PCIS_WRITE_0_CYCLE                                      0x00000000
+#define NV_PBUS_DEBUG_1_PCIS_WRITE_1_CYCLE                                      0x00000001
+#define NV_PBUS_DEBUG_1_PCIS_2_1                                                0x00000040
+#define NV_PBUS_DEBUG_1_PCIS_2_1__BITSHIFT                                      6
+#define NV_PBUS_DEBUG_1_PCIS_2_1_DISABLED                                       0x00000000
+#define NV_PBUS_DEBUG_1_PCIS_2_1_ENABLED                                        0x00000001
+#define NV_PBUS_DEBUG_1_RETRY                                                   0x00000080
+#define NV_PBUS_DEBUG_1_RETRY__BITSHIFT                                         7
+#define NV_PBUS_DEBUG_1_RETRY_DISABLED                                          0x00000000
+#define NV_PBUS_DEBUG_1_RETRY_ENABLED                                           0x00000001
+#define NV_PBUS_DEBUG_1_PCIS_RD_BURST                                           0x00000100
+#define NV_PBUS_DEBUG_1_PCIS_RD_BURST__BITSHIFT                                 8
+#define NV_PBUS_DEBUG_1_PCIS_RD_BURST_DISABLED                                  0x00000000
+#define NV_PBUS_DEBUG_1_PCIS_RD_BURST_ENABLED                                   0x00000001
+#define NV_PBUS_DEBUG_1_PCIS_WR_BURST                                           0x00000200
+#define NV_PBUS_DEBUG_1_PCIS_WR_BURST__BITSHIFT                                 9
+#define NV_PBUS_DEBUG_1_PCIS_WR_BURST_DISABLED                                  0x00000000
+#define NV_PBUS_DEBUG_1_PCIS_WR_BURST_ENABLED                                   0x00000001
+#define NV_PBUS_DEBUG_1_PCIS_EARLY_RTY                                          0x00000400
+#define NV_PBUS_DEBUG_1_PCIS_EARLY_RTY__BITSHIFT                                10
+#define NV_PBUS_DEBUG_1_PCIS_EARLY_RTY_DISABLED                                 0x00000000
+#define NV_PBUS_DEBUG_1_PCIS_EARLY_RTY_ENABLED                                  0x00000001
+#define NV_PBUS_DEBUG_1_PCIS_CPUQ                                               0x00001000
+#define NV_PBUS_DEBUG_1_PCIS_CPUQ__BITSHIFT                                     12
+#define NV_PBUS_DEBUG_1_PCIS_CPUQ_DISABLED                                      0x00000000
+#define NV_PBUS_DEBUG_1_PCIS_CPUQ_ENABLED                                       0x00000001
+#define NV_PBUS_DEBUG_1_DPSH_DECODE                                             0x00002000
+#define NV_PBUS_DEBUG_1_DPSH_DECODE__BITSHIFT                                   13
+#define NV_PBUS_DEBUG_1_DPSH_DECODE_NV4                                         0x00000000
+#define NV_PBUS_DEBUG_1_DPSH_DECODE_NV3                                         0x00000001
+#define NV_PBUS_DEBUG_1_FBI_DIFFERENTIAL                                        0x00004000
+#define NV_PBUS_DEBUG_1_FBI_DIFFERENTIAL__BITSHIFT                              14
+#define NV_PBUS_DEBUG_1_FBI_DIFFERENTIAL_ENABLED                                0x00000000
+#define NV_PBUS_DEBUG_1_FBI_DIFFERENTIAL_DISABLED                               0x00000001
+#define NV_PBUS_DEBUG_1_AGPFW_DWOD                                              0x00008000
+#define NV_PBUS_DEBUG_1_AGPFW_DWOD__BITSHIFT                                    15
+#define NV_PBUS_DEBUG_1_AGPFW_DWOD_DISABLED                                     0x00000000
+#define NV_PBUS_DEBUG_1_AGPFW_DWOD_ENABLED                                      0x00000001
+#define NV_PBUS_DEBUG_1_OPENGL                                                  0x00010000
+#define NV_PBUS_DEBUG_1_OPENGL__BITSHIFT                                        16
+#define NV_PBUS_DEBUG_1_OPENGL_OFF                                              0x00000000
+#define NV_PBUS_DEBUG_1_OPENGL_ON                                               0x00000001
+#define NV_PBUS_DEBUG_1_SPARE2                                                  0x00020000
+#define NV_PBUS_DEBUG_1_SPARE2__BITSHIFT                                        17
+#define NV_PBUS_DEBUG_1_SPARE2_ZERO                                             0x00000000
+#define NV_PBUS_DEBUG_1_SPARE2_ONE                                              0x00000001
+#define NV_PBUS_DEBUG_1_ACQUIRE_TIMEOUT                                         0x00040000
+#define NV_PBUS_DEBUG_1_ACQUIRE_TIMEOUT__BITSHIFT                               18
+#define NV_PBUS_DEBUG_1_ACQUIRE_TIMEOUT_DISABLED                                0x00000000
+#define NV_PBUS_DEBUG_1_ACQUIRE_TIMEOUT_ENABLED                                 0x00000001
+#define NV_PBUS_DEBUG_1_SPARE4                                                  0x00080000
+#define NV_PBUS_DEBUG_1_SPARE4__BITSHIFT                                        19
+#define NV_PBUS_DEBUG_1_SPARE4_ZERO                                             0x00000000
+#define NV_PBUS_DEBUG_1_SPARE4_ONE                                              0x00000001
+#define NV_PBUS_DEBUG_1_SPARE5                                                  0x00100000
+#define NV_PBUS_DEBUG_1_SPARE5__BITSHIFT                                        20
+#define NV_PBUS_DEBUG_1_SPARE5_ZERO                                             0x00000000
+#define NV_PBUS_DEBUG_1_SPARE5_ONE                                              0x00000001
+#define NV_PBUS_DEBUG_1_AGPFW_ADIS                                              0x00200000
+#define NV_PBUS_DEBUG_1_AGPFW_ADIS__BITSHIFT                                    21
+#define NV_PBUS_DEBUG_1_AGPFW_ADIS_ENABLED                                      0x00000000
+#define NV_PBUS_DEBUG_1_AGPFW_ADIS_DISABLED                                     0x00000001
+#define NV_PBUS_DEBUG_1_SPARE7                                                  0x00400000
+#define NV_PBUS_DEBUG_1_SPARE7__BITSHIFT                                        22
+#define NV_PBUS_DEBUG_1_SPARE7_ZERO                                             0x00000000
+#define NV_PBUS_DEBUG_1_SPARE7_ONE                                              0x00000001
+#define NV_PBUS_DEBUG_1_SPARE8                                                  0x00800000
+#define NV_PBUS_DEBUG_1_SPARE8__BITSHIFT                                        23
+#define NV_PBUS_DEBUG_1_SPARE8_ZERO                                             0x00000000
+#define NV_PBUS_DEBUG_1_SPARE8_ONE                                              0x00000001
+#define NV_PBUS_DEBUG_1_AGP_DIN_SEL_SRC                                         0x02000000
+#define NV_PBUS_DEBUG_1_AGP_DIN_SEL_SRC__BITSHIFT                               25
+#define NV_PBUS_DEBUG_1_AGP_DIN_SEL_SRC_HOST                                    0x00000000
+#define NV_PBUS_DEBUG_1_AGP_DIN_SEL_SRC_ADSTB                                   0x00000001
+#define NV_PBUS_DEBUG_1_PLL_PWRDWN                                              0x04000000
+#define NV_PBUS_DEBUG_1_PLL_PWRDWN__BITSHIFT                                    26
+#define NV_PBUS_DEBUG_1_PLL_PWRDWN_DISABLE                                      0x00000000
+#define NV_PBUS_DEBUG_1_PLL_PWRDWN_ENABLE                                       0x00000001
+#define NV_PBUS_DEBUG_1_PLL_STOPCLK                                             0x08000000
+#define NV_PBUS_DEBUG_1_PLL_STOPCLK__BITSHIFT                                   27
+#define NV_PBUS_DEBUG_1_PLL_STOPCLK_DISABLE                                     0x00000000
+#define NV_PBUS_DEBUG_1_PLL_STOPCLK_ENABLE                                      0x00000001
+#define NV_PBUS_DEBUG_1_CORE_SLOWDWN                                            0x60000000
+#define NV_PBUS_DEBUG_1_CORE_SLOWDWN__BITSHIFT                                  29
+#define NV_PBUS_DEBUG_1_CORE_SLOWDWN_DISABLE                                    0x00000000
+#define NV_PBUS_DEBUG_1_CORE_SLOWDWN_ENABLE                                     0x00000001
+        NV_PBUS_DEBUG_2                             = 0x00000088,
+#define NV_PBUS_DEBUG_2_AGP_VREF                                                0x00000001
+#define NV_PBUS_DEBUG_2_AGP_VREF__BITSHIFT                                      0
+#define NV_PBUS_DEBUG_2_AGP_VREF_DISABLED                                       0x00000000
+#define NV_PBUS_DEBUG_2_AGP_VREF_ENABLED                                        0x00000001
+#define NV_PBUS_DEBUG_2_AGP_SB_STB_DELAY                                        0x000003f0
+#define NV_PBUS_DEBUG_2_AGP_SB_STB_DELAY__BITSHIFT                              4
+#define NV_PBUS_DEBUG_2_AGP_SB_STB_DELAY_34                                     0x00000022
+#define NV_PBUS_DEBUG_2_AGP_AD_STB_DSE                                          0x00001000
+#define NV_PBUS_DEBUG_2_AGP_AD_STB_DSE__BITSHIFT                                12
+#define NV_PBUS_DEBUG_2_AGP_AD_STB_DSE_OFF                                      0x00000000
+#define NV_PBUS_DEBUG_2_AGP_AD_STB_DSE_ON                                       0x00000001
+#define NV_PBUS_DEBUG_2_SAGP_VREF                                               0x00010000
+#define NV_PBUS_DEBUG_2_SAGP_VREF__BITSHIFT                                     16
+#define NV_PBUS_DEBUG_2_SAGP_VREF_DISABLED                                      0x00000000
+#define NV_PBUS_DEBUG_2_SAGP_VREF_ENABLED                                       0x00000001
+#define NV_PBUS_DEBUG_2_SDSP_VREF                                               0x00100000
+#define NV_PBUS_DEBUG_2_SDSP_VREF__BITSHIFT                                     20
+#define NV_PBUS_DEBUG_2_SDSP_VREF_DISABLED                                      0x00000000
+#define NV_PBUS_DEBUG_2_SDSP_VREF_ENABLED                                       0x00000001
+        NV_PBUS_DEBUG_3                             = 0x0000008c,
+#define NV_PBUS_DEBUG_3_AGP_MAX_SIZE                                            0x00000003
+#define NV_PBUS_DEBUG_3_AGP_MAX_SIZE__BITSHIFT                                  0
+#define NV_PBUS_DEBUG_3_AGP_MAX_SIZE_UNLIMITED                                  0x00000000
+#define NV_PBUS_DEBUG_3_AGP_MAX_SIZE_32_BYTES                                   0x00000001
+#define NV_PBUS_DEBUG_3_AGP_MAX_SIZE_64_BYTES                                   0x00000002
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK                                            0x000000f0
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK__BITSHIFT                                  4
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_66MHZ                                0x00000005
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_73MHZ                                0x00000006
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_80MHZ                                0x00000007
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_87MHZ                                0x00000008
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_94MHZ                                0x00000009
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_100MHZ                               0x0000000a
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_106MHZ                               0x0000000b
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_113MHZ                               0x0000000c
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_120MHZ                               0x0000000d
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_126MHZ                               0x0000000e
+#define NV_PBUS_DEBUG_3_AGP_4X_NVCLK_ABOVE_133MHZ                               0x0000000f
+        NV_PBUS_DEBUG_CTL                           = 0x00000090,
+#define NV_PBUS_DEBUG_CTL_MODE                                                  0x00000001
+#define NV_PBUS_DEBUG_CTL_MODE__BITSHIFT                                        0
+#define NV_PBUS_DEBUG_CTL_MODE_DISABLED                                         0x00000000
+#define NV_PBUS_DEBUG_CTL_MODE_ENABLED                                          0x00000001
+#define NV_PBUS_DEBUG_CTL_READ_SELECT                                           0x00000010
+#define NV_PBUS_DEBUG_CTL_READ_SELECT__BITSHIFT                                 4
+#define NV_PBUS_DEBUG_CTL_READ_SELECT_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTL_READ_SELECT_1                                         0x00000001
+        NV_PBUS_DEBUG_READ                          = 0x00000094,
+        NV_PBUS_DEBUG_HOST                          = 0x0000009c,
+#define NV_PBUS_DEBUG_HOST_SEL                                                  0x0000000f
+#define NV_PBUS_DEBUG_HOST_SEL__BITSHIFT                                        0
+        NV_PBUS_DEBUG_SEL_0                         = 0x000000a0,
+#define NV_PBUS_DEBUG_SEL_FIELD                                                 0x0000000f
+#define NV_PBUS_DEBUG_SEL_FIELD__BITSHIFT                                       0
+        NV_PBUS_DEBUG_SEL_1                         = 0x000000a4,
+#define NV_PBUS_DEBUG_SEL_FIELD                                                 0x0000000f
+#define NV_PBUS_DEBUG_SEL_FIELD__BITSHIFT                                       0
+        NV_PBUS_DEBUG_SEL_2                         = 0x000000a8,
+#define NV_PBUS_DEBUG_SEL_FIELD                                                 0x0000000f
+#define NV_PBUS_DEBUG_SEL_FIELD__BITSHIFT                                       0
+        NV_PBUS_DEBUG_SEL_3                         = 0x000000ac,
+#define NV_PBUS_DEBUG_SEL_FIELD                                                 0x0000000f
+#define NV_PBUS_DEBUG_SEL_FIELD__BITSHIFT                                       0
+        NV_PBUS_DEBUG_CTRIM_0                       = 0x000000b0,
+#define NV_PBUS_DEBUG_CTRIM_0_INIT                                              0x06236035
+#define NV_PBUS_DEBUG_CTRIM_0_OPTIMAL                                           0x06436013
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NE_DELAY                                       0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NE_DELAY__BITSHIFT                             0
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NE_DELAY_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SE_DELAY                                       0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SE_DELAY__BITSHIFT                             4
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SE_DELAY_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NW_DELAY                                       0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NW_DELAY__BITSHIFT                             8
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NW_DELAY_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SW_DELAY                                       0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SW_DELAY__BITSHIFT                             12
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SW_DELAY_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_M_NW_DELAY                                        0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_0_M_NW_DELAY__BITSHIFT                              16
+#define NV_PBUS_DEBUG_CTRIM_0_M_NW_DELAY_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_M_SW_DELAY                                        0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_0_M_SW_DELAY__BITSHIFT                              20
+#define NV_PBUS_DEBUG_CTRIM_0_M_SW_DELAY_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_U_NW_DELAY                                        0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_0_U_NW_DELAY__BITSHIFT                              24
+#define NV_PBUS_DEBUG_CTRIM_0_U_NW_DELAY_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_U_SW_DELAY                                        0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_0_U_SW_DELAY__BITSHIFT                              28
+#define NV_PBUS_DEBUG_CTRIM_0_U_SW_DELAY_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NW_TRIM                                        0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NW_TRIM__BITSHIFT                              0
+#define NV_PBUS_DEBUG_CTRIM_0_NV_NW_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_FE_TRIM                                        0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_0_NV_FE_TRIM__BITSHIFT                              4
+#define NV_PBUS_DEBUG_CTRIM_0_NV_FE_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_CA_TRIM                                        0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_0_NV_CA_TRIM__BITSHIFT                              8
+#define NV_PBUS_DEBUG_CTRIM_0_NV_CA_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_CS_TRIM                                        0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_0_NV_CS_TRIM__BITSHIFT                              12
+#define NV_PBUS_DEBUG_CTRIM_0_NV_CS_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SH_TRIM                                        0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SH_TRIM__BITSHIFT                              16
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SH_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SP_TRIM                                        0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SP_TRIM__BITSHIFT                              20
+#define NV_PBUS_DEBUG_CTRIM_0_NV_SP_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_NV_FB_TRIM                                        0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_0_NV_FB_TRIM__BITSHIFT                              24
+#define NV_PBUS_DEBUG_CTRIM_0_NV_FB_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_0_SPARE_0                                           0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_0_SPARE_0__BITSHIFT                                 28
+#define NV_PBUS_DEBUG_CTRIM_0_SPARE_0_8                                         0x00000008
+        NV_PBUS_DEBUG_CTRIM_1                       = 0x000000b4,
+#define NV_PBUS_DEBUG_CTRIM_1_INIT                                              0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_OPTIMAL                                           0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C0_DELAY                                          0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_1_C0_DELAY__BITSHIFT                                0
+#define NV_PBUS_DEBUG_CTRIM_1_C0_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C1_DELAY                                          0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_1_C1_DELAY__BITSHIFT                                4
+#define NV_PBUS_DEBUG_CTRIM_1_C1_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C2_DELAY                                          0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_1_C2_DELAY__BITSHIFT                                8
+#define NV_PBUS_DEBUG_CTRIM_1_C2_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C3_DELAY                                          0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_1_C3_DELAY__BITSHIFT                                12
+#define NV_PBUS_DEBUG_CTRIM_1_C3_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C4_DELAY                                          0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_1_C4_DELAY__BITSHIFT                                16
+#define NV_PBUS_DEBUG_CTRIM_1_C4_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C5_DELAY                                          0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_1_C5_DELAY__BITSHIFT                                20
+#define NV_PBUS_DEBUG_CTRIM_1_C5_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C6_DELAY                                          0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_1_C6_DELAY__BITSHIFT                                24
+#define NV_PBUS_DEBUG_CTRIM_1_C6_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_C7_DELAY                                          0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_1_C7_DELAY__BITSHIFT                                28
+#define NV_PBUS_DEBUG_CTRIM_1_C7_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_M_SHAPE                                           0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_1_M_SHAPE__BITSHIFT                                 0
+#define NV_PBUS_DEBUG_CTRIM_1_M_SHAPE_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_M_SHAPE_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_N_SHAPE                                           0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_1_N_SHAPE__BITSHIFT                                 4
+#define NV_PBUS_DEBUG_CTRIM_1_N_SHAPE_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_N_SHAPE_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_PV1_SHAPE                                         0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_1_PV1_SHAPE__BITSHIFT                               8
+#define NV_PBUS_DEBUG_CTRIM_1_PV1_SHAPE_0                                       0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_PV1_SHAPE_INIT                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_PV2_SHAPE                                         0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_1_PV2_SHAPE__BITSHIFT                               12
+#define NV_PBUS_DEBUG_CTRIM_1_PV2_SHAPE_0                                       0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_PV2_SHAPE_INIT                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FP1_SHAPE                                         0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_1_FP1_SHAPE__BITSHIFT                               16
+#define NV_PBUS_DEBUG_CTRIM_1_FP1_SHAPE_0                                       0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FP1_SHAPE_INIT                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPDP_SHAPE                                        0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_1_FPDP_SHAPE__BITSHIFT                              20
+#define NV_PBUS_DEBUG_CTRIM_1_FPDP_SHAPE_0                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPDP_SHAPE_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPIO_SHAPE                                        0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPIO_SHAPE__BITSHIFT                              24
+#define NV_PBUS_DEBUG_CTRIM_1_FPIO_SHAPE_0                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPIO_SHAPE_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPION_SHAPE                                       0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPION_SHAPE__BITSHIFT                             28
+#define NV_PBUS_DEBUG_CTRIM_1_FPION_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_1_FPION_SHAPE_INIT                                  0x00000000
+        NV_PBUS_DEBUG_CTRIM_2                       = 0x000000b8,
+#define NV_PBUS_DEBUG_CTRIM_2_INIT                                              0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_OPTIMAL                                           0x33333333
+#define NV_PBUS_DEBUG_CTRIM_2_C0_DELAY                                          0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_2_C0_DELAY__BITSHIFT                                0
+#define NV_PBUS_DEBUG_CTRIM_2_C0_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_C1_DELAY                                          0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_2_C1_DELAY__BITSHIFT                                4
+#define NV_PBUS_DEBUG_CTRIM_2_C1_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_C2_DELAY                                          0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_2_C2_DELAY__BITSHIFT                                8
+#define NV_PBUS_DEBUG_CTRIM_2_C2_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_C3_DELAY                                          0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_2_C3_DELAY__BITSHIFT                                12
+#define NV_PBUS_DEBUG_CTRIM_2_C3_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_C4_DELAY                                          0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_2_C4_DELAY__BITSHIFT                                16
+#define NV_PBUS_DEBUG_CTRIM_2_C4_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_C5_DELAY                                          0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_2_C5_DELAY__BITSHIFT                                20
+#define NV_PBUS_DEBUG_CTRIM_2_C5_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_C6_DELAY                                          0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_2_C6_DELAY__BITSHIFT                                24
+#define NV_PBUS_DEBUG_CTRIM_2_C6_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_C7_DELAY                                          0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_2_C7_DELAY__BITSHIFT                                28
+#define NV_PBUS_DEBUG_CTRIM_2_C7_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_0_SHAPE                                       0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_0_SHAPE__BITSHIFT                             0
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_0_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_0_SHAPE_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_1_SHAPE                                       0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_1_SHAPE__BITSHIFT                             4
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_1_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_1_SHAPE_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_2_SHAPE                                       0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_2_SHAPE__BITSHIFT                             8
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_2_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_2_SHAPE_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_3_SHAPE                                       0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_3_SHAPE__BITSHIFT                             12
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_3_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2I_3_SHAPE_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_0_SHAPE                                       0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_0_SHAPE__BITSHIFT                             16
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_0_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_0_SHAPE_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_1_SHAPE                                       0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_1_SHAPE__BITSHIFT                             20
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_1_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_1_SHAPE_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_2_SHAPE                                       0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_2_SHAPE__BITSHIFT                             24
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_2_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_2_SHAPE_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_3_SHAPE                                       0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_3_SHAPE__BITSHIFT                             28
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_3_SHAPE_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_2_M2O_3_SHAPE_INIT                                  0x00000000
+        NV_PBUS_DEBUG_CTRIM_3                       = 0x000000bc,
+#define NV_PBUS_DEBUG_CTRIM_3_INIT                                              0x00001300
+#define NV_PBUS_DEBUG_CTRIM_3_OPTIMAL                                           0x00001300
+#define NV_PBUS_DEBUG_CTRIM_3_C0_DELAY                                          0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_3_C0_DELAY__BITSHIFT                                0
+#define NV_PBUS_DEBUG_CTRIM_3_C0_DELAY_8                                        0x00000003
+#define NV_PBUS_DEBUG_CTRIM_3_C1_DELAY                                          0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_3_C1_DELAY__BITSHIFT                                4
+#define NV_PBUS_DEBUG_CTRIM_3_C1_DELAY_8                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_3_C2_DELAY                                          0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_3_C2_DELAY__BITSHIFT                                8
+#define NV_PBUS_DEBUG_CTRIM_3_C2_DELAY_8                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_3_C3_DELAY                                          0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_3_C3_DELAY__BITSHIFT                                12
+#define NV_PBUS_DEBUG_CTRIM_3_C3_DELAY_8                                        0x00000003
+#define NV_PBUS_DEBUG_CTRIM_3_C4_DELAY                                          0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_3_C4_DELAY__BITSHIFT                                16
+#define NV_PBUS_DEBUG_CTRIM_3_C4_DELAY_8                                        0x00000002
+#define NV_PBUS_DEBUG_CTRIM_3_C5_DELAY                                          0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_3_C5_DELAY__BITSHIFT                                20
+#define NV_PBUS_DEBUG_CTRIM_3_C5_DELAY_8                                        0x00000002
+#define NV_PBUS_DEBUG_CTRIM_3_C6_DELAY                                          0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_3_C6_DELAY__BITSHIFT                                24
+#define NV_PBUS_DEBUG_CTRIM_3_C6_DELAY_F                                        0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_3_C7_DELAY                                          0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_3_C7_DELAY__BITSHIFT                                28
+#define NV_PBUS_DEBUG_CTRIM_3_C7_DELAY_F                                        0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_3_CCIR_CLK_OUT_TRIM                                 0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_3_CCIR_CLK_OUT_TRIM__BITSHIFT                       0
+#define NV_PBUS_DEBUG_CTRIM_3_CCIR_CLK_OUT_TRIM_8                               0x00000003
+#define NV_PBUS_DEBUG_CTRIM_3_CCIR_CLK_OUT_TRIM_INIT                            0x00000003
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK1_TRIM                                        0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK1_TRIM__BITSHIFT                              4
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK1_TRIM_8                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK1_TRIM_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK1_TRIM                                        0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK1_TRIM__BITSHIFT                              8
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK1_TRIM_8                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK1_TRIM_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_3_VSCLK_TRIM                                        0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_3_VSCLK_TRIM__BITSHIFT                              12
+#define NV_PBUS_DEBUG_CTRIM_3_VSCLK_TRIM_8                                      0x00000003
+#define NV_PBUS_DEBUG_CTRIM_3_VSCLK_TRIM_INIT                                   0x00000003
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK2_TRIM                                        0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK2_TRIM__BITSHIFT                              16
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK2_TRIM_8                                      0x00000002
+#define NV_PBUS_DEBUG_CTRIM_3_PCLK2_TRIM_INIT                                   0x00000002
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK2_TRIM                                        0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK2_TRIM__BITSHIFT                              20
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK2_TRIM_8                                      0x00000002
+#define NV_PBUS_DEBUG_CTRIM_3_VCLK2_TRIM_INIT                                   0x00000002
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_NVCLK                                      0x01000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_NVCLK__BITSHIFT                            24
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_NVCLK_ENABLE                               0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_NVCLK_EN_INIT                              0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_MCLK                                       0x02000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_MCLK__BITSHIFT                             25
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_MCLK_ENABLE                                0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_MCLK_EN_INIT                               0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CLK4X                                      0x04000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CLK4X__BITSHIFT                            26
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CLK4X_ENABLE                               0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CLK4X_EN_INIT                              0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR_O                                     0x08000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR_O__BITSHIFT                           27
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR_O_ENABLE                              0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR_O_EN_INIT                             0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VIP_HCLK                                   0x10000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VIP_HCLK__BITSHIFT                         28
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VIP_HCLK_ENABLE                            0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VIP_HCLK_EN_INIT                           0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VCLK2                                      0x20000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VCLK2__BITSHIFT                            29
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VCLK2_ENABLE                               0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_VCLK2_EN_INIT                              0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_PCLK                                       0x40000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_PCLK__BITSHIFT                             30
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_PCLK_ENABLE                                0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_PCLK_EN_INIT                               0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR2                                      0x80000000
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR2__BITSHIFT                            31
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR2_ENABLE                               0x00000001
+#define NV_PBUS_DEBUG_CTRIM_3_BYPASS_CCIR2_EN_INIT                              0x00000001
+        NV_PBUS_DEBUG_CTRIM_4                       = 0x000000c4,
+#define NV_PBUS_DEBUG_CTRIM_4_INIT                                              0x46ab5081
+#define NV_PBUS_DEBUG_CTRIM_4_OPTIMAL                                           0x00432465
+#define NV_PBUS_DEBUG_CTRIM_4_C0_DELAY                                          0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_4_C0_DELAY__BITSHIFT                                0
+#define NV_PBUS_DEBUG_CTRIM_4_C0_DELAY_8                                        0x00000002
+#define NV_PBUS_DEBUG_CTRIM_4_C1_DELAY                                          0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_4_C1_DELAY__BITSHIFT                                4
+#define NV_PBUS_DEBUG_CTRIM_4_C1_DELAY_8                                        0x00000002
+#define NV_PBUS_DEBUG_CTRIM_4_C2_DELAY                                          0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_4_C2_DELAY__BITSHIFT                                8
+#define NV_PBUS_DEBUG_CTRIM_4_C2_DELAY_8                                        0x00000003
+#define NV_PBUS_DEBUG_CTRIM_4_C3_DELAY                                          0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_4_C3_DELAY__BITSHIFT                                12
+#define NV_PBUS_DEBUG_CTRIM_4_C3_DELAY_8                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_4_C4_DELAY                                          0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_4_C4_DELAY__BITSHIFT                                16
+#define NV_PBUS_DEBUG_CTRIM_4_C4_DELAY_8                                        0x0000000c
+#define NV_PBUS_DEBUG_CTRIM_4_C5_DELAY                                          0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_4_C5_DELAY__BITSHIFT                                20
+#define NV_PBUS_DEBUG_CTRIM_4_C5_DELAY_8                                        0x0000000b
+#define NV_PBUS_DEBUG_CTRIM_4_C6_DELAY                                          0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_4_C6_DELAY__BITSHIFT                                24
+#define NV_PBUS_DEBUG_CTRIM_4_C6_DELAY_8                                        0x0000000d
+#define NV_PBUS_DEBUG_CTRIM_4_C7_DELAY                                          0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_4_C7_DELAY__BITSHIFT                                28
+#define NV_PBUS_DEBUG_CTRIM_4_C7_DELAY_8                                        0x0000000a
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_0_TRIM                                        0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_0_TRIM__BITSHIFT                              0
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_0_TRIM_8                                      0x00000001
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_0_TRIM_INIT                                   0x00000005
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_1_TRIM                                        0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_1_TRIM__BITSHIFT                              4
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_1_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_1_TRIM_INIT                                   0x00000006
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_2_TRIM                                        0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_2_TRIM__BITSHIFT                              8
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_2_TRIM_8                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_2_TRIM_INIT                                   0x00000004
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_3_TRIM                                        0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_3_TRIM__BITSHIFT                              12
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_3_TRIM_8                                      0x00000005
+#define NV_PBUS_DEBUG_CTRIM_4_M2I_3_TRIM_INIT                                   0x00000002
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_0_TRIM                                        0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_0_TRIM__BITSHIFT                              16
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_0_TRIM_8                                      0x0000000b
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_0_TRIM_INIT                                   0x00000003
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_1_TRIM                                        0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_1_TRIM__BITSHIFT                              20
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_1_TRIM_8                                      0x0000000a
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_1_TRIM_INIT                                   0x00000004
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_2_TRIM                                        0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_2_TRIM__BITSHIFT                              24
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_2_TRIM_8                                      0x00000006
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_2_TRIM_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_3_TRIM                                        0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_3_TRIM__BITSHIFT                              28
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_3_TRIM_8                                      0x00000004
+#define NV_PBUS_DEBUG_CTRIM_4_M2O_3_TRIM_INIT                                   0x00000000
+        NV_PBUS_DEBUG_CTRIM_5                       = 0x000000c8,
+#define NV_PBUS_DEBUG_CTRIM_5_INIT                                              0x00401300
+#define NV_PBUS_DEBUG_CTRIM_5_OPTIMAL                                           0x000000ff
+#define NV_PBUS_DEBUG_CTRIM_5_C0_DELAY                                          0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_5_C0_DELAY__BITSHIFT                                0
+#define NV_PBUS_DEBUG_CTRIM_5_C0_DELAY_8                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_C1_DELAY                                          0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_5_C1_DELAY__BITSHIFT                                4
+#define NV_PBUS_DEBUG_CTRIM_5_C1_DELAY_8                                        0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_C2_DELAY                                          0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_5_C2_DELAY__BITSHIFT                                8
+#define NV_PBUS_DEBUG_CTRIM_5_C2_DELAY_8                                        0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_C3_DELAY                                          0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_5_C3_DELAY__BITSHIFT                                12
+#define NV_PBUS_DEBUG_CTRIM_5_C3_DELAY_8                                        0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_C4_DELAY                                          0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_5_C4_DELAY__BITSHIFT                                16
+#define NV_PBUS_DEBUG_CTRIM_5_C4_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_C5_DELAY                                          0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_5_C5_DELAY__BITSHIFT                                20
+#define NV_PBUS_DEBUG_CTRIM_5_C5_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_C6_DELAY                                          0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_5_C6_DELAY__BITSHIFT                                24
+#define NV_PBUS_DEBUG_CTRIM_5_C6_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_C7_DELAY                                          0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_5_C7_DELAY__BITSHIFT                                28
+#define NV_PBUS_DEBUG_CTRIM_5_C7_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_FPIOCLK_TRIM                                      0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_5_FPIOCLK_TRIM__BITSHIFT                            0
+#define NV_PBUS_DEBUG_CTRIM_5_FPIOCLK_TRIM_8                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_FPIOCLK_TRIM_INIT                                 0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_FPIONCLK_TRIM                                     0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_5_FPIONCLK_TRIM__BITSHIFT                           4
+#define NV_PBUS_DEBUG_CTRIM_5_FPIONCLK_TRIM_8                                   0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_FPIONCLK_TRIM_INIT                                0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_FPDPCLK_TRIM                                      0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_5_FPDPCLK_TRIM__BITSHIFT                            8
+#define NV_PBUS_DEBUG_CTRIM_5_FPDPCLK_TRIM_8                                    0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_FPDPCLK_TRIM_INIT                                 0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK1_TRIM                                       0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK1_TRIM__BITSHIFT                             12
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK1_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK1_TRIM_INIT                                  0x00000008
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK2_TRIM                                       0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK2_TRIM__BITSHIFT                             16
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK2_TRIM_0                                     0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_FPCLK2_TRIM_INIT                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK1_TRIM                                      0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK1_TRIM__BITSHIFT                            20
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK1_TRIM_0                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK1_TRIM_INIT                                 0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK2_TRIM                                      0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK2_TRIM__BITSHIFT                            24
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK2_TRIM_0                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_IFPCLK2_TRIM_INIT                                 0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_M_DELAY                                           0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_5_M_DELAY__BITSHIFT                                 28
+#define NV_PBUS_DEBUG_CTRIM_5_M_DELAY_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_5_M_DELAY_INIT                                      0x00000000
+        NV_PBUS_DEBUG_CTRIM_6                       = 0x000000cc,
+#define NV_PBUS_DEBUG_CTRIM_6_INIT                                              0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_OPTIMAL                                           0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C0_DELAY                                          0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_6_C0_DELAY__BITSHIFT                                0
+#define NV_PBUS_DEBUG_CTRIM_6_C0_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C1_DELAY                                          0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_6_C1_DELAY__BITSHIFT                                4
+#define NV_PBUS_DEBUG_CTRIM_6_C1_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C2_DELAY                                          0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_6_C2_DELAY__BITSHIFT                                8
+#define NV_PBUS_DEBUG_CTRIM_6_C2_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C3_DELAY                                          0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_6_C3_DELAY__BITSHIFT                                12
+#define NV_PBUS_DEBUG_CTRIM_6_C3_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C4_DELAY                                          0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_6_C4_DELAY__BITSHIFT                                16
+#define NV_PBUS_DEBUG_CTRIM_6_C4_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C5_DELAY                                          0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_6_C5_DELAY__BITSHIFT                                20
+#define NV_PBUS_DEBUG_CTRIM_6_C5_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C6_DELAY                                          0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_6_C6_DELAY__BITSHIFT                                24
+#define NV_PBUS_DEBUG_CTRIM_6_C6_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_C7_DELAY                                          0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_6_C7_DELAY__BITSHIFT                                28
+#define NV_PBUS_DEBUG_CTRIM_6_C7_DELAY_0                                        0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_0_DELAY                                  0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_0_DELAY__BITSHIFT                        0
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_0_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_0_DELAY_INIT                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_1_DELAY                                  0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_1_DELAY__BITSHIFT                        4
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_1_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_1_DELAY_INIT                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_2_DELAY                                  0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_2_DELAY__BITSHIFT                        8
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_2_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_2_DELAY_INIT                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_3_DELAY                                  0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_3_DELAY__BITSHIFT                        12
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_3_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2I_3_DELAY_INIT                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_0_DELAY                                  0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_0_DELAY__BITSHIFT                        16
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_0_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_0_DELAY_INIT                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_1_DELAY                                  0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_1_DELAY__BITSHIFT                        20
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_1_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_1_DELAY_INIT                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_2_DELAY                                  0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_2_DELAY__BITSHIFT                        24
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_2_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_2_DELAY_INIT                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_3_DELAY                                  0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_3_DELAY__BITSHIFT                        28
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_3_DELAY_0                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_6_FBIO_M2O_3_DELAY_INIT                             0x00000000
+        NV_PBUS_DEBUG_AGPPLL                        = 0x000000c0,
+#define NV_PBUS_DEBUG_AGPPLL_COEFF_MDIV                                         0x000000ff
+#define NV_PBUS_DEBUG_AGPPLL_COEFF_MDIV__BITSHIFT                               0
+#define NV_PBUS_DEBUG_AGPPLL_COEFF_MDIV_1                                       0x00000001
+#define NV_PBUS_DEBUG_AGPPLL_COEFF_NDIV                                         0x0000ff00
+#define NV_PBUS_DEBUG_AGPPLL_COEFF_NDIV__BITSHIFT                               8
+#define NV_PBUS_DEBUG_AGPPLL_COEFF_NDIV_4                                       0x00000004
+#define NV_PBUS_DEBUG_AGPPLL_SETUP                                              0x01ff0000
+#define NV_PBUS_DEBUG_AGPPLL_SETUP__BITSHIFT                                    16
+#define NV_PBUS_DEBUG_AGPPLL_SETUP_DEFAULT                                      0x0000011c
+#define NV_PBUS_DEBUG_AGPPLL_PWRDWN                                             0x10000000
+#define NV_PBUS_DEBUG_AGPPLL_PWRDWN__BITSHIFT                                   28
+#define NV_PBUS_DEBUG_AGPPLL_PWRDWN_ON                                          0x00000000
+#define NV_PBUS_DEBUG_AGPPLL_PWRDWN_OFF                                         0x00000001
+#define NV_PBUS_DEBUG_AGPPLL_STATUS                                             0x80000000
+#define NV_PBUS_DEBUG_AGPPLL_STATUS__BITSHIFT                                   31
+#define NV_PBUS_DEBUG_AGPPLL_STATUS_NOTLOCKED                                   0x00000000
+#define NV_PBUS_DEBUG_AGPPLL_STATUS_LOCKED                                      0x00000001
+        NV_PBUS_DEBUG_PORT                          = 0x000000d0,
+#define NV_PBUS_DEBUG_PORT_MODE                                                 0x00000001
+#define NV_PBUS_DEBUG_PORT_MODE__BITSHIFT                                       0
+#define NV_PBUS_DEBUG_PORT_MODE_NORMAL                                          0x00000000
+#define NV_PBUS_DEBUG_PORT_MODE_AGP4X                                           0x00000001
+        NV_PBUS_DEBUG_CTRIM_7                       = 0x000000d4,
+#define NV_PBUS_DEBUG_CTRIM_7_INIT                                              0x00000002
+#define NV_PBUS_DEBUG_CTRIM_7_OPTIMAL                                           0x09000002
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_TRIM                                         0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_TRIM__BITSHIFT                               0
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_TRIM_0                                       0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_TRIM_INIT                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_SHAPE                                        0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_SHAPE__BITSHIFT                              4
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_SHAPE_0                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_CCDP_SHAPE_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_CCIO_SHAPE                                        0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_7_CCIO_SHAPE__BITSHIFT                              8
+#define NV_PBUS_DEBUG_CTRIM_7_CCIO_SHAPE_0                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_CCIO_SHAPE_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_FP2_SHAPE                                         0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_7_FP2_SHAPE__BITSHIFT                               12
+#define NV_PBUS_DEBUG_CTRIM_7_FP2_SHAPE_0                                       0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_FP2_SHAPE_INIT                                    0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_IFP1_SHAPE                                        0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_7_IFP1_SHAPE__BITSHIFT                              16
+#define NV_PBUS_DEBUG_CTRIM_7_IFP1_SHAPE_0                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_IFP1_SHAPE_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_IFP2_SHAPE                                        0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_7_IFP2_SHAPE__BITSHIFT                              20
+#define NV_PBUS_DEBUG_CTRIM_7_IFP2_SHAPE_0                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_IFP2_SHAPE_INIT                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_TRIM                                     0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_TRIM__BITSHIFT                           24
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_TRIM_0                                   0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_TRIM_INIT                                0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_SHAPE                                    0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_SHAPE__BITSHIFT                          28
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_SHAPE_0                                  0x00000000
+#define NV_PBUS_DEBUG_CTRIM_7_PCLK1_DP_SHAPE_INIT                               0x00000000
+        NV_PBUS_DEBUG_CTRIM_8                       = 0x000000d8,
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_0                                           0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_0__BITSHIFT                                 0
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_0_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_0_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_1                                           0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_1__BITSHIFT                                 4
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_1_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_1_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_2                                           0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_2__BITSHIFT                                 8
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_2_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_2_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_3                                           0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_3__BITSHIFT                                 12
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_3_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_3_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_4                                           0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_4__BITSHIFT                                 16
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_4_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_4_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_5                                           0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_5__BITSHIFT                                 20
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_5_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_5_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_6                                           0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_6__BITSHIFT                                 24
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_6_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_6_INIT                                      0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_7                                           0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_7__BITSHIFT                                 28
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_7_0                                         0x00000000
+#define NV_PBUS_DEBUG_CTRIM_8_DQSOB_7_INIT                                      0x00000000
+        NV_PBUS_DEBUG_CTRIM_9                       = 0x000000dc,
+#define NV_PBUS_DEBUG_CTRIM_9_INIT                                              0x00003211
+#define NV_PBUS_DEBUG_CTRIM_9_OPTIMAL                                           0x00004301
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA0_TRIM                                       0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA0_TRIM__BITSHIFT                             0
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA0_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA1_TRIM                                       0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA1_TRIM__BITSHIFT                             4
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA1_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA2_TRIM                                       0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA2_TRIM__BITSHIFT                             8
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA2_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA3_TRIM                                       0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA3_TRIM__BITSHIFT                             12
+#define NV_PBUS_DEBUG_CTRIM_9_NV_PA3_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_9_NV_CM_TRIM                                        0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_9_NV_CM_TRIM__BITSHIFT                              16
+#define NV_PBUS_DEBUG_CTRIM_9_NV_CM_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_9_NV_TM_TRIM                                        0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_9_NV_TM_TRIM__BITSHIFT                              20
+#define NV_PBUS_DEBUG_CTRIM_9_NV_TM_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_9_NV_XF_TRIM                                        0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_9_NV_XF_TRIM__BITSHIFT                              24
+#define NV_PBUS_DEBUG_CTRIM_9_NV_XF_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_9_NV_NB_TRIM                                        0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_9_NV_NB_TRIM__BITSHIFT                              28
+#define NV_PBUS_DEBUG_CTRIM_9_NV_NB_TRIM_8                                      0x00000008
+        NV_PBUS_DEBUG_PRIV_ASRC                     = 0x000000e0,
+#define NV_PBUS_DEBUG_PRIV_ASRC_EAST_SEL                                        0x80000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_EAST_SEL__BITSHIFT                              31
+#define NV_PBUS_DEBUG_PRIV_ASRC_EAST_NORMAL                                     0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_EAST_OVERIDE                                    0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_EAST_VALUE                                      0x7f000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_EAST_VALUE__BITSHIFT                            24
+#define NV_PBUS_DEBUG_PRIV_ASRC_EAST_VALUE_0                                    0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_SOUTH_SEL                                       0x00800000
+#define NV_PBUS_DEBUG_PRIV_ASRC_SOUTH_SEL__BITSHIFT                             23
+#define NV_PBUS_DEBUG_PRIV_ASRC_SOUTH_NORMAL                                    0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_SOUTH_OVERIDE                                   0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_SOUTH_VALUE                                     0x007f0000
+#define NV_PBUS_DEBUG_PRIV_ASRC_SOUTH_VALUE__BITSHIFT                           16
+#define NV_PBUS_DEBUG_PRIV_ASRC_SOUTH_VALUE_0                                   0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_WEST_SEL                                        0x00008000
+#define NV_PBUS_DEBUG_PRIV_ASRC_WEST_SEL__BITSHIFT                              15
+#define NV_PBUS_DEBUG_PRIV_ASRC_WEST_NORMAL                                     0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_WEST_OVERIDE                                    0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_WEST_VALUE                                      0x00007f00
+#define NV_PBUS_DEBUG_PRIV_ASRC_WEST_VALUE__BITSHIFT                            8
+#define NV_PBUS_DEBUG_PRIV_ASRC_WEST_VALUE_0                                    0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_NORTH_SEL                                       0x00000080
+#define NV_PBUS_DEBUG_PRIV_ASRC_NORTH_SEL__BITSHIFT                             7
+#define NV_PBUS_DEBUG_PRIV_ASRC_NORTH_NORMAL                                    0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_NORTH_OVERIDE                                   0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_NORTH_VALUE                                     0x0000007f
+#define NV_PBUS_DEBUG_PRIV_ASRC_NORTH_VALUE__BITSHIFT                           0
+#define NV_PBUS_DEBUG_PRIV_ASRC_NORTH_VALUE_0                                   0x00000000
+        NV_PBUS_DEBUG_PRIV_ASRC_1                   = 0x000000e4,
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_0_SEL                                      0x80000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_0_SEL__BITSHIFT                            31
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_0_NORMAL                                   0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_0_OVERIDE                                  0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_0_VALUE                                    0x7f000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_0_VALUE__BITSHIFT                          24
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_0_VALUE_0                                  0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_1_SEL                                      0x00800000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_1_SEL__BITSHIFT                            23
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_1_NORMAL                                   0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_1_OVERIDE                                  0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_1_VALUE                                    0x007f0000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_1_VALUE__BITSHIFT                          16
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_1_VALUE_0                                  0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_2_SEL                                      0x00008000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_2_SEL__BITSHIFT                            15
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_2_NORMAL                                   0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_2_OVERIDE                                  0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_2_VALUE                                    0x00007f00
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_2_VALUE__BITSHIFT                          8
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_2_VALUE_0                                  0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_3_SEL                                      0x00000080
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_3_SEL__BITSHIFT                            7
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_3_NORMAL                                   0x00000000
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_3_OVERIDE                                  0x00000001
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_3_VALUE                                    0x0000007f
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_3_VALUE__BITSHIFT                          0
+#define NV_PBUS_DEBUG_PRIV_ASRC_1_BK_3_VALUE_0                                  0x00000000
+        NV_PBUS_DEBUG_CTRIM_10                      = 0x000000e8,
+#define NV_PBUS_DEBUG_CTRIM_10_INIT                                             0x00021193
+#define NV_PBUS_DEBUG_CTRIM_10_OPTIMAL                                          0x00031163
+#define NV_PBUS_DEBUG_CTRIM_10_M_NW_TRIM                                        0x0000000f
+#define NV_PBUS_DEBUG_CTRIM_10_M_NW_TRIM__BITSHIFT                              0
+#define NV_PBUS_DEBUG_CTRIM_10_M_NW_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_M_FB_TRIM                                        0x000000f0
+#define NV_PBUS_DEBUG_CTRIM_10_M_FB_TRIM__BITSHIFT                              4
+#define NV_PBUS_DEBUG_CTRIM_10_M_FB_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA0_TRIM                                       0x00000f00
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA0_TRIM__BITSHIFT                             8
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA0_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA1_TRIM                                       0x0000f000
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA1_TRIM__BITSHIFT                             12
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA1_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA2_TRIM                                       0x000f0000
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA2_TRIM__BITSHIFT                             16
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA2_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA3_TRIM                                       0x00f00000
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA3_TRIM__BITSHIFT                             20
+#define NV_PBUS_DEBUG_CTRIM_10_M_PA3_TRIM_8                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_M_NB_TRIM                                        0x0f000000
+#define NV_PBUS_DEBUG_CTRIM_10_M_NB_TRIM__BITSHIFT                              24
+#define NV_PBUS_DEBUG_CTRIM_10_M_NB_TRIM_8                                      0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_SPARE_1                                          0xf0000000
+#define NV_PBUS_DEBUG_CTRIM_10_SPARE_1__BITSHIFT                                28
+#define NV_PBUS_DEBUG_CTRIM_10_SPARE_1_INIT                                     0x00000008
+#define NV_PBUS_DEBUG_CTRIM_10_BYPASS_MCLK2                                     0x80000000
+#define NV_PBUS_DEBUG_CTRIM_10_BYPASS_MCLK2__BITSHIFT                           31
+#define NV_PBUS_DEBUG_CTRIM_10_BYPASS_MCLK2_DISABLE                             0x00000000
+#define NV_PBUS_DEBUG_CTRIM_10_BYPASS_MCLK2_ENABLE                              0x00000001
+#define NV_PBUS_DEBUG_CTRIM_10_BYPASS_MCLK2_EN_INIT                             0x00000000
+        NV_PBUS_DEBUG_DUALHEAD_CTL                  = 0x000000f0,
+#define NV_PBUS_DEBUG_DUALHEAD_CTL_BLAH_0                                       0x00000000
+        NV_PBUS_DEBUG_RDIBIST_CTL                   = 0x000000f4,
+#define NV_PBUS_DEBUG_RDIBIST_CTL_RAM_FIRST                                     0x000007ff
+#define NV_PBUS_DEBUG_RDIBIST_CTL_RAM_FIRST__BITSHIFT                           0
+#define NV_PBUS_DEBUG_RDIBIST_CTL_RAM_FIRST_0                                   0x00000000
+#define NV_PBUS_DEBUG_RDIBIST_CTL_TEST                                          0x00008000
+#define NV_PBUS_DEBUG_RDIBIST_CTL_TEST__BITSHIFT                                15
+#define NV_PBUS_DEBUG_RDIBIST_CTL_TEST_GO                                       0x00000001
+#define NV_PBUS_DEBUG_RDIBIST_CTL_TEST_RUNNING                                  0x00000001
+#define NV_PBUS_DEBUG_RDIBIST_CTL_TEST_DONE                                     0x00000000
+#define NV_PBUS_DEBUG_RDIBIST_CTL_RAM_LAST                                      0x07ff0000
+#define NV_PBUS_DEBUG_RDIBIST_CTL_RAM_LAST__BITSHIFT                            16
+#define NV_PBUS_DEBUG_RDIBIST_CTL_RAM_LAST_7FF                                  0x00000000
+        NV_PBUS_DEBUG_RDIBIST_INDEX                 = 0x000000f8,
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_ADDR                                        0x0000001f
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_ADDR__BITSHIFT                              0
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_ADDR_0                                      0x00000000
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_31_0                                   0x00000000
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_63_32                                  0x00000001
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_95_64                                  0x00000002
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_127_96                                 0x00000003
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_159_128                                0x00000004
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_191_160                                0x00000005
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_223_192                                0x00000006
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_255_224                                0x00000007
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_287_256                                0x00000008
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_319_288                                0x00000009
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_PASS_351_320                                0x0000000a
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_FAIL_RAM                                    0x0000000b
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_FAIL_DWORD                                  0x0000000c
+#define NV_PBUS_DEBUG_RDIBIST_INDEX_BIST_FAIL                                   0x0000000d
+        NV_PBUS_DEBUG_RDIBIST_DATA                  = 0x000000fc,
+        NV_PBUS_INTR_0                              = 0x00000100,
+#define NV_PBUS_INTR_0_PCI_BUS_ERROR                                            0x00000001
+#define NV_PBUS_INTR_0_PCI_BUS_ERROR__BITSHIFT                                  0
+#define NV_PBUS_INTR_0_PCI_BUS_ERROR_NOT_PENDING                                0x00000000
+#define NV_PBUS_INTR_0_PCI_BUS_ERROR_PENDING                                    0x00000001
+#define NV_PBUS_INTR_0_PCI_BUS_ERROR_RESET                                      0x00000001
+#define NV_PBUS_INTR_0_HOTPLUG                                                  0x00000010
+#define NV_PBUS_INTR_0_HOTPLUG__BITSHIFT                                        4
+#define NV_PBUS_INTR_0_HOTPLUG_NOT_PENDING                                      0x00000000
+#define NV_PBUS_INTR_0_HOTPLUG_PENDING                                          0x00000001
+#define NV_PBUS_INTR_0_HOTPLUG_RESET                                            0x00000001
+        NV_PBUS_INTR_EN_0                           = 0x00000140,
+#define NV_PBUS_INTR_EN_0_PCI_BUS_ERROR                                         0x00000001
+#define NV_PBUS_INTR_EN_0_PCI_BUS_ERROR__BITSHIFT                               0
+#define NV_PBUS_INTR_EN_0_PCI_BUS_ERROR_DISABLED                                0x00000000
+#define NV_PBUS_INTR_EN_0_PCI_BUS_ERROR_ENABLED                                 0x00000001
+#define NV_PBUS_INTR_EN_0_HOTPLUG                                               0x00000010
+#define NV_PBUS_INTR_EN_0_HOTPLUG__BITSHIFT                                     4
+#define NV_PBUS_INTR_EN_0_HOTPLUG_DISABLED                                      0x00000000
+#define NV_PBUS_INTR_EN_0_HOTPLUG_ENABLED                                       0x00000001
+        NV_PBUS_ROM_CONFIG                          = 0x00000200,
+#define NV_PBUS_ROM_CONFIG_TW1                                                  0x0000003f
+#define NV_PBUS_ROM_CONFIG_TW1__BITSHIFT                                        0
+#define NV_PBUS_ROM_CONFIG_TW1_DEFAULT                                          0x0000003f
+#define NV_PBUS_ROM_CONFIG_TW0                                                  0x000000c0
+#define NV_PBUS_ROM_CONFIG_TW0__BITSHIFT                                        6
+#define NV_PBUS_ROM_CONFIG_TW0_DEFAULT                                          0x00000003
+        NV_PBUS_FBIO_CFG                            = 0x00000210,
+#define NV_PBUS_FBIO_CFG_ADR_EDGE                                               0x00000001
+#define NV_PBUS_FBIO_CFG_ADR_EDGE__BITSHIFT                                     0
+#define NV_PBUS_FBIO_CFG_ADR_EDGE_QUARTER                                       0x00000000
+#define NV_PBUS_FBIO_CFG_ADR_EDGE_HALF                                          0x00000001
+#define NV_PBUS_FBIO_CFG_CLK_EDGE                                               0x00000010
+#define NV_PBUS_FBIO_CFG_CLK_EDGE__BITSHIFT                                     4
+#define NV_PBUS_FBIO_CFG_CLK_EDGE_NORMAL                                        0x00000000
+#define NV_PBUS_FBIO_CFG_CLK_EDGE_EARLY                                         0x00000001
+#define NV_PBUS_FBIO_CFG_DQS_EDGE                                               0x00000100
+#define NV_PBUS_FBIO_CFG_DQS_EDGE__BITSHIFT                                     8
+#define NV_PBUS_FBIO_CFG_DQS_EDGE_NORMAL                                        0x00000000
+#define NV_PBUS_FBIO_CFG_DQS_EDGE_EARLY                                         0x00000001
+#define NV_PBUS_FBIO_CFG_WRITE_DATA                                             0x00001000
+#define NV_PBUS_FBIO_CFG_WRITE_DATA__BITSHIFT                                   12
+#define NV_PBUS_FBIO_CFG_WRITE_DATA_STROBED                                     0x00000000
+#define NV_PBUS_FBIO_CFG_WRITE_DATA_CLOCKED                                     0x00000001
+#define NV_PBUS_FBIO_CFG_QUSE                                                   0x00030000
+#define NV_PBUS_FBIO_CFG_QUSE__BITSHIFT                                         16
+#define NV_PBUS_FBIO_CFG_QUSE_NORMAL                                            0x00000000
+#define NV_PBUS_FBIO_CFG_QUSE_ALWAYS                                            0x00000001
+#define NV_PBUS_FBIO_CFG_QUSE_HOLD                                              0x00000002
+#define NV_PBUS_FBIO_CFG_QUSE_RESERVED                                          0x00000003
+#define NV_PBUS_FBIO_CFG_RESERVED0                                              0x00100000
+#define NV_PBUS_FBIO_CFG_RESERVED0__BITSHIFT                                    20
+#define NV_PBUS_FBIO_CFG_RESERVED0_0                                            0x00000000
+#define NV_PBUS_FBIO_CFG_RESERVED0_1                                            0x00000001
+#define NV_PBUS_FBIO_CFG_DQSEN                                                  0x03000000
+#define NV_PBUS_FBIO_CFG_DQSEN__BITSHIFT                                        24
+#define NV_PBUS_FBIO_CFG_DQSEN_NORMAL                                           0x00000000
+#define NV_PBUS_FBIO_CFG_DQSEN_HOLD                                             0x00000001
+#define NV_PBUS_FBIO_CFG_DQSEN_PULL                                             0x00000002
+#define NV_PBUS_FBIO_CFG_DQSEN_EXTENDED                                         0x00000003
+#define NV_PBUS_FBIO_CFG_DEN                                                    0x0c000000
+#define NV_PBUS_FBIO_CFG_DEN__BITSHIFT                                          26
+#define NV_PBUS_FBIO_CFG_DEN_NORMAL                                             0x00000000
+#define NV_PBUS_FBIO_CFG_DEN_HOLD                                               0x00000001
+#define NV_PBUS_FBIO_CFG_DEN_EARLY                                              0x00000002
+#define NV_PBUS_FBIO_CFG_DEN_EXTENDED                                           0x00000003
+#define NV_PBUS_FBIO_CFG_RESERVED1                                              0x10000000
+#define NV_PBUS_FBIO_CFG_RESERVED1__BITSHIFT                                    28
+#define NV_PBUS_FBIO_CFG_RESERVED1_0                                            0x00000000
+#define NV_PBUS_FBIO_CFG_RESERVED1_1                                            0x00000001
+        NV_PBUS_FBIO_DLY                            = 0x00000214,
+#define NV_PBUS_FBIO_DLY_DATAIB_A                                               0x00000007
+#define NV_PBUS_FBIO_DLY_DATAIB_A__BITSHIFT                                     0
+#define NV_PBUS_FBIO_DLY_DATAIB_A_NONE                                          0x00000000
+#define NV_PBUS_FBIO_DLY_DATAIB_A_FULL                                          0x00000007
+#define NV_PBUS_FBIO_DLY_CLKIC_A                                                0x00000018
+#define NV_PBUS_FBIO_DLY_CLKIC_A__BITSHIFT                                      3
+#define NV_PBUS_FBIO_DLY_CLKIC_A_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_CLKIC_A_FULL                                           0x00000003
+#define NV_PBUS_FBIO_DLY_DQSIB_A                                                0x000000e0
+#define NV_PBUS_FBIO_DLY_DQSIB_A__BITSHIFT                                      5
+#define NV_PBUS_FBIO_DLY_DQSIB_A_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_DQSIB_A_INIT                                           0x00000006
+#define NV_PBUS_FBIO_DLY_DQSIB_A_FULL                                           0x00000007
+#define NV_PBUS_FBIO_DLY_DATAIB_B                                               0x00000700
+#define NV_PBUS_FBIO_DLY_DATAIB_B__BITSHIFT                                     8
+#define NV_PBUS_FBIO_DLY_DATAIB_B_NONE                                          0x00000000
+#define NV_PBUS_FBIO_DLY_DATAIB_B_FULL                                          0x00000007
+#define NV_PBUS_FBIO_DLY_CLKIC_B                                                0x00001800
+#define NV_PBUS_FBIO_DLY_CLKIC_B__BITSHIFT                                      11
+#define NV_PBUS_FBIO_DLY_CLKIC_B_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_CLKIC_B_FULL                                           0x00000003
+#define NV_PBUS_FBIO_DLY_DQSIB_B                                                0x0000e000
+#define NV_PBUS_FBIO_DLY_DQSIB_B__BITSHIFT                                      13
+#define NV_PBUS_FBIO_DLY_DQSIB_B_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_DQSIB_B_INIT                                           0x00000006
+#define NV_PBUS_FBIO_DLY_DQSIB_B_FULL                                           0x00000007
+#define NV_PBUS_FBIO_DLY_DATAIB_C                                               0x00070000
+#define NV_PBUS_FBIO_DLY_DATAIB_C__BITSHIFT                                     16
+#define NV_PBUS_FBIO_DLY_DATAIB_C_NONE                                          0x00000000
+#define NV_PBUS_FBIO_DLY_DATAIB_C_FULL                                          0x00000007
+#define NV_PBUS_FBIO_DLY_CLKIC_C                                                0x00180000
+#define NV_PBUS_FBIO_DLY_CLKIC_C__BITSHIFT                                      19
+#define NV_PBUS_FBIO_DLY_CLKIC_C_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_CLKIC_C_FULL                                           0x00000003
+#define NV_PBUS_FBIO_DLY_DQSIB_C                                                0x00e00000
+#define NV_PBUS_FBIO_DLY_DQSIB_C__BITSHIFT                                      21
+#define NV_PBUS_FBIO_DLY_DQSIB_C_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_DQSIB_C_INIT                                           0x00000006
+#define NV_PBUS_FBIO_DLY_DQSIB_C_FULL                                           0x00000007
+#define NV_PBUS_FBIO_DLY_DATAIB_D                                               0x07000000
+#define NV_PBUS_FBIO_DLY_DATAIB_D__BITSHIFT                                     24
+#define NV_PBUS_FBIO_DLY_DATAIB_D_NONE                                          0x00000000
+#define NV_PBUS_FBIO_DLY_DATAIB_D_FULL                                          0x00000007
+#define NV_PBUS_FBIO_DLY_CLKIC_D                                                0x18000000
+#define NV_PBUS_FBIO_DLY_CLKIC_D__BITSHIFT                                      27
+#define NV_PBUS_FBIO_DLY_CLKIC_D_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_CLKIC_D_FULL                                           0x00000003
+#define NV_PBUS_FBIO_DLY_DQSIB_D                                                0xe0000000
+#define NV_PBUS_FBIO_DLY_DQSIB_D__BITSHIFT                                      29
+#define NV_PBUS_FBIO_DLY_DQSIB_D_NONE                                           0x00000000
+#define NV_PBUS_FBIO_DLY_DQSIB_D_INIT                                           0x00000006
+#define NV_PBUS_FBIO_DLY_DQSIB_D_FULL                                           0x00000007
+        NV_PBUS_FBIO_RAM                            = 0x00000218,
+#define NV_PBUS_FBIO_RAM_DQS_SIZE                                               0x00000001
+#define NV_PBUS_FBIO_RAM_DQS_SIZE__BITSHIFT                                     0
+#define NV_PBUS_FBIO_RAM_DQS_SIZE_32                                            0x00000000
+#define NV_PBUS_FBIO_RAM_DQS_SIZE_8                                             0x00000001
+#define NV_PBUS_FBIO_RAM_TYPE                                                   0x00000100
+#define NV_PBUS_FBIO_RAM_TYPE__BITSHIFT                                         8
+#define NV_PBUS_FBIO_RAM_TYPE_DDR                                               0x00000000
+#define NV_PBUS_FBIO_RAM_TYPE_SDR                                               0x00000001
+#define NV_PBUS_FBIO_RAM_VREF                                                   0x00010000
+#define NV_PBUS_FBIO_RAM_VREF__BITSHIFT                                         16
+#define NV_PBUS_FBIO_RAM_VREF_DISABLED                                          0x00000000
+#define NV_PBUS_FBIO_RAM_VREF_ENABLED                                           0x00000001
+#define NV_PBUS_FBIO_RAM_RESERVED0                                              0x01000000
+#define NV_PBUS_FBIO_RAM_RESERVED0__BITSHIFT                                    24
+#define NV_PBUS_FBIO_RAM_RESERVED0_0                                            0x00000000
+#define NV_PBUS_FBIO_RAM_RESERVED0_1                                            0x00000001
+        NV_PBUS_FBIO_CALCNT                         = 0x0000021c,
+#define NV_PBUS_FBIO_CALCNT_OVERFLOW                                            0x80000000
+#define NV_PBUS_FBIO_CALCNT_OVERFLOW__BITSHIFT                                  31
+        NV_PBUS_FBIO_CALEN                          = 0x00000220,
+#define NV_PBUS_FBIO_CALEN_VCC_A                                                0x00000001
+#define NV_PBUS_FBIO_CALEN_VCC_A__BITSHIFT                                      0
+#define NV_PBUS_FBIO_CALEN_VCC_A_OFF                                            0x00000000
+#define NV_PBUS_FBIO_CALEN_VCC_A_ON                                             0x00000001
+#define NV_PBUS_FBIO_CALEN_VCC_B                                                0x00000002
+#define NV_PBUS_FBIO_CALEN_VCC_B__BITSHIFT                                      1
+#define NV_PBUS_FBIO_CALEN_VCC_B_OFF                                            0x00000000
+#define NV_PBUS_FBIO_CALEN_VCC_B_ON                                             0x00000001
+#define NV_PBUS_FBIO_CALEN_VCC_C                                                0x00000004
+#define NV_PBUS_FBIO_CALEN_VCC_C__BITSHIFT                                      2
+#define NV_PBUS_FBIO_CALEN_VCC_C_OFF                                            0x00000000
+#define NV_PBUS_FBIO_CALEN_VCC_C_ON                                             0x00000001
+#define NV_PBUS_FBIO_CALEN_VCC_D                                                0x00000008
+#define NV_PBUS_FBIO_CALEN_VCC_D__BITSHIFT                                      3
+#define NV_PBUS_FBIO_CALEN_VCC_D_OFF                                            0x00000000
+#define NV_PBUS_FBIO_CALEN_VCC_D_ON                                             0x00000001
+#define NV_PBUS_FBIO_CALEN_VCCQ_A                                               0x00000100
+#define NV_PBUS_FBIO_CALEN_VCCQ_A__BITSHIFT                                     8
+#define NV_PBUS_FBIO_CALEN_VCCQ_A_OFF                                           0x00000000
+#define NV_PBUS_FBIO_CALEN_VCCQ_A_ON                                            0x00000001
+#define NV_PBUS_FBIO_CALEN_VCCQ_B                                               0x00000200
+#define NV_PBUS_FBIO_CALEN_VCCQ_B__BITSHIFT                                     9
+#define NV_PBUS_FBIO_CALEN_VCCQ_B_OFF                                           0x00000000
+#define NV_PBUS_FBIO_CALEN_VCCQ_B_ON                                            0x00000001
+#define NV_PBUS_FBIO_CALEN_VCCQ_C                                               0x00000400
+#define NV_PBUS_FBIO_CALEN_VCCQ_C__BITSHIFT                                     10
+#define NV_PBUS_FBIO_CALEN_VCCQ_C_OFF                                           0x00000000
+#define NV_PBUS_FBIO_CALEN_VCCQ_C_ON                                            0x00000001
+#define NV_PBUS_FBIO_CALEN_VCCQ_D                                               0x00000800
+#define NV_PBUS_FBIO_CALEN_VCCQ_D__BITSHIFT                                     11
+#define NV_PBUS_FBIO_CALEN_VCCQ_D_OFF                                           0x00000000
+#define NV_PBUS_FBIO_CALEN_VCCQ_D_ON                                            0x00000001
+#define NV_PBUS_FBIO_CALEN_PN_A                                                 0x00010000
+#define NV_PBUS_FBIO_CALEN_PN_A__BITSHIFT                                       16
+#define NV_PBUS_FBIO_CALEN_PN_A_OFF                                             0x00000000
+#define NV_PBUS_FBIO_CALEN_PN_A_ON                                              0x00000001
+#define NV_PBUS_FBIO_CALEN_PN_B                                                 0x00020000
+#define NV_PBUS_FBIO_CALEN_PN_B__BITSHIFT                                       17
+#define NV_PBUS_FBIO_CALEN_PN_B_OFF                                             0x00000000
+#define NV_PBUS_FBIO_CALEN_PN_B_ON                                              0x00000001
+#define NV_PBUS_FBIO_CALEN_PN_C                                                 0x00040000
+#define NV_PBUS_FBIO_CALEN_PN_C__BITSHIFT                                       18
+#define NV_PBUS_FBIO_CALEN_PN_C_OFF                                             0x00000000
+#define NV_PBUS_FBIO_CALEN_PN_C_ON                                              0x00000001
+#define NV_PBUS_FBIO_CALEN_PN_D                                                 0x00080000
+#define NV_PBUS_FBIO_CALEN_PN_D__BITSHIFT                                       19
+#define NV_PBUS_FBIO_CALEN_PN_D_OFF                                             0x00000000
+#define NV_PBUS_FBIO_CALEN_PN_D_ON                                              0x00000001
+        NV_PBUS_FBIO_CALPN                          = 0x00000224,
+#define NV_PBUS_FBIO_CALPN_A                                                    0x0000001f
+#define NV_PBUS_FBIO_CALPN_A__BITSHIFT                                          0
+#define NV_PBUS_FBIO_CALPN_B                                                    0x00001f00
+#define NV_PBUS_FBIO_CALPN_B__BITSHIFT                                          8
+#define NV_PBUS_FBIO_CALPN_C                                                    0x001f0000
+#define NV_PBUS_FBIO_CALPN_C__BITSHIFT                                          16
+#define NV_PBUS_FBIO_CALPN_D                                                    0x1f000000
+#define NV_PBUS_FBIO_CALPN_D__BITSHIFT                                          24
+        NV_PBUS_FBIO_CALSEL                         = 0x00000228,
+#define NV_PBUS_FBIO_CALSEL_SOURCE                                              0x0000000f
+#define NV_PBUS_FBIO_CALSEL_SOURCE__BITSHIFT                                    0
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCC_A                                        0x00000000
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCC_B                                        0x00000001
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCC_C                                        0x00000002
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCC_D                                        0x00000003
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCCQ_A                                       0x00000004
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCCQ_B                                       0x00000005
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCCQ_C                                       0x00000006
+#define NV_PBUS_FBIO_CALSEL_SOURCE_VCCQ_D                                       0x00000007
+#define NV_PBUS_FBIO_CALSEL_SOURCE_PCI                                          0x00000008
+#define NV_PBUS_FBIO_CALSEL_SOURCE_CORE                                         0x00000009
+#define NV_PBUS_FBIO_CALSEL_SOURCE_RESERVED0                                    0x0000000a
+#define NV_PBUS_FBIO_CALSEL_SOURCE_RESERVED1                                    0x0000000b
+#define NV_PBUS_FBIO_CALSEL_SOURCE_RESERVED2                                    0x0000000c
+#define NV_PBUS_FBIO_CALSEL_SOURCE_RESERVED3                                    0x0000000d
+#define NV_PBUS_FBIO_CALSEL_SOURCE_RESERVED4                                    0x0000000e
+#define NV_PBUS_FBIO_CALSEL_SOURCE_RESERVED5                                    0x0000000f
+#define NV_PBUS_FBIO_CALSEL_REF_SEL                                             0x00000100
+#define NV_PBUS_FBIO_CALSEL_REF_SEL__BITSHIFT                                   8
+#define NV_PBUS_FBIO_CALSEL_REF_SEL_XTAL                                        0x00000000
+#define NV_PBUS_FBIO_CALSEL_REF_SEL_PCICLK                                      0x00000001
+#define NV_PBUS_FBIO_CALSEL_REF_DIV                                             0x000f0000
+#define NV_PBUS_FBIO_CALSEL_REF_DIV__BITSHIFT                                   16
+#define NV_PBUS_FBIO_CALSEL_REF_DIV_0                                           0x00000000
+#define NV_PBUS_FBIO_CALSEL_REF_DIV_4                                           0x00000004
+#define NV_PBUS_FBIO_CALSEL_REF_DIV_16                                          0x0000000f
+        NV_PBUS_FBIO_ADRDRV                         = 0x0000022c,
+#define NV_PBUS_FBIO_ADRDRV_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_ADRDRV_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_ADRDRV_A_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_ADRDRV_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_ADRDRV_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_ADRDRV_A_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_ADRDRV_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_ADRDRV_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_ADRDRV_B_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_ADRDRV_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_ADRDRV_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_ADRDRV_B_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_ADRDRV_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_ADRDRV_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_ADRDRV_C_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_ADRDRV_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_ADRDRV_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_ADRDRV_C_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_ADRDRV_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_ADRDRV_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_ADRDRV_D_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_ADRDRV_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_ADRDRV_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_ADRDRV_D_RISE_INIT                                         0x00000007
+        NV_PBUS_FBIO_CLKDRV                         = 0x00000230,
+#define NV_PBUS_FBIO_CLKDRV_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_CLKDRV_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_CLKDRV_A_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_CLKDRV_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_CLKDRV_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_CLKDRV_A_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_CLKDRV_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_CLKDRV_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_CLKDRV_B_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_CLKDRV_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_CLKDRV_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_CLKDRV_B_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_CLKDRV_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_CLKDRV_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_CLKDRV_C_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_CLKDRV_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_CLKDRV_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_CLKDRV_C_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_CLKDRV_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_CLKDRV_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_CLKDRV_D_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_CLKDRV_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_CLKDRV_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_CLKDRV_D_RISE_INIT                                         0x00000007
+        NV_PBUS_FBIO_DATDRV                         = 0x00000234,
+#define NV_PBUS_FBIO_DATDRV_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_DATDRV_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_DATDRV_A_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DATDRV_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_DATDRV_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_DATDRV_A_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_DATDRV_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_DATDRV_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_DATDRV_B_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DATDRV_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_DATDRV_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_DATDRV_B_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_DATDRV_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_DATDRV_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_DATDRV_C_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DATDRV_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_DATDRV_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_DATDRV_C_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_DATDRV_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_DATDRV_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_DATDRV_D_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DATDRV_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_DATDRV_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_DATDRV_D_RISE_INIT                                         0x00000007
+        NV_PBUS_FBIO_DQSDRV                         = 0x00000238,
+#define NV_PBUS_FBIO_DQSDRV_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_DQSDRV_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_DQSDRV_A_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DQSDRV_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_DQSDRV_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_DQSDRV_A_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_DQSDRV_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_DQSDRV_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_DQSDRV_B_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DQSDRV_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_DQSDRV_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_DQSDRV_B_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_DQSDRV_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_DQSDRV_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_DQSDRV_C_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DQSDRV_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_DQSDRV_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_DQSDRV_C_RISE_INIT                                         0x00000007
+#define NV_PBUS_FBIO_DQSDRV_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_DQSDRV_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_DQSDRV_D_FALL_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DQSDRV_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_DQSDRV_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_DQSDRV_D_RISE_INIT                                         0x00000007
+        NV_PBUS_FBIO_ADRSLW                         = 0x0000023c,
+#define NV_PBUS_FBIO_ADRSLW_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_ADRSLW_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_ADRSLW_A_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_ADRSLW_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_ADRSLW_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_ADRSLW_A_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_ADRSLW_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_ADRSLW_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_ADRSLW_B_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_ADRSLW_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_ADRSLW_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_ADRSLW_B_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_ADRSLW_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_ADRSLW_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_ADRSLW_C_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_ADRSLW_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_ADRSLW_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_ADRSLW_C_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_ADRSLW_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_ADRSLW_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_ADRSLW_D_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_ADRSLW_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_ADRSLW_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_ADRSLW_D_RISE_INIT                                         0x00000008
+        NV_PBUS_FBIO_CLKSLW                         = 0x00000240,
+#define NV_PBUS_FBIO_CLKSLW_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_CLKSLW_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_CLKSLW_A_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_CLKSLW_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_CLKSLW_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_CLKSLW_A_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_CLKSLW_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_CLKSLW_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_CLKSLW_B_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_CLKSLW_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_CLKSLW_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_CLKSLW_B_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_CLKSLW_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_CLKSLW_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_CLKSLW_C_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_CLKSLW_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_CLKSLW_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_CLKSLW_C_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_CLKSLW_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_CLKSLW_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_CLKSLW_D_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_CLKSLW_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_CLKSLW_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_CLKSLW_D_RISE_INIT                                         0x00000008
+        NV_PBUS_FBIO_DATSLW                         = 0x00000244,
+#define NV_PBUS_FBIO_DATSLW_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_DATSLW_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_DATSLW_A_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DATSLW_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_DATSLW_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_DATSLW_A_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DATSLW_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_DATSLW_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_DATSLW_B_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DATSLW_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_DATSLW_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_DATSLW_B_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DATSLW_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_DATSLW_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_DATSLW_C_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DATSLW_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_DATSLW_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_DATSLW_C_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DATSLW_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_DATSLW_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_DATSLW_D_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DATSLW_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_DATSLW_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_DATSLW_D_RISE_INIT                                         0x00000008
+        NV_PBUS_FBIO_DQSSLW                         = 0x00000248,
+#define NV_PBUS_FBIO_DQSSLW_A_FALL                                              0x0000000f
+#define NV_PBUS_FBIO_DQSSLW_A_FALL__BITSHIFT                                    0
+#define NV_PBUS_FBIO_DQSSLW_A_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DQSSLW_A_RISE                                              0x000000f0
+#define NV_PBUS_FBIO_DQSSLW_A_RISE__BITSHIFT                                    4
+#define NV_PBUS_FBIO_DQSSLW_A_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DQSSLW_B_FALL                                              0x00000f00
+#define NV_PBUS_FBIO_DQSSLW_B_FALL__BITSHIFT                                    8
+#define NV_PBUS_FBIO_DQSSLW_B_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DQSSLW_B_RISE                                              0x0000f000
+#define NV_PBUS_FBIO_DQSSLW_B_RISE__BITSHIFT                                    12
+#define NV_PBUS_FBIO_DQSSLW_B_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DQSSLW_C_FALL                                              0x000f0000
+#define NV_PBUS_FBIO_DQSSLW_C_FALL__BITSHIFT                                    16
+#define NV_PBUS_FBIO_DQSSLW_C_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DQSSLW_C_RISE                                              0x00f00000
+#define NV_PBUS_FBIO_DQSSLW_C_RISE__BITSHIFT                                    20
+#define NV_PBUS_FBIO_DQSSLW_C_RISE_INIT                                         0x00000008
+#define NV_PBUS_FBIO_DQSSLW_D_FALL                                              0x0f000000
+#define NV_PBUS_FBIO_DQSSLW_D_FALL__BITSHIFT                                    24
+#define NV_PBUS_FBIO_DQSSLW_D_FALL_INIT                                         0x0000000b
+#define NV_PBUS_FBIO_DQSSLW_D_RISE                                              0xf0000000
+#define NV_PBUS_FBIO_DQSSLW_D_RISE__BITSHIFT                                    28
+#define NV_PBUS_FBIO_DQSSLW_D_RISE_INIT                                         0x00000008
+        NV_PBUS_DISPIO_PADCTL                       = 0x0000024c,
+#define NV_PBUS_DISPIO_PADCTL_DATSLW_FALL                                       0x0000000f
+#define NV_PBUS_DISPIO_PADCTL_DATSLW_FALL__BITSHIFT                             0
+#define NV_PBUS_DISPIO_PADCTL_DATSLW_FALL_INIT                                  0x0000000b
+#define NV_PBUS_DISPIO_PADCTL_DATSLW_RISE                                       0x000000f0
+#define NV_PBUS_DISPIO_PADCTL_DATSLW_RISE__BITSHIFT                             4
+#define NV_PBUS_DISPIO_PADCTL_DATSLW_RISE_INIT                                  0x00000008
+#define NV_PBUS_DISPIO_PADCTL_DATDRV_FALL                                       0x00000f00
+#define NV_PBUS_DISPIO_PADCTL_DATDRV_FALL__BITSHIFT                             8
+#define NV_PBUS_DISPIO_PADCTL_DATDRV_FALL_INIT                                  0x00000008
+#define NV_PBUS_DISPIO_PADCTL_DATDRV_RISE                                       0x0000f000
+#define NV_PBUS_DISPIO_PADCTL_DATDRV_RISE__BITSHIFT                             12
+#define NV_PBUS_DISPIO_PADCTL_DATDRV_RISE_INIT                                  0x00000007
+#define NV_PBUS_DISPIO_PADCTL_STBSLW_FALL                                       0x000f0000
+#define NV_PBUS_DISPIO_PADCTL_STBSLW_FALL__BITSHIFT                             16
+#define NV_PBUS_DISPIO_PADCTL_STBSLW_FALL_INIT                                  0x0000000b
+#define NV_PBUS_DISPIO_PADCTL_STBSLW_RISE                                       0x00f00000
+#define NV_PBUS_DISPIO_PADCTL_STBSLW_RISE__BITSHIFT                             20
+#define NV_PBUS_DISPIO_PADCTL_STBSLW_RISE_INIT                                  0x00000008
+#define NV_PBUS_DISPIO_PADCTL_STBDRV_FALL                                       0x0f000000
+#define NV_PBUS_DISPIO_PADCTL_STBDRV_FALL__BITSHIFT                             24
+#define NV_PBUS_DISPIO_PADCTL_STBDRV_FALL_INIT                                  0x00000008
+#define NV_PBUS_DISPIO_PADCTL_STBDRV_RISE                                       0xf0000000
+#define NV_PBUS_DISPIO_PADCTL_STBDRV_RISE__BITSHIFT                             28
+#define NV_PBUS_DISPIO_PADCTL_STBDRV_RISE_INIT                                  0x00000007
+        NV_PBUS_TVDIO_PADCTL                        = 0x00000250,
+#define NV_PBUS_TVDIO_PADCTL_DATSLW_FALL                                        0x0000000f
+#define NV_PBUS_TVDIO_PADCTL_DATSLW_FALL__BITSHIFT                              0
+#define NV_PBUS_TVDIO_PADCTL_DATSLW_FALL_INIT                                   0x0000000b
+#define NV_PBUS_TVDIO_PADCTL_DATSLW_RISE                                        0x000000f0
+#define NV_PBUS_TVDIO_PADCTL_DATSLW_RISE__BITSHIFT                              4
+#define NV_PBUS_TVDIO_PADCTL_DATSLW_RISE_INIT                                   0x00000008
+#define NV_PBUS_TVDIO_PADCTL_DATDRV_FALL                                        0x00000f00
+#define NV_PBUS_TVDIO_PADCTL_DATDRV_FALL__BITSHIFT                              8
+#define NV_PBUS_TVDIO_PADCTL_DATDRV_FALL_INIT                                   0x00000008
+#define NV_PBUS_TVDIO_PADCTL_DATDRV_RISE                                        0x0000f000
+#define NV_PBUS_TVDIO_PADCTL_DATDRV_RISE__BITSHIFT                              12
+#define NV_PBUS_TVDIO_PADCTL_DATDRV_RISE_INIT                                   0x00000007
+#define NV_PBUS_TVDIO_PADCTL_VREF                                               0x80000000
+#define NV_PBUS_TVDIO_PADCTL_VREF__BITSHIFT                                     31
+#define NV_PBUS_TVDIO_PADCTL_VREF_DISABLED                                      0x00000000
+#define NV_PBUS_TVDIO_PADCTL_VREF_ENABLED                                       0x00000001
+        NV_PBUS_PRIV_ASRC_2                         = 0x00000254,
+#define NV_PBUS_PRIV_ASRC_V33_OB                                                0x000000ff
+#define NV_PBUS_PRIV_ASRC_V33_OB__BITSHIFT                                      0
+#define NV_PBUS_PRIV_ASRC_V33_OB_INIT                                           0x00000000
+#define NV_PBUS_PRIV_ASRC_V25_OB                                                0x0000ff00
+#define NV_PBUS_PRIV_ASRC_V25_OB__BITSHIFT                                      8
+#define NV_PBUS_PRIV_ASRC_V25_OB_INIT                                           0x00000000
+#define NV_PBUS_PRIV_ASRC_V33_IB                                                0x007f0000
+#define NV_PBUS_PRIV_ASRC_V33_IB__BITSHIFT                                      16
+#define NV_PBUS_PRIV_ASRC_V25_IB                                                0x7f000000
+#define NV_PBUS_PRIV_ASRC_V25_IB__BITSHIFT                                      24
+        NV_PBUS_TVDIO_CALCNT                        = 0x00000260,
+#define NV_PBUS_TVDIO_CALCNT_OVERFLOW                                           0x80000000
+#define NV_PBUS_TVDIO_CALCNT_OVERFLOW__BITSHIFT                                 31
+        NV_PBUS_TVDIO_CALEN                         = 0x00000264,
+#define NV_PBUS_TVDIO_CALEN_VCC_A                                               0x00000001
+#define NV_PBUS_TVDIO_CALEN_VCC_A__BITSHIFT                                     0
+#define NV_PBUS_TVDIO_CALEN_VCC_A_OFF                                           0x00000000
+#define NV_PBUS_TVDIO_CALEN_VCC_A_ON                                            0x00000001
+#define NV_PBUS_TVDIO_CALEN_VCCQ_A                                              0x00000100
+#define NV_PBUS_TVDIO_CALEN_VCCQ_A__BITSHIFT                                    8
+#define NV_PBUS_TVDIO_CALEN_VCCQ_A_OFF                                          0x00000000
+#define NV_PBUS_TVDIO_CALEN_VCCQ_A_ON                                           0x00000001
+#define NV_PBUS_TVDIO_CALEN_PN_A                                                0x00010000
+#define NV_PBUS_TVDIO_CALEN_PN_A__BITSHIFT                                      16
+#define NV_PBUS_TVDIO_CALEN_PN_A_OFF                                            0x00000000
+#define NV_PBUS_TVDIO_CALEN_PN_A_ON                                             0x00000001
+        NV_PBUS_TVDIO_CALPN                         = 0x00000268,
+#define NV_PBUS_TVDIO_CALPN_A                                                   0x0000001f
+#define NV_PBUS_TVDIO_CALPN_A__BITSHIFT                                         0
+        NV_PBUS_TVDIO_CALSEL                        = 0x0000026c,
+#define NV_PBUS_TVDIO_CALSEL_SOURCE                                             0x0000000f
+#define NV_PBUS_TVDIO_CALSEL_SOURCE__BITSHIFT                                   0
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED0                                   0x00000000
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED1                                   0x00000001
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED2                                   0x00000002
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED3                                   0x00000003
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_VCCQ_A                                      0x00000004
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED4                                   0x00000005
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED5                                   0x00000006
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED6                                   0x00000007
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_PCI                                         0x00000008
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_CORE                                        0x00000009
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED7                                   0x0000000a
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED8                                   0x0000000b
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVED9                                   0x0000000c
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVEDA                                   0x0000000d
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVEDB                                   0x0000000e
+#define NV_PBUS_TVDIO_CALSEL_SOURCE_RESERVEDC                                   0x0000000f
+#define NV_PBUS_TVDIO_CALSEL_REF_SEL                                            0x00000100
+#define NV_PBUS_TVDIO_CALSEL_REF_SEL__BITSHIFT                                  8
+#define NV_PBUS_TVDIO_CALSEL_REF_SEL_XTAL                                       0x00000000
+#define NV_PBUS_TVDIO_CALSEL_REF_SEL_PCICLK                                     0x00000001
+#define NV_PBUS_TVDIO_CALSEL_REF_DIV                                            0x000f0000
+#define NV_PBUS_TVDIO_CALSEL_REF_DIV__BITSHIFT                                  16
+#define NV_PBUS_TVDIO_CALSEL_REF_DIV_0                                          0x00000000
+#define NV_PBUS_TVDIO_CALSEL_REF_DIV_4                                          0x00000004
+#define NV_PBUS_TVDIO_CALSEL_REF_DIV_16                                         0x0000000f
+        NV_PBUS_PCI_NV_0                            = 0x00000800,
+#define NV_PBUS_PCI_NV_0_VENDOR_ID                                              0x0000ffff
+#define NV_PBUS_PCI_NV_0_VENDOR_ID__BITSHIFT                                    0
+#define NV_PBUS_PCI_NV_0_VENDOR_ID_NVIDIA_SGS                                   0x000012d2
+#define NV_PBUS_PCI_NV_0_VENDOR_ID_NVIDIA                                       0x000010de
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC                                         0x00070000
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC__BITSHIFT                               16
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_VGA                                     0x00000000
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_ALT1                                    0x00000001
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_ALT2                                    0x00000002
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_ALT3                                    0x00000003
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_LC0                                     0x00000004
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_LC1                                     0x00000005
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_LC2                                     0x00000006
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_FUNC_LC3                                     0x00000007
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP                                         0xfff80000
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP__BITSHIFT                               19
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV0                                     0x00000000
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV1                                     0x00000001
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV2                                     0x00000002
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV3                                     0x00000003
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV4                                     0x00000004
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV5                                     0x00000005
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV10                                    0x00000010
+#define NV_PBUS_PCI_NV_0_DEVICE_ID_CHIP_NV20                                    0x00000020
+        NV_PBUS_PCI_NV_1                            = 0x00000804,
+#define NV_PBUS_PCI_NV_1_IO_SPACE                                               0x00000001
+#define NV_PBUS_PCI_NV_1_IO_SPACE__BITSHIFT                                     0
+#define NV_PBUS_PCI_NV_1_IO_SPACE_DISABLED                                      0x00000000
+#define NV_PBUS_PCI_NV_1_IO_SPACE_ENABLED                                       0x00000001
+#define NV_PBUS_PCI_NV_1_MEMORY_SPACE                                           0x00000002
+#define NV_PBUS_PCI_NV_1_MEMORY_SPACE__BITSHIFT                                 1
+#define NV_PBUS_PCI_NV_1_MEMORY_SPACE_DISABLED                                  0x00000000
+#define NV_PBUS_PCI_NV_1_MEMORY_SPACE_ENABLED                                   0x00000001
+#define NV_PBUS_PCI_NV_1_BUS_MASTER                                             0x00000004
+#define NV_PBUS_PCI_NV_1_BUS_MASTER__BITSHIFT                                   2
+#define NV_PBUS_PCI_NV_1_BUS_MASTER_DISABLED                                    0x00000000
+#define NV_PBUS_PCI_NV_1_BUS_MASTER_ENABLED                                     0x00000001
+#define NV_PBUS_PCI_NV_1_WRITE_AND_INVAL                                        0x00000010
+#define NV_PBUS_PCI_NV_1_WRITE_AND_INVAL__BITSHIFT                              4
+#define NV_PBUS_PCI_NV_1_WRITE_AND_INVAL_DISABLED                               0x00000000
+#define NV_PBUS_PCI_NV_1_WRITE_AND_INVAL_ENABLED                                0x00000001
+#define NV_PBUS_PCI_NV_1_PALETTE_SNOOP                                          0x00000020
+#define NV_PBUS_PCI_NV_1_PALETTE_SNOOP__BITSHIFT                                5
+#define NV_PBUS_PCI_NV_1_PALETTE_SNOOP_DISABLED                                 0x00000000
+#define NV_PBUS_PCI_NV_1_PALETTE_SNOOP_ENABLED                                  0x00000001
+#define NV_PBUS_PCI_NV_1_CAPLIST                                                0x00100000
+#define NV_PBUS_PCI_NV_1_CAPLIST__BITSHIFT                                      20
+#define NV_PBUS_PCI_NV_1_CAPLIST_NOT_PRESENT                                    0x00000000
+#define NV_PBUS_PCI_NV_1_CAPLIST_PRESENT                                        0x00000001
+#define NV_PBUS_PCI_NV_1_66MHZ                                                  0x00200000
+#define NV_PBUS_PCI_NV_1_66MHZ__BITSHIFT                                        21
+#define NV_PBUS_PCI_NV_1_66MHZ_INCAPABLE                                        0x00000000
+#define NV_PBUS_PCI_NV_1_66MHZ_CAPABLE                                          0x00000001
+#define NV_PBUS_PCI_NV_1_FAST_BACK2BACK                                         0x00800000
+#define NV_PBUS_PCI_NV_1_FAST_BACK2BACK__BITSHIFT                               23
+#define NV_PBUS_PCI_NV_1_FAST_BACK2BACK_INCAPABLE                               0x00000000
+#define NV_PBUS_PCI_NV_1_FAST_BACK2BACK_CAPABLE                                 0x00000001
+#define NV_PBUS_PCI_NV_1_DEVSEL_TIMING                                          0x06000000
+#define NV_PBUS_PCI_NV_1_DEVSEL_TIMING__BITSHIFT                                25
+#define NV_PBUS_PCI_NV_1_DEVSEL_TIMING_FAST                                     0x00000000
+#define NV_PBUS_PCI_NV_1_DEVSEL_TIMING_MEDIUM                                   0x00000001
+#define NV_PBUS_PCI_NV_1_DEVSEL_TIMING_SLOW                                     0x00000002
+#define NV_PBUS_PCI_NV_1_SIGNALED_TARGET                                        0x08000000
+#define NV_PBUS_PCI_NV_1_SIGNALED_TARGET__BITSHIFT                              27
+#define NV_PBUS_PCI_NV_1_SIGNALED_TARGET_NO_ABORT                               0x00000000
+#define NV_PBUS_PCI_NV_1_SIGNALED_TARGET_ABORT                                  0x00000001
+#define NV_PBUS_PCI_NV_1_SIGNALED_TARGET_CLEAR                                  0x00000001
+#define NV_PBUS_PCI_NV_1_RECEIVED_TARGET                                        0x10000000
+#define NV_PBUS_PCI_NV_1_RECEIVED_TARGET__BITSHIFT                              28
+#define NV_PBUS_PCI_NV_1_RECEIVED_TARGET_NO_ABORT                               0x00000000
+#define NV_PBUS_PCI_NV_1_RECEIVED_TARGET_ABORT                                  0x00000001
+#define NV_PBUS_PCI_NV_1_RECEIVED_TARGET_CLEAR                                  0x00000001
+#define NV_PBUS_PCI_NV_1_RECEIVED_MASTER                                        0x20000000
+#define NV_PBUS_PCI_NV_1_RECEIVED_MASTER__BITSHIFT                              29
+#define NV_PBUS_PCI_NV_1_RECEIVED_MASTER_NO_ABORT                               0x00000000
+#define NV_PBUS_PCI_NV_1_RECEIVED_MASTER_ABORT                                  0x00000001
+#define NV_PBUS_PCI_NV_1_RECEIVED_MASTER_CLEAR                                  0x00000001
+#define NV_PBUS_PCI_NV_1_CFG2RMA_MAPPING                                        0x40000000
+#define NV_PBUS_PCI_NV_1_CFG2RMA_MAPPING__BITSHIFT                              30
+#define NV_PBUS_PCI_NV_1_CFG2RMA_MAPPING_DISABLED                               0x00000000
+#define NV_PBUS_PCI_NV_1_CFG2RMA_MAPPING_ENABLED                                0x00000001
+        NV_PBUS_PCI_NV_2                            = 0x00000808,
+#define NV_PBUS_PCI_NV_2_REVISION_ID                                            0x000000ff
+#define NV_PBUS_PCI_NV_2_REVISION_ID__BITSHIFT                                  0
+#define NV_PBUS_PCI_NV_2_REVISION_ID_A01                                        0x000000a1
+#define NV_PBUS_PCI_NV_2_REVISION_ID_B01                                        0x000000b1
+#define NV_PBUS_PCI_NV_2_CLASS_CODE                                             0xffffff00
+#define NV_PBUS_PCI_NV_2_CLASS_CODE__BITSHIFT                                   8
+#define NV_PBUS_PCI_NV_2_CLASS_CODE_VGA                                         0x00030000
+#define NV_PBUS_PCI_NV_2_CLASS_CODE_MULTIMEDIA                                  0x00048000
+        NV_PBUS_PCI_NV_3                            = 0x0000080c,
+#define NV_PBUS_PCI_NV_3_LATENCY_TIMER                                          0x0000f800
+#define NV_PBUS_PCI_NV_3_LATENCY_TIMER__BITSHIFT                                11
+#define NV_PBUS_PCI_NV_3_LATENCY_TIMER_0_CLOCKS                                 0x00000000
+#define NV_PBUS_PCI_NV_3_LATENCY_TIMER_8_CLOCKS                                 0x00000001
+#define NV_PBUS_PCI_NV_3_LATENCY_TIMER_240_CLOCKS                               0x0000001e
+#define NV_PBUS_PCI_NV_3_LATENCY_TIMER_248_CLOCKS                               0x0000001f
+#define NV_PBUS_PCI_NV_3_HEADER_TYPE                                            0x00ff0000
+#define NV_PBUS_PCI_NV_3_HEADER_TYPE__BITSHIFT                                  16
+#define NV_PBUS_PCI_NV_3_HEADER_TYPE_SINGLEFUNC                                 0x00000000
+#define NV_PBUS_PCI_NV_3_HEADER_TYPE_MULTIFUNC                                  0x00000080
+        NV_PBUS_PCI_NV_4                            = 0x00000810,
+#define NV_PBUS_PCI_NV_4_SPACE_TYPE                                             0x00000001
+#define NV_PBUS_PCI_NV_4_SPACE_TYPE__BITSHIFT                                   0
+#define NV_PBUS_PCI_NV_4_SPACE_TYPE_MEMORY                                      0x00000000
+#define NV_PBUS_PCI_NV_4_SPACE_TYPE_IO                                          0x00000001
+#define NV_PBUS_PCI_NV_4_ADDRESS_TYPE                                           0x00000006
+#define NV_PBUS_PCI_NV_4_ADDRESS_TYPE__BITSHIFT                                 1
+#define NV_PBUS_PCI_NV_4_ADDRESS_TYPE_32_BIT                                    0x00000000
+#define NV_PBUS_PCI_NV_4_ADDRESS_TYPE_20_BIT                                    0x00000001
+#define NV_PBUS_PCI_NV_4_ADDRESS_TYPE_64_BIT                                    0x00000002
+#define NV_PBUS_PCI_NV_4_PREFETCHABLE                                           0x00000008
+#define NV_PBUS_PCI_NV_4_PREFETCHABLE__BITSHIFT                                 3
+#define NV_PBUS_PCI_NV_4_PREFETCHABLE_NOT                                       0x00000000
+#define NV_PBUS_PCI_NV_4_PREFETCHABLE_MERGABLE                                  0x00000001
+#define NV_PBUS_PCI_NV_4_BASE_ADDRESS                                           0xff000000
+#define NV_PBUS_PCI_NV_4_BASE_ADDRESS__BITSHIFT                                 24
+        NV_PBUS_PCI_NV_5                            = 0x00000814,
+#define NV_PBUS_PCI_NV_5_SPACE_TYPE                                             0x00000001
+#define NV_PBUS_PCI_NV_5_SPACE_TYPE__BITSHIFT                                   0
+#define NV_PBUS_PCI_NV_5_SPACE_TYPE_MEMORY                                      0x00000000
+#define NV_PBUS_PCI_NV_5_SPACE_TYPE_IO                                          0x00000001
+#define NV_PBUS_PCI_NV_5_ADDRESS_TYPE                                           0x00000006
+#define NV_PBUS_PCI_NV_5_ADDRESS_TYPE__BITSHIFT                                 1
+#define NV_PBUS_PCI_NV_5_ADDRESS_TYPE_32_BIT                                    0x00000000
+#define NV_PBUS_PCI_NV_5_ADDRESS_TYPE_20_BIT                                    0x00000001
+#define NV_PBUS_PCI_NV_5_ADDRESS_TYPE_64_BIT                                    0x00000002
+#define NV_PBUS_PCI_NV_5_PREFETCHABLE                                           0x00000008
+#define NV_PBUS_PCI_NV_5_PREFETCHABLE__BITSHIFT                                 3
+#define NV_PBUS_PCI_NV_5_PREFETCHABLE_NOT                                       0x00000000
+#define NV_PBUS_PCI_NV_5_PREFETCHABLE_MERGABLE                                  0x00000001
+#define NV_PBUS_PCI_NV_5_BASE_ADDRESS                                           0xff000000
+#define NV_PBUS_PCI_NV_5_BASE_ADDRESS__BITSHIFT                                 24
+        NV_PBUS_PCI_NV_6                            = 0x00000818,
+#define NV_PBUS_PCI_NV_6_SPACE_TYPE                                             0x00000001
+#define NV_PBUS_PCI_NV_6_SPACE_TYPE__BITSHIFT                                   0
+#define NV_PBUS_PCI_NV_6_SPACE_TYPE_MEMORY                                      0x00000000
+#define NV_PBUS_PCI_NV_6_SPACE_TYPE_IO                                          0x00000001
+#define NV_PBUS_PCI_NV_6_ADDRESS_TYPE                                           0x00000006
+#define NV_PBUS_PCI_NV_6_ADDRESS_TYPE__BITSHIFT                                 1
+#define NV_PBUS_PCI_NV_6_ADDRESS_TYPE_32_BIT                                    0x00000000
+#define NV_PBUS_PCI_NV_6_ADDRESS_TYPE_20_BIT                                    0x00000001
+#define NV_PBUS_PCI_NV_6_ADDRESS_TYPE_64_BIT                                    0x00000002
+#define NV_PBUS_PCI_NV_6_PREFETCHABLE                                           0x00000008
+#define NV_PBUS_PCI_NV_6_PREFETCHABLE__BITSHIFT                                 3
+#define NV_PBUS_PCI_NV_6_PREFETCHABLE_NOT                                       0x00000000
+#define NV_PBUS_PCI_NV_6_PREFETCHABLE_MERGABLE                                  0x00000001
+#define NV_PBUS_PCI_NV_6_BASE_ADDRESS                                           0xfff80000
+#define NV_PBUS_PCI_NV_6_BASE_ADDRESS__BITSHIFT                                 19
+        NV_PBUS_PCI_NV_7_0                          = 0x0000081c,
+        NV_PBUS_PCI_NV_7_1                          = 0x00000820,
+        NV_PBUS_PCI_NV_7_2                          = 0x00000824,
+        NV_PBUS_PCI_NV_7_3                          = 0x00000828,
+#define NV_PBUS_PCI_NV_7_RESERVED_0                                             0x00000000
+        NV_PBUS_PCI_NV_11                           = 0x0000082c,
+#define NV_PBUS_PCI_NV_11_SUBSYSTEM_VENDOR_ID                                   0x0000ffff
+#define NV_PBUS_PCI_NV_11_SUBSYSTEM_VENDOR_ID__BITSHIFT                         0
+#define NV_PBUS_PCI_NV_11_SUBSYSTEM_VENDOR_ID_NONE                              0x00000000
+#define NV_PBUS_PCI_NV_11_SUBSYSTEM_ID                                          0xffff0000
+#define NV_PBUS_PCI_NV_11_SUBSYSTEM_ID__BITSHIFT                                16
+#define NV_PBUS_PCI_NV_11_SUBSYSTEM_ID_NONE                                     0x00000000
+        NV_PBUS_PCI_NV_12                           = 0x00000830,
+#define NV_PBUS_PCI_NV_12_ROM_DECODE                                            0x00000001
+#define NV_PBUS_PCI_NV_12_ROM_DECODE__BITSHIFT                                  0
+#define NV_PBUS_PCI_NV_12_ROM_DECODE_DISABLED                                   0x00000000
+#define NV_PBUS_PCI_NV_12_ROM_DECODE_ENABLED                                    0x00000001
+#define NV_PBUS_PCI_NV_12_ROM_BASE                                              0xffff0000
+#define NV_PBUS_PCI_NV_12_ROM_BASE__BITSHIFT                                    16
+        NV_PBUS_PCI_NV_13                           = 0x00000834,
+#define NV_PBUS_PCI_NV_13_CAP_PTR                                               0x000000ff
+#define NV_PBUS_PCI_NV_13_CAP_PTR__BITSHIFT                                     0
+#define NV_PBUS_PCI_NV_13_CAP_PTR_AGP                                           0x00000044
+#define NV_PBUS_PCI_NV_13_CAP_PTR_POWER_MGMT                                    0x00000060
+        NV_PBUS_PCI_NV_14                           = 0x00000838,
+#define NV_PBUS_PCI_NV_14_RESERVED_0                                            0x00000000
+        NV_PBUS_PCI_NV_15                           = 0x0000083c,
+#define NV_PBUS_PCI_NV_15_INTR_LINE                                             0x000000ff
+#define NV_PBUS_PCI_NV_15_INTR_LINE__BITSHIFT                                   0
+#define NV_PBUS_PCI_NV_15_INTR_LINE_IRQ0                                        0x00000000
+#define NV_PBUS_PCI_NV_15_INTR_LINE_IRQ1                                        0x00000001
+#define NV_PBUS_PCI_NV_15_INTR_LINE_IRQ15                                       0x0000000f
+#define NV_PBUS_PCI_NV_15_INTR_LINE_UNKNOWN                                     0x000000ff
+#define NV_PBUS_PCI_NV_15_INTR_PIN                                              0x0000ff00
+#define NV_PBUS_PCI_NV_15_INTR_PIN__BITSHIFT                                    8
+#define NV_PBUS_PCI_NV_15_INTR_PIN_INTA                                         0x00000001
+#define NV_PBUS_PCI_NV_15_MIN_GNT                                               0x00ff0000
+#define NV_PBUS_PCI_NV_15_MIN_GNT__BITSHIFT                                     16
+#define NV_PBUS_PCI_NV_15_MIN_GNT_NO_REQUIREMENTS                               0x00000000
+#define NV_PBUS_PCI_NV_15_MIN_GNT_750NS                                         0x00000003
+#define NV_PBUS_PCI_NV_15_MIN_GNT_1250NS                                        0x00000005
+#define NV_PBUS_PCI_NV_15_MAX_LAT                                               0xff000000
+#define NV_PBUS_PCI_NV_15_MAX_LAT__BITSHIFT                                     24
+#define NV_PBUS_PCI_NV_15_MAX_LAT_NO_REQUIREMENTS                               0x00000000
+#define NV_PBUS_PCI_NV_15_MAX_LAT_250NS                                         0x00000001
+        NV_PBUS_PCI_NV_16                           = 0x00000840,
+#define NV_PBUS_PCI_NV_16_SUBSYSTEM_VENDOR_ID                                   0x0000ffff
+#define NV_PBUS_PCI_NV_16_SUBSYSTEM_VENDOR_ID__BITSHIFT                         0
+#define NV_PBUS_PCI_NV_16_SUBSYSTEM_VENDOR_ID_NONE                              0x00000000
+#define NV_PBUS_PCI_NV_16_SUBSYSTEM_ID                                          0xffff0000
+#define NV_PBUS_PCI_NV_16_SUBSYSTEM_ID__BITSHIFT                                16
+#define NV_PBUS_PCI_NV_16_SUBSYSTEM_ID_NONE                                     0x00000000
+        NV_PBUS_PCI_NV_17                           = 0x00000844,
+#define NV_PBUS_PCI_NV_17_AGP_REV_MAJOR                                         0x00f00000
+#define NV_PBUS_PCI_NV_17_AGP_REV_MAJOR__BITSHIFT                               20
+#define NV_PBUS_PCI_NV_17_AGP_REV_MAJOR_1                                       0x00000002
+#define NV_PBUS_PCI_NV_17_AGP_REV_MINOR                                         0x000f0000
+#define NV_PBUS_PCI_NV_17_AGP_REV_MINOR__BITSHIFT                               16
+#define NV_PBUS_PCI_NV_17_AGP_REV_MINOR_0                                       0x00000000
+#define NV_PBUS_PCI_NV_17_NEXT_PTR                                              0x0000ff00
+#define NV_PBUS_PCI_NV_17_NEXT_PTR__BITSHIFT                                    8
+#define NV_PBUS_PCI_NV_17_NEXT_PTR_NULL                                         0x00000000
+#define NV_PBUS_PCI_NV_17_CAP_ID                                                0x000000ff
+#define NV_PBUS_PCI_NV_17_CAP_ID__BITSHIFT                                      0
+#define NV_PBUS_PCI_NV_17_CAP_ID_AGP                                            0x00000002
+        NV_PBUS_PCI_NV_18                           = 0x00000848,
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RQ                                         0xff000000
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RQ__BITSHIFT                               24
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RQ_32                                      0x0000001f
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_SBA                                        0x00000200
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_SBA__BITSHIFT                              9
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_SBA_NONE                                   0x00000000
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_SBA_CAPABLE                                0x00000001
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_FW                                         0x00000010
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_FW__BITSHIFT                               4
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_FW_NONE                                    0x00000000
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_FW_CAPABLE                                 0x00000001
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RATE                                       0x00000007
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RATE__BITSHIFT                             0
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RATE_1X                                    0x00000001
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RATE_2X                                    0x00000002
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RATE_1X_AND_2X                             0x00000003
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RATE_4X                                    0x00000004
+#define NV_PBUS_PCI_NV_18_AGP_STATUS_RATE_1X_2X_4X                              0x00000007
+        NV_PBUS_PCI_NV_19                           = 0x0000084c,
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_RQ_DEPTH                                  0x1f000000
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_RQ_DEPTH__BITSHIFT                        24
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_RQ_DEPTH_0                                0x00000000
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_SBA_ENABLE                                0x00000200
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_SBA_ENABLE__BITSHIFT                      9
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_SBA_ENABLE_OFF                            0x00000000
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_SBA_ENABLE_ON                             0x00000001
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_AGP_ENABLE                                0x00000100
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_AGP_ENABLE__BITSHIFT                      8
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_AGP_ENABLE_OFF                            0x00000000
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_AGP_ENABLE_ON                             0x00000001
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_FW_ENABLE                                 0x00000010
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_FW_ENABLE__BITSHIFT                       4
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_FW_ENABLE_OFF                             0x00000000
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_FW_ENABLE_ON                              0x00000001
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_DATA_RATE                                 0x00000007
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_DATA_RATE__BITSHIFT                       0
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_DATA_RATE_OFF                             0x00000000
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_DATA_RATE_1X                              0x00000001
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_DATA_RATE_2X                              0x00000002
+#define NV_PBUS_PCI_NV_19_AGP_COMMAND_DATA_RATE_4X                              0x00000004
+        NV_PBUS_PCI_NV_20                           = 0x00000850,
+#define NV_PBUS_PCI_NV_20_ROM_SHADOW                                            0x00000001
+#define NV_PBUS_PCI_NV_20_ROM_SHADOW__BITSHIFT                                  0
+#define NV_PBUS_PCI_NV_20_ROM_SHADOW_DISABLED                                   0x00000000
+#define NV_PBUS_PCI_NV_20_ROM_SHADOW_ENABLED                                    0x00000001
+        NV_PBUS_PCI_NV_21                           = 0x00000854,
+#define NV_PBUS_PCI_NV_21_VGA                                                   0x00000001
+#define NV_PBUS_PCI_NV_21_VGA__BITSHIFT                                         0
+#define NV_PBUS_PCI_NV_21_VGA_DISABLED                                          0x00000000
+#define NV_PBUS_PCI_NV_21_VGA_ENABLED                                           0x00000001
+        NV_PBUS_PCI_NV_22                           = 0x00000858,
+#define NV_PBUS_PCI_NV_22_SCRATCH                                               0x00ffffff
+#define NV_PBUS_PCI_NV_22_SCRATCH__BITSHIFT                                     0
+#define NV_PBUS_PCI_NV_22_SCRATCH_DEFAULT                                       0x0023d6ce
+        NV_PBUS_PCI_NV_23                           = 0x0000085c,
+#define NV_PBUS_PCI_NV_23_DT_TIMEOUT                                            0x0000000f
+#define NV_PBUS_PCI_NV_23_DT_TIMEOUT__BITSHIFT                                  0
+#define NV_PBUS_PCI_NV_23_DT_TIMEOUT_16                                         0x0000000f
+        NV_PBUS_PCI_NV_24                           = 0x00000860,
+#define NV_PBUS_PCI_NV_24_PME_D3_COLD                                           0x80000000
+#define NV_PBUS_PCI_NV_24_PME_D3_COLD__BITSHIFT                                 31
+#define NV_PBUS_PCI_NV_24_PME_D3_COLD_SUPPORTED                                 0x00000001
+#define NV_PBUS_PCI_NV_24_PME_D3_COLD_NOT_SUPPORTED                             0x00000000
+#define NV_PBUS_PCI_NV_24_PME_D3_HOT                                            0x40000000
+#define NV_PBUS_PCI_NV_24_PME_D3_HOT__BITSHIFT                                  30
+#define NV_PBUS_PCI_NV_24_PME_D3_HOT_SUPPORTED                                  0x00000001
+#define NV_PBUS_PCI_NV_24_PME_D3_HOT_NOT_SUPPORTED                              0x00000000
+#define NV_PBUS_PCI_NV_24_PME_D2                                                0x20000000
+#define NV_PBUS_PCI_NV_24_PME_D2__BITSHIFT                                      29
+#define NV_PBUS_PCI_NV_24_PME_D2_SUPPORTED                                      0x00000001
+#define NV_PBUS_PCI_NV_24_PME_D2_NOT_SUPPORTED                                  0x00000000
+#define NV_PBUS_PCI_NV_24_PME_D1                                                0x10000000
+#define NV_PBUS_PCI_NV_24_PME_D1__BITSHIFT                                      28
+#define NV_PBUS_PCI_NV_24_PME_D1_SUPPORTED                                      0x00000001
+#define NV_PBUS_PCI_NV_24_PME_D1_NOT_SUPPORTED                                  0x00000000
+#define NV_PBUS_PCI_NV_24_PME_D0                                                0x08000000
+#define NV_PBUS_PCI_NV_24_PME_D0__BITSHIFT                                      27
+#define NV_PBUS_PCI_NV_24_PME_D0_SUPPORTED                                      0x00000001
+#define NV_PBUS_PCI_NV_24_PME_D0_NOT_SUPPORTED                                  0x00000000
+#define NV_PBUS_PCI_NV_24_D2                                                    0x04000000
+#define NV_PBUS_PCI_NV_24_D2__BITSHIFT                                          26
+#define NV_PBUS_PCI_NV_24_D2_SUPPORTED                                          0x00000001
+#define NV_PBUS_PCI_NV_24_D2_NOT_SUPPORTED                                      0x00000000
+#define NV_PBUS_PCI_NV_24_D1                                                    0x02000000
+#define NV_PBUS_PCI_NV_24_D1__BITSHIFT                                          25
+#define NV_PBUS_PCI_NV_24_D1_SUPPORTED                                          0x00000001
+#define NV_PBUS_PCI_NV_24_D1_NOT_SUPPORTED                                      0x00000000
+#define NV_PBUS_PCI_NV_24_DSI                                                   0x00200000
+#define NV_PBUS_PCI_NV_24_DSI__BITSHIFT                                         21
+#define NV_PBUS_PCI_NV_24_DSI_NOT_REQUIRED                                      0x00000000
+#define NV_PBUS_PCI_NV_24_PME_CLOCK                                             0x00080000
+#define NV_PBUS_PCI_NV_24_PME_CLOCK__BITSHIFT                                   19
+#define NV_PBUS_PCI_NV_24_PME_CLOCK_NOT_REQUIRED                                0x00000000
+#define NV_PBUS_PCI_NV_24_VERSION                                               0x00070000
+#define NV_PBUS_PCI_NV_24_VERSION__BITSHIFT                                     16
+#define NV_PBUS_PCI_NV_24_VERSION_1                                             0x00000001
+#define NV_PBUS_PCI_NV_24_VERSION_2                                             0x00000002
+#define NV_PBUS_PCI_NV_24_NEXT_PTR                                              0x0000ff00
+#define NV_PBUS_PCI_NV_24_NEXT_PTR__BITSHIFT                                    8
+#define NV_PBUS_PCI_NV_24_NEXT_PTR_NULL                                         0x00000000
+#define NV_PBUS_PCI_NV_24_NEXT_PTR_AGP                                          0x00000044
+#define NV_PBUS_PCI_NV_24_CAP_ID                                                0x000000ff
+#define NV_PBUS_PCI_NV_24_CAP_ID__BITSHIFT                                      0
+#define NV_PBUS_PCI_NV_24_CAP_ID_POWER_MGMT                                     0x00000001
+        NV_PBUS_PCI_NV_25                           = 0x00000864,
+#define NV_PBUS_PCI_NV_25_POWER_STATE                                           0x00000003
+#define NV_PBUS_PCI_NV_25_POWER_STATE__BITSHIFT                                 0
+#define NV_PBUS_PCI_NV_25_POWER_STATE_D3_HOT                                    0x00000003
+#define NV_PBUS_PCI_NV_25_POWER_STATE_D0                                        0x00000000
+        NV_PBUS_PCI_NV_26_0                         = 0x00000868,
+        NV_PBUS_PCI_NV_26_1                         = 0x0000086c,
+        NV_PBUS_PCI_NV_26_2                         = 0x00000870,
+        NV_PBUS_PCI_NV_26_3                         = 0x00000874,
+        NV_PBUS_PCI_NV_26_4                         = 0x00000878,
+        NV_PBUS_PCI_NV_26_5                         = 0x0000087c,
+        NV_PBUS_PCI_NV_26_6                         = 0x00000880,
+        NV_PBUS_PCI_NV_26_7                         = 0x00000884,
+        NV_PBUS_PCI_NV_26_8                         = 0x00000888,
+        NV_PBUS_PCI_NV_26_9                         = 0x0000088c,
+        NV_PBUS_PCI_NV_26_10                        = 0x00000890,
+        NV_PBUS_PCI_NV_26_11                        = 0x00000894,
+        NV_PBUS_PCI_NV_26_12                        = 0x00000898,
+        NV_PBUS_PCI_NV_26_13                        = 0x0000089c,
+        NV_PBUS_PCI_NV_26_14                        = 0x000008a0,
+        NV_PBUS_PCI_NV_26_15                        = 0x000008a4,
+        NV_PBUS_PCI_NV_26_16                        = 0x000008a8,
+        NV_PBUS_PCI_NV_26_17                        = 0x000008ac,
+        NV_PBUS_PCI_NV_26_18                        = 0x000008b0,
+        NV_PBUS_PCI_NV_26_19                        = 0x000008b4,
+        NV_PBUS_PCI_NV_26_20                        = 0x000008b8,
+        NV_PBUS_PCI_NV_26_21                        = 0x000008bc,
+        NV_PBUS_PCI_NV_26_22                        = 0x000008c0,
+        NV_PBUS_PCI_NV_26_23                        = 0x000008c4,
+        NV_PBUS_PCI_NV_26_24                        = 0x000008c8,
+        NV_PBUS_PCI_NV_26_25                        = 0x000008cc,
+        NV_PBUS_PCI_NV_26_26                        = 0x000008d0,
+        NV_PBUS_PCI_NV_26_27                        = 0x000008d4,
+        NV_PBUS_PCI_NV_26_28                        = 0x000008d8,
+        NV_PBUS_PCI_NV_26_29                        = 0x000008dc,
+        NV_PBUS_PCI_NV_26_30                        = 0x000008e0,
+        NV_PBUS_PCI_NV_26_31                        = 0x000008e4,
+        NV_PBUS_PCI_NV_26_32                        = 0x000008e8,
+        NV_PBUS_PCI_NV_26_33                        = 0x000008ec,
+        NV_PBUS_PCI_NV_26_34                        = 0x000008f0,
+        NV_PBUS_PCI_NV_26_35                        = 0x000008f4,
+        NV_PBUS_PCI_NV_26_36                        = 0x000008f8,
+        NV_PBUS_PCI_NV_26_37                        = 0x000008fc,
+#define NV_PBUS_PCI_NV_26_RESERVED_0                                            0x00000000
+};
+
+static const char *const nv2a_pbus_name[] = {
+    NAMER(NV_PBUS_DEBUG_0),
+    NAMER(NV_PBUS_DEBUG_1),
+    NAMER(NV_PBUS_DEBUG_2),
+    NAMER(NV_PBUS_DEBUG_3),
+    NAMER(NV_PBUS_DEBUG_CTL),
+    NAMER(NV_PBUS_DEBUG_READ),
+    NAMER(NV_PBUS_DEBUG_HOST),
+    NAMER(NV_PBUS_DEBUG_SEL_0),
+    NAMER(NV_PBUS_DEBUG_SEL_1),
+    NAMER(NV_PBUS_DEBUG_SEL_2),
+    NAMER(NV_PBUS_DEBUG_SEL_3),
+    NAMER(NV_PBUS_DEBUG_CTRIM_0),
+    NAMER(NV_PBUS_DEBUG_CTRIM_1),
+    NAMER(NV_PBUS_DEBUG_CTRIM_2),
+    NAMER(NV_PBUS_DEBUG_CTRIM_3),
+    NAMER(NV_PBUS_DEBUG_CTRIM_4),
+    NAMER(NV_PBUS_DEBUG_CTRIM_5),
+    NAMER(NV_PBUS_DEBUG_CTRIM_6),
+    NAMER(NV_PBUS_DEBUG_AGPPLL),
+    NAMER(NV_PBUS_DEBUG_PORT),
+    NAMER(NV_PBUS_DEBUG_CTRIM_7),
+    NAMER(NV_PBUS_DEBUG_CTRIM_8),
+    NAMER(NV_PBUS_DEBUG_CTRIM_9),
+    NAMER(NV_PBUS_DEBUG_PRIV_ASRC),
+    NAMER(NV_PBUS_DEBUG_PRIV_ASRC_1),
+    NAMER(NV_PBUS_DEBUG_CTRIM_10),
+    NAMER(NV_PBUS_DEBUG_DUALHEAD_CTL),
+    NAMER(NV_PBUS_DEBUG_RDIBIST_CTL),
+    NAMER(NV_PBUS_DEBUG_RDIBIST_INDEX),
+    NAMER(NV_PBUS_DEBUG_RDIBIST_DATA),
+    NAMER(NV_PBUS_INTR_0),
+    NAMER(NV_PBUS_INTR_EN_0),
+    NAMER(NV_PBUS_ROM_CONFIG),
+    NAMER(NV_PBUS_FBIO_CFG),
+    NAMER(NV_PBUS_FBIO_DLY),
+    NAMER(NV_PBUS_FBIO_RAM),
+    NAMER(NV_PBUS_FBIO_CALCNT),
+    NAMER(NV_PBUS_FBIO_CALEN),
+    NAMER(NV_PBUS_FBIO_CALPN),
+    NAMER(NV_PBUS_FBIO_CALSEL),
+    NAMER(NV_PBUS_FBIO_ADRDRV),
+    NAMER(NV_PBUS_FBIO_CLKDRV),
+    NAMER(NV_PBUS_FBIO_DATDRV),
+    NAMER(NV_PBUS_FBIO_DQSDRV),
+    NAMER(NV_PBUS_FBIO_ADRSLW),
+    NAMER(NV_PBUS_FBIO_CLKSLW),
+    NAMER(NV_PBUS_FBIO_DATSLW),
+    NAMER(NV_PBUS_FBIO_DQSSLW),
+    NAMER(NV_PBUS_DISPIO_PADCTL),
+    NAMER(NV_PBUS_TVDIO_PADCTL),
+    NAMER(NV_PBUS_PRIV_ASRC_2),
+    NAMER(NV_PBUS_TVDIO_CALCNT),
+    NAMER(NV_PBUS_TVDIO_CALEN),
+    NAMER(NV_PBUS_TVDIO_CALPN),
+    NAMER(NV_PBUS_TVDIO_CALSEL),
+    NAMER(NV_PBUS_PCI_NV_0),
+    NAMER(NV_PBUS_PCI_NV_1),
+    NAMER(NV_PBUS_PCI_NV_2),
+    NAMER(NV_PBUS_PCI_NV_3),
+    NAMER(NV_PBUS_PCI_NV_4),
+    NAMER(NV_PBUS_PCI_NV_5),
+    NAMER(NV_PBUS_PCI_NV_6),
+    NAMER(NV_PBUS_PCI_NV_7_0),
+    NAMER(NV_PBUS_PCI_NV_7_1),
+    NAMER(NV_PBUS_PCI_NV_7_2),
+    NAMER(NV_PBUS_PCI_NV_7_3),
+    NAMER(NV_PBUS_PCI_NV_11),
+    NAMER(NV_PBUS_PCI_NV_12),
+    NAMER(NV_PBUS_PCI_NV_13),
+    NAMER(NV_PBUS_PCI_NV_14),
+    NAMER(NV_PBUS_PCI_NV_15),
+    NAMER(NV_PBUS_PCI_NV_16),
+    NAMER(NV_PBUS_PCI_NV_17),
+    NAMER(NV_PBUS_PCI_NV_18),
+    NAMER(NV_PBUS_PCI_NV_19),
+    NAMER(NV_PBUS_PCI_NV_20),
+    NAMER(NV_PBUS_PCI_NV_21),
+    NAMER(NV_PBUS_PCI_NV_22),
+    NAMER(NV_PBUS_PCI_NV_23),
+    NAMER(NV_PBUS_PCI_NV_24),
+    NAMER(NV_PBUS_PCI_NV_25),
+    NAMER(NV_PBUS_PCI_NV_26_0),
+    NAMER(NV_PBUS_PCI_NV_26_1),
+    NAMER(NV_PBUS_PCI_NV_26_2),
+    NAMER(NV_PBUS_PCI_NV_26_3),
+    NAMER(NV_PBUS_PCI_NV_26_4),
+    NAMER(NV_PBUS_PCI_NV_26_5),
+    NAMER(NV_PBUS_PCI_NV_26_6),
+    NAMER(NV_PBUS_PCI_NV_26_7),
+    NAMER(NV_PBUS_PCI_NV_26_8),
+    NAMER(NV_PBUS_PCI_NV_26_9),
+    NAMER(NV_PBUS_PCI_NV_26_10),
+    NAMER(NV_PBUS_PCI_NV_26_11),
+    NAMER(NV_PBUS_PCI_NV_26_12),
+    NAMER(NV_PBUS_PCI_NV_26_13),
+    NAMER(NV_PBUS_PCI_NV_26_14),
+    NAMER(NV_PBUS_PCI_NV_26_15),
+    NAMER(NV_PBUS_PCI_NV_26_16),
+    NAMER(NV_PBUS_PCI_NV_26_17),
+    NAMER(NV_PBUS_PCI_NV_26_18),
+    NAMER(NV_PBUS_PCI_NV_26_19),
+    NAMER(NV_PBUS_PCI_NV_26_20),
+    NAMER(NV_PBUS_PCI_NV_26_21),
+    NAMER(NV_PBUS_PCI_NV_26_22),
+    NAMER(NV_PBUS_PCI_NV_26_23),
+    NAMER(NV_PBUS_PCI_NV_26_24),
+    NAMER(NV_PBUS_PCI_NV_26_25),
+    NAMER(NV_PBUS_PCI_NV_26_26),
+    NAMER(NV_PBUS_PCI_NV_26_27),
+    NAMER(NV_PBUS_PCI_NV_26_28),
+    NAMER(NV_PBUS_PCI_NV_26_29),
+    NAMER(NV_PBUS_PCI_NV_26_30),
+    NAMER(NV_PBUS_PCI_NV_26_31),
+    NAMER(NV_PBUS_PCI_NV_26_32),
+    NAMER(NV_PBUS_PCI_NV_26_33),
+    NAMER(NV_PBUS_PCI_NV_26_34),
+    NAMER(NV_PBUS_PCI_NV_26_35),
+    NAMER(NV_PBUS_PCI_NV_26_36),
+    NAMER(NV_PBUS_PCI_NV_26_37),
+};
+

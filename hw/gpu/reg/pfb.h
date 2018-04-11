@@ -1,0 +1,1636 @@
+
+enum {
+        NV_PFB_DEBUG_0                              = 0x00000080,
+#define NV_PFB_DEBUG_0_FINE_SEL                                                 0x00000007
+#define NV_PFB_DEBUG_0_FINE_SEL__BITSHIFT                                       0
+#define NV_PFB_DEBUG_0_FINE_SEL_0                                               0x00000000
+#define NV_PFB_DEBUG_0_MRS                                                      0x00000010
+#define NV_PFB_DEBUG_0_MRS__BITSHIFT                                            4
+#define NV_PFB_DEBUG_0_MRS_256                                                  0x00000000
+#define NV_PFB_DEBUG_0_MRS_2                                                    0x00000001
+#define NV_PFB_DEBUG_0_SPARE0                                                   0x00000100
+#define NV_PFB_DEBUG_0_SPARE0__BITSHIFT                                         8
+#define NV_PFB_DEBUG_0_SPARE0_DISABLED                                          0x00000000
+#define NV_PFB_DEBUG_0_SPARE0_ENABLED                                           0x00000001
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2NV                                      0x00010000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2NV__BITSHIFT                            16
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2NV_DISABLED                             0x00000000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2NV_ENABLED                              0x00000001
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2CPU                                     0x00020000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2CPU__BITSHIFT                           17
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2CPU_DISABLED                            0x00000000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2CPU_ENABLED                             0x00000001
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2AGP                                     0x00040000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2AGP__BITSHIFT                           18
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2AGP_DISABLED                            0x00000000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2AGP_ENABLED                             0x00000001
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2LDT                                     0x00080000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2LDT__BITSHIFT                           19
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2LDT_DISABLED                            0x00000000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_RR_M2LDT_ENABLED                             0x00000001
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_FA                                           0x01000000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_FA__BITSHIFT                                 24
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_FA_DISABLED                                  0x00000000
+#define NV_PFB_DEBUG_0_XTRA_SETTLE_FA_ENABLED                                   0x00000001
+#define NV_PFB_DEBUG_0_BURST_INTERRUPT                                          0x08000000
+#define NV_PFB_DEBUG_0_BURST_INTERRUPT__BITSHIFT                                27
+#define NV_PFB_DEBUG_0_BURST_INTERRUPT_ENABLED                                  0x00000000
+#define NV_PFB_DEBUG_0_BURST_INTERRUPT_DISABLED                                 0x00000001
+#define NV_PFB_DEBUG_0_SPARE1                                                   0x10000000
+#define NV_PFB_DEBUG_0_SPARE1__BITSHIFT                                         28
+#define NV_PFB_DEBUG_0_SPARE1_DISABLED                                          0x00000000
+#define NV_PFB_DEBUG_0_SPARE1_ENABLED                                           0x00000001
+#define NV_PFB_DEBUG_0_SPARE2                                                   0x20000000
+#define NV_PFB_DEBUG_0_SPARE2__BITSHIFT                                         29
+#define NV_PFB_DEBUG_0_SPARE2_DISABLED                                          0x00000000
+#define NV_PFB_DEBUG_0_SPARE2_ENABLED                                           0x00000001
+#define NV_PFB_DEBUG_0_SPARE3                                                   0x40000000
+#define NV_PFB_DEBUG_0_SPARE3__BITSHIFT                                         30
+#define NV_PFB_DEBUG_0_SPARE3_DISABLED                                          0x00000000
+#define NV_PFB_DEBUG_0_SPARE3_ENABLED                                           0x00000001
+#define NV_PFB_DEBUG_0_SPARE4                                                   0x80000000
+#define NV_PFB_DEBUG_0_SPARE4__BITSHIFT                                         31
+#define NV_PFB_DEBUG_0_SPARE4_DISABLED                                          0x00000000
+#define NV_PFB_DEBUG_0_SPARE4_ENABLED                                           0x00000001
+        NV_PFB_RDI_INDEX                            = 0x000000f0,
+#define NV_PFB_RDI_INDEX_ADDRESS                                                0x00001fc0
+#define NV_PFB_RDI_INDEX_ADDRESS__BITSHIFT                                      6
+#define NV_PFB_RDI_INDEX_ADDRESS_0                                              0x00000000
+#define NV_PFB_RDI_INDEX_SELECT                                                 0x01ff0000
+#define NV_PFB_RDI_INDEX_SELECT__BITSHIFT                                       16
+#define NV_PFB_RDI_INDEX_SELECT_0                                               0x00000000
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQ_P0                                       0x00000100
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQ_P1                                       0x00000101
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQ_P2                                       0x00000102
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQ_P3                                       0x00000103
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZOQ_P0                                       0x00000104
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZOQ_P1                                       0x00000105
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZOQ_P2                                       0x00000106
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZOQ_P3                                       0x00000107
+#define NV_PFB_RDI_INDEX_SELECT_FA_T0Q_P0                                       0x00000108
+#define NV_PFB_RDI_INDEX_SELECT_FA_T0Q_P1                                       0x00000109
+#define NV_PFB_RDI_INDEX_SELECT_FA_T0Q_P2                                       0x0000010a
+#define NV_PFB_RDI_INDEX_SELECT_FA_T0Q_P3                                       0x0000010b
+#define NV_PFB_RDI_INDEX_SELECT_FA_T1Q_P0                                       0x0000010c
+#define NV_PFB_RDI_INDEX_SELECT_FA_T1Q_P1                                       0x0000010d
+#define NV_PFB_RDI_INDEX_SELECT_FA_T1Q_P2                                       0x0000010e
+#define NV_PFB_RDI_INDEX_SELECT_FA_T1Q_P3                                       0x0000010f
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZRQ_P0                                       0x00000110
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZRQ_P1                                       0x00000111
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZRQ_P2                                       0x00000112
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZRQ_P3                                       0x00000113
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQ_P0                                       0x00000114
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQ_P1                                       0x00000115
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQ_P2                                       0x00000116
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQ_P3                                       0x00000117
+#define NV_PFB_RDI_INDEX_SELECT_FA_CRQ_P0                                       0x00000118
+#define NV_PFB_RDI_INDEX_SELECT_FA_CRQ_P1                                       0x00000119
+#define NV_PFB_RDI_INDEX_SELECT_FA_CRQ_P2                                       0x0000011a
+#define NV_PFB_RDI_INDEX_SELECT_FA_CRQ_P3                                       0x0000011b
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQ_P0                                       0x0000011c
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQ_P1                                       0x0000011d
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQ_P2                                       0x0000011e
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQ_P3                                       0x0000011f
+#define NV_PFB_RDI_INDEX_SELECT_FA_EXTQ_P0                                      0x00000120
+#define NV_PFB_RDI_INDEX_SELECT_FA_EXTQ_P1                                      0x00000121
+#define NV_PFB_RDI_INDEX_SELECT_FA_EXTQ_P2                                      0x00000122
+#define NV_PFB_RDI_INDEX_SELECT_FA_EXTQ_P3                                      0x00000123
+#define NV_PFB_RDI_INDEX_SELECT_HP_HPQ_P0                                       0x00000124
+#define NV_PFB_RDI_INDEX_SELECT_HP_HPQ_P1                                       0x00000125
+#define NV_PFB_RDI_INDEX_SELECT_HP_HPQ_P2                                       0x00000126
+#define NV_PFB_RDI_INDEX_SELECT_HP_HPQ_P3                                       0x00000127
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_AGP_D                                    0x00000128
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_AGP_BE                                   0x00000129
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_ISO_D                                    0x0000012a
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_ISO_BE                                   0x0000012b
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_NONISO_D                                 0x0000012c
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_NONISO_BE                                0x0000012d
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_CPU_D                                    0x0000012e
+#define NV_PFB_RDI_INDEX_SELECT_RR_SNQ_CPU_BE                                   0x0000012f
+#define NV_PFB_RDI_INDEX_SELECT_MC_ZTAG_P0                                      0x00000130
+#define NV_PFB_RDI_INDEX_SELECT_MC_ZTAG_P1                                      0x00000131
+#define NV_PFB_RDI_INDEX_SELECT_MC_ZTAG_P2                                      0x00000132
+#define NV_PFB_RDI_INDEX_SELECT_MC_ZTAG_P3                                      0x00000133
+#define NV_PFB_RDI_INDEX_SELECT_GART_INTFC_CPU_D                                0x00000134
+#define NV_PFB_RDI_INDEX_SELECT_GART_INTFC_CPU_BE                               0x00000135
+#define NV_PFB_RDI_INDEX_SELECT_WBC_DATA                                        0x00000136
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_CPUQ_P0                                0x00000138
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_CPUQ_P1                                0x00000139
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_CPUQ_P2                                0x0000013a
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_CPUQ_P3                                0x0000013b
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_LDTQ_P0                                0x0000013c
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_LDTQ_P1                                0x0000013d
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_LDTQ_P2                                0x0000013e
+#define NV_PFB_RDI_INDEX_SELECT_PA_RTARB_LDTQ_P3                                0x0000013f
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_RWAQ_P0                               0x00000140
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_RWAQ_P1                               0x00000141
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_RWAQ_P2                               0x00000142
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_RWAQ_P3                               0x00000143
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_PRQ_P0                                0x00000148
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_PRQ_P1                                0x00000149
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_PRQ_P2                                0x0000014a
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_PRQ_P3                                0x0000014b
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_ACQ_P0                                0x0000014c
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_ACQ_P1                                0x0000014d
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_ACQ_P2                                0x0000014e
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQHP_ACQ_P3                                0x0000014f
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQW_P0                                      0x00000150
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQW_P1                                      0x00000151
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQW_P2                                      0x00000152
+#define NV_PFB_RDI_INDEX_SELECT_FA_LPQW_P3                                      0x00000153
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQW_P0                                      0x00000154
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQW_P1                                      0x00000155
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQW_P2                                      0x00000156
+#define NV_PFB_RDI_INDEX_SELECT_FA_ZWQW_P3                                      0x00000157
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQW_P0                                      0x00000158
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQW_P1                                      0x00000159
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQW_P2                                      0x0000015a
+#define NV_PFB_RDI_INDEX_SELECT_FA_CWQW_P3                                      0x0000015b
+#define NV_PFB_RDI_INDEX_SELECT_RR_AGP_P0                                       0x0000015c
+#define NV_PFB_RDI_INDEX_SELECT_RR_AGP_P1                                       0x0000015d
+#define NV_PFB_RDI_INDEX_SELECT_RR_AGP_P2                                       0x0000015e
+#define NV_PFB_RDI_INDEX_SELECT_RR_AGP_P3                                       0x0000015f
+#define NV_PFB_RDI_INDEX_SELECT_RR_ISO_P0                                       0x00000160
+#define NV_PFB_RDI_INDEX_SELECT_RR_ISO_P1                                       0x00000161
+#define NV_PFB_RDI_INDEX_SELECT_RR_ISO_P2                                       0x00000162
+#define NV_PFB_RDI_INDEX_SELECT_RR_ISO_P3                                       0x00000163
+#define NV_PFB_RDI_INDEX_SELECT_RR_NONISO_P0                                    0x00000164
+#define NV_PFB_RDI_INDEX_SELECT_RR_NONISO_P1                                    0x00000165
+#define NV_PFB_RDI_INDEX_SELECT_RR_NONISO_P2                                    0x00000166
+#define NV_PFB_RDI_INDEX_SELECT_RR_NONISO_P3                                    0x00000167
+#define NV_PFB_RDI_INDEX_SELECT_RR_CPU_P0                                       0x00000168
+#define NV_PFB_RDI_INDEX_SELECT_RR_CPU_P1                                       0x00000169
+#define NV_PFB_RDI_INDEX_SELECT_RR_CPU_P2                                       0x0000016a
+#define NV_PFB_RDI_INDEX_SELECT_RR_CPU_P3                                       0x0000016b
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0HP_P0                                      0x0000016c
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0HP_P1                                      0x0000016d
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0HP_P2                                      0x0000016e
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0HP_P3                                      0x0000016f
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0LP_P0                                      0x00000170
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0LP_P1                                      0x00000171
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0LP_P2                                      0x00000172
+#define NV_PFB_RDI_INDEX_SELECT_RR_W0LP_P3                                      0x00000173
+#define NV_PFB_RDI_INDEX_SELECT_RR_W1LP_P0                                      0x00000174
+#define NV_PFB_RDI_INDEX_SELECT_RR_W1LP_P1                                      0x00000175
+#define NV_PFB_RDI_INDEX_SELECT_RR_W1LP_P2                                      0x00000176
+#define NV_PFB_RDI_INDEX_SELECT_RR_W1LP_P3                                      0x00000177
+#define NV_PFB_RDI_INDEX_SELECT_RR_W2LP_P0                                      0x00000178
+#define NV_PFB_RDI_INDEX_SELECT_RR_W2LP_P1                                      0x00000179
+#define NV_PFB_RDI_INDEX_SELECT_RR_W2LP_P2                                      0x0000017a
+#define NV_PFB_RDI_INDEX_SELECT_RR_W2LP_P3                                      0x0000017b
+#define NV_PFB_RDI_INDEX_SELECT_RR_W3HP_P0                                      0x0000017c
+#define NV_PFB_RDI_INDEX_SELECT_RR_W3HP_P1                                      0x0000017d
+#define NV_PFB_RDI_INDEX_SELECT_RR_W3HP_P2                                      0x0000017e
+#define NV_PFB_RDI_INDEX_SELECT_RR_W3HP_P3                                      0x0000017f
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWAQ_P0                               0x000001a0
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWAQ_P1                               0x000001a1
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWAQ_P2                               0x000001a2
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWAQ_P3                               0x000001a3
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWDQ_P0                               0x000001a4
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWDQ_P1                               0x000001a5
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWDQ_P2                               0x000001a6
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_RWDQ_P3                               0x000001a7
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_PRQ_P0                                0x000001a8
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_PRQ_P1                                0x000001a9
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_PRQ_P2                                0x000001aa
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_PRQ_P3                                0x000001ab
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_ACQ_P0                                0x000001ac
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_ACQ_P1                                0x000001ad
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_ACQ_P2                                0x000001ae
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQFA_ACQ_P3                                0x000001af
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWAQ_P0                               0x000001b0
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWAQ_P1                               0x000001b1
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWAQ_P2                               0x000001b2
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWAQ_P3                               0x000001b3
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWDQ_P0                               0x000001b4
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWDQ_P1                               0x000001b5
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWDQ_P2                               0x000001b6
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_RWDQ_P3                               0x000001b7
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_PRQ_P0                                0x000001b8
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_PRQ_P1                                0x000001b9
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_PRQ_P2                                0x000001ba
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_PRQ_P3                                0x000001bb
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_ACQ_P0                                0x000001bc
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_ACQ_P1                                0x000001bd
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_ACQ_P2                                0x000001be
+#define NV_PFB_RDI_INDEX_SELECT_MC_CMDQRT_ACQ_P3                                0x000001bf
+        NV_PFB_RDI_DATA_0                           = 0x00000100,
+        NV_PFB_RDI_DATA_1                           = 0x00000104,
+        NV_PFB_RDI_DATA_2                           = 0x00000108,
+        NV_PFB_RDI_DATA_3                           = 0x0000010c,
+        NV_PFB_RDI_DATA_4                           = 0x00000110,
+        NV_PFB_RDI_DATA_5                           = 0x00000114,
+        NV_PFB_RDI_DATA_6                           = 0x00000118,
+        NV_PFB_RDI_DATA_7                           = 0x0000011c,
+        NV_PFB_RDI_DATA_8                           = 0x00000120,
+        NV_PFB_RDI_DATA_9                           = 0x00000124,
+        NV_PFB_RDI_DATA_10                          = 0x00000128,
+        NV_PFB_RDI_DATA_11                          = 0x0000012c,
+        NV_PFB_RDI_DATA_12                          = 0x00000130,
+        NV_PFB_RDI_DATA_13                          = 0x00000134,
+        NV_PFB_RDI_DATA_14                          = 0x00000138,
+        NV_PFB_RDI_DATA_15                          = 0x0000013c,
+        NV_PFB_CFG0                                 = 0x00000200,
+#define NV_PFB_CFG0_PART                                                        0x00000003
+#define NV_PFB_CFG0_PART__BITSHIFT                                              0
+#define NV_PFB_CFG0_PART_4                                                      0x00000003
+#define NV_PFB_CFG0_PART_1                                                      0x00000000
+#define NV_PFB_CFG0_PART_2                                                      0x00000001
+#define NV_PFB_CFG0_EXTBANK                                                     0x00000100
+#define NV_PFB_CFG0_EXTBANK__BITSHIFT                                           8
+#define NV_PFB_CFG0_EXTBANK_0                                                   0x00000000
+#define NV_PFB_CFG0_EXTBANK_1                                                   0x00000001
+#define NV_PFB_CFG0_BURST_INT_RD2RD                                             0x00010000
+#define NV_PFB_CFG0_BURST_INT_RD2RD__BITSHIFT                                   16
+#define NV_PFB_CFG0_BURST_INT_RD2RD_DISABLED                                    0x00000000
+#define NV_PFB_CFG0_BURST_INT_RD2RD_ENABLED                                     0x00000001
+#define NV_PFB_CFG0_BURST_INT_WR2WR                                             0x00020000
+#define NV_PFB_CFG0_BURST_INT_WR2WR__BITSHIFT                                   17
+#define NV_PFB_CFG0_BURST_INT_WR2WR_DISABLED                                    0x00000000
+#define NV_PFB_CFG0_BURST_INT_WR2WR_ENABLED                                     0x00000001
+#define NV_PFB_CFG0_BURST_INT_RD2PRE                                            0x00040000
+#define NV_PFB_CFG0_BURST_INT_RD2PRE__BITSHIFT                                  18
+#define NV_PFB_CFG0_BURST_INT_RD2PRE_DISABLED                                   0x00000000
+#define NV_PFB_CFG0_BURST_INT_RD2PRE_ENABLED                                    0x00000001
+#define NV_PFB_CFG0_SPARE0                                                      0x00080000
+#define NV_PFB_CFG0_SPARE0__BITSHIFT                                            19
+#define NV_PFB_CFG0_SPARE0_DISABLED                                             0x00000000
+#define NV_PFB_CFG0_SPARE0_ENABLED                                              0x00000001
+#define NV_PFB_CFG0_AUTO_PRE_RD                                                 0x01000000
+#define NV_PFB_CFG0_AUTO_PRE_RD__BITSHIFT                                       24
+#define NV_PFB_CFG0_AUTO_PRE_RD_DISABLED                                        0x00000000
+#define NV_PFB_CFG0_AUTO_PRE_RD_ENABLED                                         0x00000001
+#define NV_PFB_CFG0_AUTO_PRE_WR                                                 0x02000000
+#define NV_PFB_CFG0_AUTO_PRE_WR__BITSHIFT                                       25
+#define NV_PFB_CFG0_AUTO_PRE_WR_DISABLED                                        0x00000000
+#define NV_PFB_CFG0_AUTO_PRE_WR_ENABLED                                         0x00000001
+#define NV_PFB_CFG0_SYNC_MODE                                                   0x04000000
+#define NV_PFB_CFG0_SYNC_MODE__BITSHIFT                                         26
+#define NV_PFB_CFG0_SYNC_MODE_DISABLED                                          0x00000000
+#define NV_PFB_CFG0_SYNC_MODE_ENABLED                                           0x00000001
+#define NV_PFB_CFG0_TWO_CLK_ADDR                                                0x08000000
+#define NV_PFB_CFG0_TWO_CLK_ADDR__BITSHIFT                                      27
+#define NV_PFB_CFG0_TWO_CLK_ADDR_DISABLE                                        0x00000000
+#define NV_PFB_CFG0_TWO_CLK_ADDR_ENABLE                                         0x00000001
+        NV_PFB_CFG1                                 = 0x00000204,
+#define NV_PFB_CFG1_APA                                                         0x00000070
+#define NV_PFB_CFG1_APA__BITSHIFT                                               4
+#define NV_PFB_CFG1_APA_A8                                                      0x00000000
+#define NV_PFB_CFG1_APA_A9                                                      0x00000001
+#define NV_PFB_CFG1_APA_A10                                                     0x00000002
+#define NV_PFB_CFG1_APA_A11                                                     0x00000003
+#define NV_PFB_CFG1_APA_A12                                                     0x00000004
+#define NV_PFB_CFG1_APB                                                         0x00000700
+#define NV_PFB_CFG1_APB__BITSHIFT                                               8
+#define NV_PFB_CFG1_APB_A8                                                      0x00000000
+#define NV_PFB_CFG1_APB_A9                                                      0x00000001
+#define NV_PFB_CFG1_APB_A10                                                     0x00000002
+#define NV_PFB_CFG1_APB_A11                                                     0x00000003
+#define NV_PFB_CFG1_APB_A12                                                     0x00000004
+#define NV_PFB_CFG1_COL                                                         0x0000f000
+#define NV_PFB_CFG1_COL__BITSHIFT                                               12
+#define NV_PFB_CFG1_COL_8                                                       0x00000008
+#define NV_PFB_CFG1_COL_9                                                       0x00000009
+#define NV_PFB_CFG1_COL_7                                                       0x00000007
+#define NV_PFB_CFG1_COL_10                                                      0x0000000a
+#define NV_PFB_CFG1_ROWA                                                        0x000f0000
+#define NV_PFB_CFG1_ROWA__BITSHIFT                                              16
+#define NV_PFB_CFG1_ROWA_11                                                     0x00000003
+#define NV_PFB_CFG1_ROWA_12                                                     0x00000004
+#define NV_PFB_CFG1_ROWA_9                                                      0x00000001
+#define NV_PFB_CFG1_ROWA_10                                                     0x00000002
+#define NV_PFB_CFG1_ROWA_13                                                     0x00000005
+#define NV_PFB_CFG1_ROWB                                                        0x00f00000
+#define NV_PFB_CFG1_ROWB__BITSHIFT                                              20
+#define NV_PFB_CFG1_ROWB_11                                                     0x00000003
+#define NV_PFB_CFG1_ROWB_12                                                     0x00000004
+#define NV_PFB_CFG1_ROWB_9                                                      0x00000001
+#define NV_PFB_CFG1_ROWB_10                                                     0x00000002
+#define NV_PFB_CFG1_ROWB_13                                                     0x00000005
+#define NV_PFB_CFG1_BANKA                                                       0x01000000
+#define NV_PFB_CFG1_BANKA__BITSHIFT                                             24
+#define NV_PFB_CFG1_BANKA_2                                                     0x00000001
+#define NV_PFB_CFG1_BANKA_1                                                     0x00000000
+#define NV_PFB_CFG1_BANKB                                                       0x10000000
+#define NV_PFB_CFG1_BANKB__BITSHIFT                                             28
+#define NV_PFB_CFG1_BANKB_2                                                     0x00000001
+#define NV_PFB_CFG1_BANKB_1                                                     0x00000000
+        NV_PFB_CSTATUS                              = 0x0000020c,
+#define NV_PFB_CSTATUS_RAMAMOUNT_MS                                             0x00000001
+#define NV_PFB_CSTATUS_RAMAMOUNT_MS__BITSHIFT                                   0
+#define NV_PFB_CSTATUS_RAMAMOUNT_LS                                             0xfff00000
+#define NV_PFB_CSTATUS_RAMAMOUNT_LS__BITSHIFT                                   20
+        NV_PFB_REFCTRL                              = 0x00000210,
+#define NV_PFB_REFCTRL_PUT                                                      0x0000007f
+#define NV_PFB_REFCTRL_PUT__BITSHIFT                                            0
+#define NV_PFB_REFCTRL_PUT_0                                                    0x00000000
+#define NV_PFB_REFCTRL_GET                                                      0x00007f00
+#define NV_PFB_REFCTRL_GET__BITSHIFT                                            8
+#define NV_PFB_REFCTRL_GET_0                                                    0x00000000
+#define NV_PFB_REFCTRL_VALID                                                    0x80000000
+#define NV_PFB_REFCTRL_VALID__BITSHIFT                                          31
+#define NV_PFB_REFCTRL_VALID_0                                                  0x00000000
+#define NV_PFB_REFCTRL_VALID_1                                                  0x00000001
+        NV_PFB_NVM                                  = 0x00000214,
+#define NV_PFB_NVM_MODE                                                         0x00000001
+#define NV_PFB_NVM_MODE__BITSHIFT                                               0
+#define NV_PFB_NVM_MODE_DISABLE                                                 0x00000000
+#define NV_PFB_NVM_MODE_ENABLE                                                  0x00000001
+#define NV_PFB_NVM_LIMIT                                                        0x000000f0
+#define NV_PFB_NVM_LIMIT__BITSHIFT                                              4
+#define NV_PFB_NVM_LIMIT_64K                                                    0x00000000
+#define NV_PFB_NVM_LIMIT_128K                                                   0x00000001
+#define NV_PFB_NVM_LIMIT_192K                                                   0x00000002
+#define NV_PFB_NVM_LIMIT_256K                                                   0x00000003
+#define NV_PFB_NVM_LIMIT_320K                                                   0x00000004
+#define NV_PFB_NVM_LIMIT_384K                                                   0x00000005
+#define NV_PFB_NVM_LIMIT_448K                                                   0x00000006
+#define NV_PFB_NVM_LIMIT_512K                                                   0x00000007
+#define NV_PFB_NVM_LIMIT_576K                                                   0x00000008
+#define NV_PFB_NVM_LIMIT_640K                                                   0x00000009
+#define NV_PFB_NVM_LIMIT_704K                                                   0x0000000a
+#define NV_PFB_NVM_LIMIT_768K                                                   0x0000000b
+#define NV_PFB_NVM_LIMIT_832K                                                   0x0000000c
+#define NV_PFB_NVM_LIMIT_896K                                                   0x0000000d
+#define NV_PFB_NVM_LIMIT_960K                                                   0x0000000e
+#define NV_PFB_NVM_LIMIT_1024K                                                  0x0000000f
+        NV_PFB_PIN                                  = 0x00000218,
+#define NV_PFB_PIN_CKE                                                          0x00000001
+#define NV_PFB_PIN_CKE__BITSHIFT                                                0
+#define NV_PFB_PIN_CKE_POWERDOWN                                                0x00000000
+#define NV_PFB_PIN_CKE_NORMAL                                                   0x00000001
+#define NV_PFB_PIN_DQM                                                          0x00000010
+#define NV_PFB_PIN_DQM__BITSHIFT                                                4
+#define NV_PFB_PIN_DQM_NORMAL                                                   0x00000000
+#define NV_PFB_PIN_DQM_INACTIVE                                                 0x00000001
+        NV_PFB_PAD                                  = 0x0000021c,
+#define NV_PFB_PAD_CKE                                                          0x00000001
+#define NV_PFB_PAD_CKE__BITSHIFT                                                0
+#define NV_PFB_PAD_CKE_TRISTATE                                                 0x00000000
+#define NV_PFB_PAD_CKE_NORMAL                                                   0x00000001
+        NV_PFB_TIMING0                              = 0x00000220,
+#define NV_PFB_TIMING0_RC                                                       0x0000001f
+#define NV_PFB_TIMING0_RC__BITSHIFT                                             0
+#define NV_PFB_TIMING0_RC_12                                                    0x0000000c
+#define NV_PFB_TIMING0_RC_31                                                    0x0000001f
+#define NV_PFB_TIMING0_RFC                                                      0x00001f00
+#define NV_PFB_TIMING0_RFC__BITSHIFT                                            8
+#define NV_PFB_TIMING0_RFC_14                                                   0x0000000e
+#define NV_PFB_TIMING0_RFC_31                                                   0x0000001f
+#define NV_PFB_TIMING0_RAS                                                      0x000f8000
+#define NV_PFB_TIMING0_RAS__BITSHIFT                                            15
+#define NV_PFB_TIMING0_RAS_8                                                    0x00000008
+#define NV_PFB_TIMING0_RAS_31                                                   0x0000001f
+#define NV_PFB_TIMING0_RD_RCD                                                   0x00f00000
+#define NV_PFB_TIMING0_RD_RCD__BITSHIFT                                         20
+#define NV_PFB_TIMING0_RD_RCD_4                                                 0x00000004
+#define NV_PFB_TIMING0_RD_RCD_15                                                0x0000000f
+#define NV_PFB_TIMING0_WR_RCD                                                   0x0f000000
+#define NV_PFB_TIMING0_WR_RCD__BITSHIFT                                         24
+#define NV_PFB_TIMING0_WR_RCD_4                                                 0x00000004
+#define NV_PFB_TIMING0_WR_RCD_15                                                0x0000000f
+#define NV_PFB_TIMING0_RP                                                       0xf0000000
+#define NV_PFB_TIMING0_RP__BITSHIFT                                             28
+#define NV_PFB_TIMING0_RP_4                                                     0x00000004
+#define NV_PFB_TIMING0_RP_15                                                    0x0000000f
+        NV_PFB_TIMING1                              = 0x00000224,
+#define NV_PFB_TIMING1_R2W                                                      0x000000f0
+#define NV_PFB_TIMING1_R2W__BITSHIFT                                            4
+#define NV_PFB_TIMING1_R2W_5                                                    0x00000005
+#define NV_PFB_TIMING1_R2W_7                                                    0x00000007
+#define NV_PFB_TIMING1_R2P                                                      0x00000f00
+#define NV_PFB_TIMING1_R2P__BITSHIFT                                            8
+#define NV_PFB_TIMING1_R2P_1                                                    0x00000001
+#define NV_PFB_TIMING1_R2P_2                                                    0x00000002
+#define NV_PFB_TIMING1_R2P_3                                                    0x00000003
+#define NV_PFB_TIMING1_R2P_7                                                    0x00000007
+#define NV_PFB_TIMING1_REXT                                                     0x00007000
+#define NV_PFB_TIMING1_REXT__BITSHIFT                                           12
+#define NV_PFB_TIMING1_REXT_1                                                   0x00000001
+#define NV_PFB_TIMING1_REXT_2                                                   0x00000002
+#define NV_PFB_TIMING1_W2R                                                      0x000f0000
+#define NV_PFB_TIMING1_W2R__BITSHIFT                                            16
+#define NV_PFB_TIMING1_W2R_3                                                    0x00000003
+#define NV_PFB_TIMING1_W2R_4                                                    0x00000004
+#define NV_PFB_TIMING1_W2R_7                                                    0x00000007
+#define NV_PFB_TIMING1_W2P                                                      0x00f00000
+#define NV_PFB_TIMING1_W2P__BITSHIFT                                            20
+#define NV_PFB_TIMING1_W2P_4                                                    0x00000004
+#define NV_PFB_TIMING1_W2P_5                                                    0x00000005
+#define NV_PFB_TIMING1_W2P_7                                                    0x00000007
+#define NV_PFB_TIMING1_RRD                                                      0x07000000
+#define NV_PFB_TIMING1_RRD__BITSHIFT                                            24
+#define NV_PFB_TIMING1_RRD_1                                                    0x00000001
+#define NV_PFB_TIMING1_RRD_2                                                    0x00000002
+#define NV_PFB_TIMING1_RRD_7                                                    0x00000007
+#define NV_PFB_TIMING1_DOE_TYPE                                                 0x08000000
+#define NV_PFB_TIMING1_DOE_TYPE__BITSHIFT                                       27
+#define NV_PFB_TIMING1_DOE_TYPE_0                                               0x00000000
+#define NV_PFB_TIMING1_DOE_DLY                                                  0x70000000
+#define NV_PFB_TIMING1_DOE_DLY__BITSHIFT                                        28
+#define NV_PFB_TIMING1_DOE_DLY_7                                                0x00000007
+        NV_PFB_TIMING2                              = 0x00000228,
+#define NV_PFB_TIMING2_REFRESH_LO                                               0x0000001f
+#define NV_PFB_TIMING2_REFRESH_LO__BITSHIFT                                     0
+#define NV_PFB_TIMING2_REFRESH_LO_1F                                            0x0000001f
+#define NV_PFB_TIMING2_REFRESH                                                  0x0000ffe0
+#define NV_PFB_TIMING2_REFRESH__BITSHIFT                                        5
+#define NV_PFB_TIMING2_REFRESH_0                                                0x00000000
+#define NV_PFB_TIMING2_REFRESH_47                                               0x0000002f
+#define NV_PFB_TIMING2_QUSE                                                     0x00070000
+#define NV_PFB_TIMING2_QUSE__BITSHIFT                                           16
+#define NV_PFB_TIMING2_QUSE_2                                                   0x00000002
+#define NV_PFB_TIMING2_QUSE_MIN                                                 0x00000000
+#define NV_PFB_TIMING2_QUSE_MAX                                                 0x00000007
+#define NV_PFB_TIMING2_QINC                                                     0x00f00000
+#define NV_PFB_TIMING2_QINC__BITSHIFT                                           20
+#define NV_PFB_TIMING2_QINC_1                                                   0x00000001
+#define NV_PFB_TIMING2_QINC_MIN                                                 0x00000000
+#define NV_PFB_TIMING2_QINC_MAX                                                 0x0000000f
+#define NV_PFB_TIMING2_RDV                                                      0x0f000000
+#define NV_PFB_TIMING2_RDV__BITSHIFT                                            24
+#define NV_PFB_TIMING2_RDV_7                                                    0x00000007
+#define NV_PFB_TIMING2_RDV_8                                                    0x00000008
+#define NV_PFB_TIMING2_RDV_MIN                                                  0x00000002
+#define NV_PFB_TIMING2_RDV_MAX                                                  0x0000000e
+        NV_PFB_TILE_0                               = 0x00000240,
+        NV_PFB_TILE_1                               = 0x00000250,
+        NV_PFB_TILE_2                               = 0x00000260,
+        NV_PFB_TILE_3                               = 0x00000270,
+        NV_PFB_TILE_4                               = 0x00000280,
+        NV_PFB_TILE_5                               = 0x00000290,
+        NV_PFB_TILE_6                               = 0x000002a0,
+        NV_PFB_TILE_7                               = 0x000002b0,
+#define NV_PFB_TILE_REGION                                                      0x00000001
+#define NV_PFB_TILE_REGION__BITSHIFT                                            0
+#define NV_PFB_TILE_REGION_INVALID                                              0x00000000
+#define NV_PFB_TILE_REGION_VALID                                                0x00000001
+#define NV_PFB_TILE_BANK0_SENSE                                                 0x00000002
+#define NV_PFB_TILE_BANK0_SENSE__BITSHIFT                                       1
+#define NV_PFB_TILE_BANK0_SENSE_0                                               0x00000000
+#define NV_PFB_TILE_BANK0_SENSE_1                                               0x00000001
+#define NV_PFB_TILE_ADR                                                         0xffffc000
+#define NV_PFB_TILE_ADR__BITSHIFT                                               14
+        NV_PFB_TLIMIT_0                             = 0x00000244,
+        NV_PFB_TLIMIT_1                             = 0x00000254,
+        NV_PFB_TLIMIT_2                             = 0x00000264,
+        NV_PFB_TLIMIT_3                             = 0x00000274,
+        NV_PFB_TLIMIT_4                             = 0x00000284,
+        NV_PFB_TLIMIT_5                             = 0x00000294,
+        NV_PFB_TLIMIT_6                             = 0x000002a4,
+        NV_PFB_TLIMIT_7                             = 0x000002b4,
+#define NV_PFB_TLIMIT_ADR                                                       0xffffc000
+#define NV_PFB_TLIMIT_ADR__BITSHIFT                                             14
+#define NV_PFB_TLIMIT_ADR_LO                                                    0x00003fff
+#define NV_PFB_TLIMIT_ADR_LO__BITSHIFT                                          0
+#define NV_PFB_TLIMIT_ADR_LO_3FFF                                               0x00003fff
+        NV_PFB_TSIZE_0                              = 0x00000248,
+        NV_PFB_TSIZE_1                              = 0x00000258,
+        NV_PFB_TSIZE_2                              = 0x00000268,
+        NV_PFB_TSIZE_3                              = 0x00000278,
+        NV_PFB_TSIZE_4                              = 0x00000288,
+        NV_PFB_TSIZE_5                              = 0x00000298,
+        NV_PFB_TSIZE_6                              = 0x000002a8,
+        NV_PFB_TSIZE_7                              = 0x000002b8,
+#define NV_PFB_TSIZE_PITCH                                                      0x0000ff00
+#define NV_PFB_TSIZE_PITCH__BITSHIFT                                            8
+#define NV_PFB_TSIZE_PITCH_0200                                                 0x00000002
+#define NV_PFB_TSIZE_PITCH_0300                                                 0x00000003
+#define NV_PFB_TSIZE_PITCH_0400                                                 0x00000004
+#define NV_PFB_TSIZE_PITCH_0500                                                 0x00000005
+#define NV_PFB_TSIZE_PITCH_0600                                                 0x00000006
+#define NV_PFB_TSIZE_PITCH_0700                                                 0x00000007
+#define NV_PFB_TSIZE_PITCH_0800                                                 0x00000008
+#define NV_PFB_TSIZE_PITCH_0A00                                                 0x0000000a
+#define NV_PFB_TSIZE_PITCH_0C00                                                 0x0000000c
+#define NV_PFB_TSIZE_PITCH_0E00                                                 0x0000000e
+#define NV_PFB_TSIZE_PITCH_1000                                                 0x00000010
+#define NV_PFB_TSIZE_PITCH_1400                                                 0x00000014
+#define NV_PFB_TSIZE_PITCH_1800                                                 0x00000018
+#define NV_PFB_TSIZE_PITCH_1C00                                                 0x0000001c
+#define NV_PFB_TSIZE_PITCH_2000                                                 0x00000020
+#define NV_PFB_TSIZE_PITCH_2800                                                 0x00000028
+#define NV_PFB_TSIZE_PITCH_3000                                                 0x00000030
+#define NV_PFB_TSIZE_PITCH_3800                                                 0x00000038
+#define NV_PFB_TSIZE_PITCH_4000                                                 0x00000040
+#define NV_PFB_TSIZE_PITCH_5000                                                 0x00000050
+#define NV_PFB_TSIZE_PITCH_6000                                                 0x00000060
+#define NV_PFB_TSIZE_PITCH_7000                                                 0x00000070
+#define NV_PFB_TSIZE_PITCH_8000                                                 0x00000080
+#define NV_PFB_TSIZE_PITCH_A000                                                 0x000000a0
+#define NV_PFB_TSIZE_PITCH_C000                                                 0x000000c0
+#define NV_PFB_TSIZE_PITCH_E000                                                 0x000000e0
+        NV_PFB_TSTATUS_0                            = 0x0000024c,
+        NV_PFB_TSTATUS_1                            = 0x0000025c,
+        NV_PFB_TSTATUS_2                            = 0x0000026c,
+        NV_PFB_TSTATUS_3                            = 0x0000027c,
+        NV_PFB_TSTATUS_4                            = 0x0000028c,
+        NV_PFB_TSTATUS_5                            = 0x0000029c,
+        NV_PFB_TSTATUS_6                            = 0x000002ac,
+        NV_PFB_TSTATUS_7                            = 0x000002bc,
+#define NV_PFB_TSTATUS_PRIME                                                    0x00000003
+#define NV_PFB_TSTATUS_PRIME__BITSHIFT                                          0
+#define NV_PFB_TSTATUS_PRIME_1                                                  0x00000000
+#define NV_PFB_TSTATUS_PRIME_3                                                  0x00000001
+#define NV_PFB_TSTATUS_PRIME_5                                                  0x00000002
+#define NV_PFB_TSTATUS_PRIME_7                                                  0x00000003
+#define NV_PFB_TSTATUS_FACTOR                                                   0x00000070
+#define NV_PFB_TSTATUS_FACTOR__BITSHIFT                                         4
+#define NV_PFB_TSTATUS_FACTOR_1                                                 0x00000000
+#define NV_PFB_TSTATUS_FACTOR_2                                                 0x00000001
+#define NV_PFB_TSTATUS_FACTOR_4                                                 0x00000002
+#define NV_PFB_TSTATUS_FACTOR_8                                                 0x00000003
+#define NV_PFB_TSTATUS_FACTOR_16                                                0x00000004
+#define NV_PFB_TSTATUS_FACTOR_32                                                0x00000005
+#define NV_PFB_TSTATUS_FACTOR_64                                                0x00000006
+#define NV_PFB_TSTATUS_FACTOR_128                                               0x00000007
+#define NV_PFB_TSTATUS_REGION                                                   0x80000000
+#define NV_PFB_TSTATUS_REGION__BITSHIFT                                         31
+#define NV_PFB_TSTATUS_REGION_INVALID                                           0x00000000
+#define NV_PFB_TSTATUS_REGION_VALID                                             0x00000001
+        NV_PFB_MRS                                  = 0x000002c0,
+#define NV_PFB_MRS_A0                                                           0x00000001
+#define NV_PFB_MRS_A0__BITSHIFT                                                 0
+#define NV_PFB_MRS_A0_0                                                         0x00000000
+#define NV_PFB_MRS_A0_1                                                         0x00000001
+#define NV_PFB_MRS_A1                                                           0x00000002
+#define NV_PFB_MRS_A1__BITSHIFT                                                 1
+#define NV_PFB_MRS_A1_0                                                         0x00000000
+#define NV_PFB_MRS_A1_1                                                         0x00000001
+#define NV_PFB_MRS_A2                                                           0x00000004
+#define NV_PFB_MRS_A2__BITSHIFT                                                 2
+#define NV_PFB_MRS_A2_0                                                         0x00000000
+#define NV_PFB_MRS_A2_1                                                         0x00000001
+#define NV_PFB_MRS_A3                                                           0x00000008
+#define NV_PFB_MRS_A3__BITSHIFT                                                 3
+#define NV_PFB_MRS_A3_0                                                         0x00000000
+#define NV_PFB_MRS_A3_1                                                         0x00000001
+#define NV_PFB_MRS_A4                                                           0x00000010
+#define NV_PFB_MRS_A4__BITSHIFT                                                 4
+#define NV_PFB_MRS_A4_0                                                         0x00000000
+#define NV_PFB_MRS_A4_1                                                         0x00000001
+#define NV_PFB_MRS_A5                                                           0x00000020
+#define NV_PFB_MRS_A5__BITSHIFT                                                 5
+#define NV_PFB_MRS_A5_0                                                         0x00000000
+#define NV_PFB_MRS_A5_1                                                         0x00000001
+#define NV_PFB_MRS_A6                                                           0x00000040
+#define NV_PFB_MRS_A6__BITSHIFT                                                 6
+#define NV_PFB_MRS_A6_0                                                         0x00000000
+#define NV_PFB_MRS_A6_1                                                         0x00000001
+#define NV_PFB_MRS_A7                                                           0x00000080
+#define NV_PFB_MRS_A7__BITSHIFT                                                 7
+#define NV_PFB_MRS_A7_0                                                         0x00000000
+#define NV_PFB_MRS_A7_1                                                         0x00000001
+#define NV_PFB_MRS_A8                                                           0x00000100
+#define NV_PFB_MRS_A8__BITSHIFT                                                 8
+#define NV_PFB_MRS_A8_0                                                         0x00000000
+#define NV_PFB_MRS_A8_1                                                         0x00000001
+#define NV_PFB_MRS_A9                                                           0x00000200
+#define NV_PFB_MRS_A9__BITSHIFT                                                 9
+#define NV_PFB_MRS_A9_0                                                         0x00000000
+#define NV_PFB_MRS_A9_1                                                         0x00000001
+#define NV_PFB_MRS_A10                                                          0x00000400
+#define NV_PFB_MRS_A10__BITSHIFT                                                10
+#define NV_PFB_MRS_A10_0                                                        0x00000000
+#define NV_PFB_MRS_A10_1                                                        0x00000001
+#define NV_PFB_MRS_A11                                                          0x00000800
+#define NV_PFB_MRS_A11__BITSHIFT                                                11
+#define NV_PFB_MRS_A11_0                                                        0x00000000
+#define NV_PFB_MRS_A11_1                                                        0x00000001
+#define NV_PFB_MRS_A12                                                          0x00001000
+#define NV_PFB_MRS_A12__BITSHIFT                                                12
+#define NV_PFB_MRS_A12_0                                                        0x00000000
+#define NV_PFB_MRS_A12_1                                                        0x00000001
+#define NV_PFB_MRS_BA0                                                          0x00100000
+#define NV_PFB_MRS_BA0__BITSHIFT                                                20
+#define NV_PFB_MRS_BA0_0                                                        0x00000000
+#define NV_PFB_MRS_BA0_1                                                        0x00000001
+#define NV_PFB_MRS_BA1                                                          0x00200000
+#define NV_PFB_MRS_BA1__BITSHIFT                                                21
+#define NV_PFB_MRS_BA1_0                                                        0x00000000
+#define NV_PFB_MRS_BA1_1                                                        0x00000001
+        NV_PFB_EMRS                                 = 0x000002c4,
+#define NV_PFB_EMRS_A0                                                          0x00000001
+#define NV_PFB_EMRS_A0__BITSHIFT                                                0
+#define NV_PFB_EMRS_A0_0                                                        0x00000000
+#define NV_PFB_EMRS_A0_1                                                        0x00000001
+#define NV_PFB_EMRS_A1                                                          0x00000002
+#define NV_PFB_EMRS_A1__BITSHIFT                                                1
+#define NV_PFB_EMRS_A1_0                                                        0x00000000
+#define NV_PFB_EMRS_A1_1                                                        0x00000001
+#define NV_PFB_EMRS_A2                                                          0x00000004
+#define NV_PFB_EMRS_A2__BITSHIFT                                                2
+#define NV_PFB_EMRS_A2_0                                                        0x00000000
+#define NV_PFB_EMRS_A2_1                                                        0x00000001
+#define NV_PFB_EMRS_A3                                                          0x00000008
+#define NV_PFB_EMRS_A3__BITSHIFT                                                3
+#define NV_PFB_EMRS_A3_0                                                        0x00000000
+#define NV_PFB_EMRS_A3_1                                                        0x00000001
+#define NV_PFB_EMRS_A4                                                          0x00000010
+#define NV_PFB_EMRS_A4__BITSHIFT                                                4
+#define NV_PFB_EMRS_A4_0                                                        0x00000000
+#define NV_PFB_EMRS_A4_1                                                        0x00000001
+#define NV_PFB_EMRS_A5                                                          0x00000020
+#define NV_PFB_EMRS_A5__BITSHIFT                                                5
+#define NV_PFB_EMRS_A5_0                                                        0x00000000
+#define NV_PFB_EMRS_A5_1                                                        0x00000001
+#define NV_PFB_EMRS_A6                                                          0x00000040
+#define NV_PFB_EMRS_A6__BITSHIFT                                                6
+#define NV_PFB_EMRS_A6_0                                                        0x00000000
+#define NV_PFB_EMRS_A6_1                                                        0x00000001
+#define NV_PFB_EMRS_A7                                                          0x00000080
+#define NV_PFB_EMRS_A7__BITSHIFT                                                7
+#define NV_PFB_EMRS_A7_0                                                        0x00000000
+#define NV_PFB_EMRS_A7_1                                                        0x00000001
+#define NV_PFB_EMRS_A8                                                          0x00000100
+#define NV_PFB_EMRS_A8__BITSHIFT                                                8
+#define NV_PFB_EMRS_A8_0                                                        0x00000000
+#define NV_PFB_EMRS_A8_1                                                        0x00000001
+#define NV_PFB_EMRS_A9                                                          0x00000200
+#define NV_PFB_EMRS_A9__BITSHIFT                                                9
+#define NV_PFB_EMRS_A9_0                                                        0x00000000
+#define NV_PFB_EMRS_A9_1                                                        0x00000001
+#define NV_PFB_EMRS_A10                                                         0x00000400
+#define NV_PFB_EMRS_A10__BITSHIFT                                               10
+#define NV_PFB_EMRS_A10_0                                                       0x00000000
+#define NV_PFB_EMRS_A10_1                                                       0x00000001
+#define NV_PFB_EMRS_A11                                                         0x00000800
+#define NV_PFB_EMRS_A11__BITSHIFT                                               11
+#define NV_PFB_EMRS_A11_0                                                       0x00000000
+#define NV_PFB_EMRS_A11_1                                                       0x00000001
+#define NV_PFB_EMRS_A12                                                         0x00001000
+#define NV_PFB_EMRS_A12__BITSHIFT                                               12
+#define NV_PFB_EMRS_A12_0                                                       0x00000000
+#define NV_PFB_EMRS_A12_1                                                       0x00000001
+#define NV_PFB_EMRS_BA0                                                         0x00100000
+#define NV_PFB_EMRS_BA0__BITSHIFT                                               20
+#define NV_PFB_EMRS_BA0_0                                                       0x00000000
+#define NV_PFB_EMRS_BA0_1                                                       0x00000001
+#define NV_PFB_EMRS_BA1                                                         0x00200000
+#define NV_PFB_EMRS_BA1__BITSHIFT                                               21
+#define NV_PFB_EMRS_BA1_0                                                       0x00000000
+#define NV_PFB_EMRS_BA1_1                                                       0x00000001
+        NV_PFB_MRS_EXT                              = 0x000002c8,
+#define NV_PFB_MRS_EXT_A0                                                       0x00000001
+#define NV_PFB_MRS_EXT_A0__BITSHIFT                                             0
+#define NV_PFB_MRS_EXT_A0_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A0_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A1                                                       0x00000002
+#define NV_PFB_MRS_EXT_A1__BITSHIFT                                             1
+#define NV_PFB_MRS_EXT_A1_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A1_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A2                                                       0x00000004
+#define NV_PFB_MRS_EXT_A2__BITSHIFT                                             2
+#define NV_PFB_MRS_EXT_A2_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A2_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A3                                                       0x00000008
+#define NV_PFB_MRS_EXT_A3__BITSHIFT                                             3
+#define NV_PFB_MRS_EXT_A3_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A3_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A4                                                       0x00000010
+#define NV_PFB_MRS_EXT_A4__BITSHIFT                                             4
+#define NV_PFB_MRS_EXT_A4_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A4_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A5                                                       0x00000020
+#define NV_PFB_MRS_EXT_A5__BITSHIFT                                             5
+#define NV_PFB_MRS_EXT_A5_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A5_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A6                                                       0x00000040
+#define NV_PFB_MRS_EXT_A6__BITSHIFT                                             6
+#define NV_PFB_MRS_EXT_A6_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A6_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A7                                                       0x00000080
+#define NV_PFB_MRS_EXT_A7__BITSHIFT                                             7
+#define NV_PFB_MRS_EXT_A7_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A7_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A8                                                       0x00000100
+#define NV_PFB_MRS_EXT_A8__BITSHIFT                                             8
+#define NV_PFB_MRS_EXT_A8_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A8_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A9                                                       0x00000200
+#define NV_PFB_MRS_EXT_A9__BITSHIFT                                             9
+#define NV_PFB_MRS_EXT_A9_0                                                     0x00000000
+#define NV_PFB_MRS_EXT_A9_1                                                     0x00000001
+#define NV_PFB_MRS_EXT_A10                                                      0x00000400
+#define NV_PFB_MRS_EXT_A10__BITSHIFT                                            10
+#define NV_PFB_MRS_EXT_A10_0                                                    0x00000000
+#define NV_PFB_MRS_EXT_A10_1                                                    0x00000001
+#define NV_PFB_MRS_EXT_A11                                                      0x00000800
+#define NV_PFB_MRS_EXT_A11__BITSHIFT                                            11
+#define NV_PFB_MRS_EXT_A11_0                                                    0x00000000
+#define NV_PFB_MRS_EXT_A11_1                                                    0x00000001
+#define NV_PFB_MRS_EXT_A12                                                      0x00001000
+#define NV_PFB_MRS_EXT_A12__BITSHIFT                                            12
+#define NV_PFB_MRS_EXT_A12_0                                                    0x00000000
+#define NV_PFB_MRS_EXT_A12_1                                                    0x00000001
+#define NV_PFB_MRS_EXT_BA0                                                      0x00100000
+#define NV_PFB_MRS_EXT_BA0__BITSHIFT                                            20
+#define NV_PFB_MRS_EXT_BA0_0                                                    0x00000000
+#define NV_PFB_MRS_EXT_BA0_1                                                    0x00000001
+#define NV_PFB_MRS_EXT_BA1                                                      0x00200000
+#define NV_PFB_MRS_EXT_BA1__BITSHIFT                                            21
+#define NV_PFB_MRS_EXT_BA1_0                                                    0x00000000
+#define NV_PFB_MRS_EXT_BA1_1                                                    0x00000001
+        NV_PFB_EMRS_EXT                             = 0x000002cc,
+#define NV_PFB_EMRS_EXT_A0                                                      0x00000001
+#define NV_PFB_EMRS_EXT_A0__BITSHIFT                                            0
+#define NV_PFB_EMRS_EXT_A0_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A0_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A1                                                      0x00000002
+#define NV_PFB_EMRS_EXT_A1__BITSHIFT                                            1
+#define NV_PFB_EMRS_EXT_A1_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A1_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A2                                                      0x00000004
+#define NV_PFB_EMRS_EXT_A2__BITSHIFT                                            2
+#define NV_PFB_EMRS_EXT_A2_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A2_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A3                                                      0x00000008
+#define NV_PFB_EMRS_EXT_A3__BITSHIFT                                            3
+#define NV_PFB_EMRS_EXT_A3_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A3_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A4                                                      0x00000010
+#define NV_PFB_EMRS_EXT_A4__BITSHIFT                                            4
+#define NV_PFB_EMRS_EXT_A4_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A4_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A5                                                      0x00000020
+#define NV_PFB_EMRS_EXT_A5__BITSHIFT                                            5
+#define NV_PFB_EMRS_EXT_A5_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A5_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A6                                                      0x00000040
+#define NV_PFB_EMRS_EXT_A6__BITSHIFT                                            6
+#define NV_PFB_EMRS_EXT_A6_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A6_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A7                                                      0x00000080
+#define NV_PFB_EMRS_EXT_A7__BITSHIFT                                            7
+#define NV_PFB_EMRS_EXT_A7_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A7_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A8                                                      0x00000100
+#define NV_PFB_EMRS_EXT_A8__BITSHIFT                                            8
+#define NV_PFB_EMRS_EXT_A8_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A8_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A9                                                      0x00000200
+#define NV_PFB_EMRS_EXT_A9__BITSHIFT                                            9
+#define NV_PFB_EMRS_EXT_A9_0                                                    0x00000000
+#define NV_PFB_EMRS_EXT_A9_1                                                    0x00000001
+#define NV_PFB_EMRS_EXT_A10                                                     0x00000400
+#define NV_PFB_EMRS_EXT_A10__BITSHIFT                                           10
+#define NV_PFB_EMRS_EXT_A10_0                                                   0x00000000
+#define NV_PFB_EMRS_EXT_A10_1                                                   0x00000001
+#define NV_PFB_EMRS_EXT_A11                                                     0x00000800
+#define NV_PFB_EMRS_EXT_A11__BITSHIFT                                           11
+#define NV_PFB_EMRS_EXT_A11_0                                                   0x00000000
+#define NV_PFB_EMRS_EXT_A11_1                                                   0x00000001
+#define NV_PFB_EMRS_EXT_A12                                                     0x00001000
+#define NV_PFB_EMRS_EXT_A12__BITSHIFT                                           12
+#define NV_PFB_EMRS_EXT_A12_0                                                   0x00000000
+#define NV_PFB_EMRS_EXT_A12_1                                                   0x00000001
+#define NV_PFB_EMRS_EXT_BA0                                                     0x00100000
+#define NV_PFB_EMRS_EXT_BA0__BITSHIFT                                           20
+#define NV_PFB_EMRS_EXT_BA0_0                                                   0x00000000
+#define NV_PFB_EMRS_EXT_BA0_1                                                   0x00000001
+#define NV_PFB_EMRS_EXT_BA1                                                     0x00200000
+#define NV_PFB_EMRS_EXT_BA1__BITSHIFT                                           21
+#define NV_PFB_EMRS_EXT_BA1_0                                                   0x00000000
+#define NV_PFB_EMRS_EXT_BA1_1                                                   0x00000001
+        NV_PFB_REF                                  = 0x000002d0,
+#define NV_PFB_REF_CMD                                                          0x00000001
+#define NV_PFB_REF_CMD__BITSHIFT                                                0
+#define NV_PFB_REF_CMD_REFRESH                                                  0x00000000
+#define NV_PFB_REF_CMD_REFRESH_1                                                0x00000001
+        NV_PFB_PRE                                  = 0x000002d4,
+#define NV_PFB_PRE_CMD                                                          0x00000001
+#define NV_PFB_PRE_CMD__BITSHIFT                                                0
+#define NV_PFB_PRE_CMD_PRECHARGE                                                0x00000000
+#define NV_PFB_PRE_CMD_PRECHARGE_1                                              0x00000001
+        NV_PFB_ZCOMP_0                              = 0x00000300,
+        NV_PFB_ZCOMP_1                              = 0x00000304,
+        NV_PFB_ZCOMP_2                              = 0x00000308,
+        NV_PFB_ZCOMP_3                              = 0x0000030c,
+        NV_PFB_ZCOMP_4                              = 0x00000310,
+        NV_PFB_ZCOMP_5                              = 0x00000314,
+        NV_PFB_ZCOMP_6                              = 0x00000318,
+        NV_PFB_ZCOMP_7                              = 0x0000031c,
+#define NV_PFB_ZCOMP_BASE_TAG_ADR                                               0x0003ffc0
+#define NV_PFB_ZCOMP_BASE_TAG_ADR__BITSHIFT                                     6
+#define NV_PFB_ZCOMP_MODE                                                       0x04000000
+#define NV_PFB_ZCOMP_MODE__BITSHIFT                                             26
+#define NV_PFB_ZCOMP_MODE_16                                                    0x00000000
+#define NV_PFB_ZCOMP_MODE_32                                                    0x00000001
+#define NV_PFB_ZCOMP_ENDIAN                                                     0x08000000
+#define NV_PFB_ZCOMP_ENDIAN__BITSHIFT                                           27
+#define NV_PFB_ZCOMP_ENDIAN_LITTLE                                              0x00000000
+#define NV_PFB_ZCOMP_ENDIAN_BIG                                                 0x00000001
+#define NV_PFB_ZCOMP_AA                                                         0x30000000
+#define NV_PFB_ZCOMP_AA__BITSHIFT                                               28
+#define NV_PFB_ZCOMP_AA_DISABLED                                                0x00000000
+#define NV_PFB_ZCOMP_AA_CENTER_1                                                0x00000001
+#define NV_PFB_ZCOMP_AA_CENTER_CORNER_2                                         0x00000002
+#define NV_PFB_ZCOMP_AA_SQUARE_OFFSET_4                                         0x00000003
+#define NV_PFB_ZCOMP_EN                                                         0x80000000
+#define NV_PFB_ZCOMP_EN__BITSHIFT                                               31
+#define NV_PFB_ZCOMP_EN_FALSE                                                   0x00000000
+#define NV_PFB_ZCOMP_EN_TRUE                                                    0x00000001
+        NV_PFB_ZCOMP_MAX_TAG                        = 0x00000320,
+#define NV_PFB_ZCOMP_MAX_TAG_ADR_LO                                             0x0000003f
+#define NV_PFB_ZCOMP_MAX_TAG_ADR_LO__BITSHIFT                                   0
+#define NV_PFB_ZCOMP_MAX_TAG_ADR_LO_3F                                          0x0000003f
+#define NV_PFB_ZCOMP_MAX_TAG_ADR                                                0x0003ffc0
+#define NV_PFB_ZCOMP_MAX_TAG_ADR__BITSHIFT                                      6
+#define NV_PFB_ZCOMP_MAX_TAG_ADR_VALUE                                          0x0000012b
+        NV_PFB_ZCOMP_OFFSET                         = 0x00000324,
+#define NV_PFB_ZCOMP_OFFSET_ADR_SPACE                                           0x0000000f
+#define NV_PFB_ZCOMP_OFFSET_ADR_SPACE__BITSHIFT                                 0
+#define NV_PFB_ZCOMP_OFFSET_ZCULL_COMP_ONLY_EN                                  0x00000010
+#define NV_PFB_ZCOMP_OFFSET_ZCULL_COMP_ONLY_EN__BITSHIFT                        4
+#define NV_PFB_ZCOMP_OFFSET_ZCULL_COMP_ONLY_EN_FALSE                            0x00000000
+#define NV_PFB_ZCOMP_OFFSET_ZCULL_COMP_ONLY_EN_TRUE                             0x00000001
+#define NV_PFB_ZCOMP_OFFSET_ADR                                                 0x03ffc000
+#define NV_PFB_ZCOMP_OFFSET_ADR__BITSHIFT                                       14
+#define NV_PFB_ZCOMP_OFFSET_EN                                                  0x80000000
+#define NV_PFB_ZCOMP_OFFSET_EN__BITSHIFT                                        31
+#define NV_PFB_ZCOMP_OFFSET_EN_FALSE                                            0x00000000
+#define NV_PFB_ZCOMP_OFFSET_EN_TRUE                                             0x00000001
+        NV_PFB_ARB_PREDIVIDER                       = 0x00000328,
+#define NV_PFB_ARB_PREDIVIDER_DIV                                               0x000000ff
+#define NV_PFB_ARB_PREDIVIDER_DIV__BITSHIFT                                     0
+#define NV_PFB_ARB_PREDIVIDER_DIV_0                                             0x00000000
+#define NV_PFB_ARB_PREDIVIDER_DIV_1                                             0x00000001
+#define NV_PFB_ARB_PREDIVIDER_DIV_2                                             0x00000002
+#define NV_PFB_ARB_PREDIVIDER_DIV_3                                             0x00000003
+#define NV_PFB_ARB_PREDIVIDER_DIV_4                                             0x00000004
+#define NV_PFB_ARB_PREDIVIDER_DIV_5                                             0x00000005
+#define NV_PFB_ARB_PREDIVIDER_DIV_6                                             0x00000006
+#define NV_PFB_ARB_PREDIVIDER_DIV_7                                             0x00000007
+#define NV_PFB_ARB_PREDIVIDER_DIV_8                                             0x00000008
+#define NV_PFB_ARB_PREDIVIDER_DIV_9                                             0x00000009
+#define NV_PFB_ARB_PREDIVIDER_DIV_10                                            0x0000000a
+#define NV_PFB_ARB_PREDIVIDER_DIV_11                                            0x0000000b
+#define NV_PFB_ARB_PREDIVIDER_DIV_12                                            0x0000000c
+#define NV_PFB_ARB_PREDIVIDER_DIV_13                                            0x0000000d
+#define NV_PFB_ARB_PREDIVIDER_DIV_14                                            0x0000000e
+#define NV_PFB_ARB_PREDIVIDER_DIV_15                                            0x0000000f
+#define NV_PFB_ARB_PREDIVIDER_DIV_16                                            0x00000010
+#define NV_PFB_ARB_PREDIVIDER_DIV_20                                            0x00000014
+#define NV_PFB_ARB_PREDIVIDER_TIMEOUT_CONT_GNT                                  0x00001000
+#define NV_PFB_ARB_PREDIVIDER_TIMEOUT_CONT_GNT__BITSHIFT                        12
+#define NV_PFB_ARB_PREDIVIDER_TIMEOUT_CONT_GNT_DISABLE                          0x00000000
+#define NV_PFB_ARB_PREDIVIDER_TIMEOUT_CONT_GNT_ENABLE                           0x00000001
+        NV_PFB_ARB_TIMEOUT                          = 0x0000032c,
+#define NV_PFB_ARB_TIMEOUT_EXT                                                  0x0000000f
+#define NV_PFB_ARB_TIMEOUT_EXT__BITSHIFT                                        0
+#define NV_PFB_ARB_TIMEOUT_EXT_8                                                0x00000008
+#define NV_PFB_ARB_TIMEOUT_EXT_14                                               0x0000000e
+#define NV_PFB_ARB_TIMEOUT_EXT_DISABLE                                          0x0000000f
+#define NV_PFB_ARB_TIMEOUT_LP                                                   0x000000f0
+#define NV_PFB_ARB_TIMEOUT_LP__BITSHIFT                                         4
+#define NV_PFB_ARB_TIMEOUT_LP_8                                                 0x00000008
+#define NV_PFB_ARB_TIMEOUT_LP_DISABLE                                           0x0000000f
+#define NV_PFB_ARB_TIMEOUT_ZO                                                   0x00000f00
+#define NV_PFB_ARB_TIMEOUT_ZO__BITSHIFT                                         8
+#define NV_PFB_ARB_TIMEOUT_ZO_8                                                 0x00000008
+#define NV_PFB_ARB_TIMEOUT_ZO_DISABLE                                           0x0000000f
+#define NV_PFB_ARB_TIMEOUT_TX                                                   0x0000f000
+#define NV_PFB_ARB_TIMEOUT_TX__BITSHIFT                                         12
+#define NV_PFB_ARB_TIMEOUT_TX_3                                                 0x00000003
+#define NV_PFB_ARB_TIMEOUT_TX_8                                                 0x00000008
+#define NV_PFB_ARB_TIMEOUT_TX_12                                                0x0000000c
+#define NV_PFB_ARB_TIMEOUT_TX_DISABLE                                           0x0000000f
+#define NV_PFB_ARB_TIMEOUT_ZR                                                   0x000f0000
+#define NV_PFB_ARB_TIMEOUT_ZR__BITSHIFT                                         16
+#define NV_PFB_ARB_TIMEOUT_ZR_8                                                 0x00000008
+#define NV_PFB_ARB_TIMEOUT_ZR_DISABLE                                           0x0000000f
+#define NV_PFB_ARB_TIMEOUT_ZW                                                   0x00f00000
+#define NV_PFB_ARB_TIMEOUT_ZW__BITSHIFT                                         20
+#define NV_PFB_ARB_TIMEOUT_ZW_8                                                 0x00000008
+#define NV_PFB_ARB_TIMEOUT_ZW_DISABLE                                           0x0000000f
+#define NV_PFB_ARB_TIMEOUT_CR                                                   0x0f000000
+#define NV_PFB_ARB_TIMEOUT_CR__BITSHIFT                                         24
+#define NV_PFB_ARB_TIMEOUT_CR_8                                                 0x00000008
+#define NV_PFB_ARB_TIMEOUT_CR_DISABLE                                           0x0000000f
+#define NV_PFB_ARB_TIMEOUT_CW                                                   0xf0000000
+#define NV_PFB_ARB_TIMEOUT_CW__BITSHIFT                                         28
+#define NV_PFB_ARB_TIMEOUT_CW_8                                                 0x00000008
+#define NV_PFB_ARB_TIMEOUT_CW_DISABLE                                           0x0000000f
+        NV_PFB_ARB_XFER_SZ                          = 0x00000330,
+#define NV_PFB_ARB_XFER_SZ_EXT                                                  0x0000000f
+#define NV_PFB_ARB_XFER_SZ_EXT__BITSHIFT                                        0
+#define NV_PFB_ARB_XFER_SZ_EXT_4                                                0x00000002
+#define NV_PFB_ARB_XFER_SZ_EXT_8                                                0x00000004
+#define NV_PFB_ARB_XFER_SZ_EXT_MIN                                              0x00000000
+#define NV_PFB_ARB_XFER_SZ_EXT_INF                                              0x0000000f
+#define NV_PFB_ARB_XFER_SZ_LP                                                   0x000000f0
+#define NV_PFB_ARB_XFER_SZ_LP__BITSHIFT                                         4
+#define NV_PFB_ARB_XFER_SZ_LP_8                                                 0x00000004
+#define NV_PFB_ARB_XFER_SZ_LP_MIN                                               0x00000000
+#define NV_PFB_ARB_XFER_SZ_LP_INF                                               0x0000000f
+#define NV_PFB_ARB_XFER_SZ_ZO                                                   0x00000f00
+#define NV_PFB_ARB_XFER_SZ_ZO__BITSHIFT                                         8
+#define NV_PFB_ARB_XFER_SZ_ZO_8                                                 0x00000004
+#define NV_PFB_ARB_XFER_SZ_ZO_MIN                                               0x00000000
+#define NV_PFB_ARB_XFER_SZ_ZO_INF                                               0x0000000f
+#define NV_PFB_ARB_XFER_SZ_TX                                                   0x0000f000
+#define NV_PFB_ARB_XFER_SZ_TX__BITSHIFT                                         12
+#define NV_PFB_ARB_XFER_SZ_TX_8                                                 0x00000004
+#define NV_PFB_ARB_XFER_SZ_TX_MIN                                               0x00000000
+#define NV_PFB_ARB_XFER_SZ_TX_INF                                               0x0000000f
+#define NV_PFB_ARB_XFER_SZ_ZR                                                   0x000f0000
+#define NV_PFB_ARB_XFER_SZ_ZR__BITSHIFT                                         16
+#define NV_PFB_ARB_XFER_SZ_ZR_8                                                 0x00000004
+#define NV_PFB_ARB_XFER_SZ_ZR_MIN                                               0x00000000
+#define NV_PFB_ARB_XFER_SZ_ZR_INF                                               0x0000000f
+#define NV_PFB_ARB_XFER_SZ_ZW                                                   0x00f00000
+#define NV_PFB_ARB_XFER_SZ_ZW__BITSHIFT                                         20
+#define NV_PFB_ARB_XFER_SZ_ZW_8                                                 0x00000004
+#define NV_PFB_ARB_XFER_SZ_ZW_MIN                                               0x00000000
+#define NV_PFB_ARB_XFER_SZ_ZW_INF                                               0x0000000f
+#define NV_PFB_ARB_XFER_SZ_CR                                                   0x0f000000
+#define NV_PFB_ARB_XFER_SZ_CR__BITSHIFT                                         24
+#define NV_PFB_ARB_XFER_SZ_CR_8                                                 0x00000004
+#define NV_PFB_ARB_XFER_SZ_CR_MIN                                               0x00000000
+#define NV_PFB_ARB_XFER_SZ_CR_INF                                               0x0000000f
+#define NV_PFB_ARB_XFER_SZ_CW                                                   0xf0000000
+#define NV_PFB_ARB_XFER_SZ_CW__BITSHIFT                                         28
+#define NV_PFB_ARB_XFER_SZ_CW_8                                                 0x00000004
+#define NV_PFB_ARB_XFER_SZ_CW_MIN                                               0x00000000
+#define NV_PFB_ARB_XFER_SZ_CW_INF                                               0x0000000f
+        NV_PFB_ARB_XFER_REM                         = 0x00000334,
+#define NV_PFB_ARB_XFER_REM_EXT                                                 0x0000000f
+#define NV_PFB_ARB_XFER_REM_EXT__BITSHIFT                                       0
+#define NV_PFB_ARB_XFER_REM_EXT_0                                               0x00000000
+#define NV_PFB_ARB_XFER_REM_EXT_4                                               0x00000004
+#define NV_PFB_ARB_XFER_REM_EXT_8                                               0x00000008
+#define NV_PFB_ARB_XFER_REM_LP                                                  0x000000f0
+#define NV_PFB_ARB_XFER_REM_LP__BITSHIFT                                        4
+#define NV_PFB_ARB_XFER_REM_LP_0                                                0x00000000
+#define NV_PFB_ARB_XFER_REM_LP_4                                                0x00000004
+#define NV_PFB_ARB_XFER_REM_LP_8                                                0x00000008
+#define NV_PFB_ARB_XFER_REM_ZO                                                  0x00000f00
+#define NV_PFB_ARB_XFER_REM_ZO__BITSHIFT                                        8
+#define NV_PFB_ARB_XFER_REM_ZO_0                                                0x00000000
+#define NV_PFB_ARB_XFER_REM_ZO_4                                                0x00000004
+#define NV_PFB_ARB_XFER_REM_ZO_8                                                0x00000008
+#define NV_PFB_ARB_XFER_REM_TX                                                  0x0000f000
+#define NV_PFB_ARB_XFER_REM_TX__BITSHIFT                                        12
+#define NV_PFB_ARB_XFER_REM_TX_0                                                0x00000000
+#define NV_PFB_ARB_XFER_REM_TX_4                                                0x00000004
+#define NV_PFB_ARB_XFER_REM_TX_8                                                0x00000008
+#define NV_PFB_ARB_XFER_REM_ZR                                                  0x000f0000
+#define NV_PFB_ARB_XFER_REM_ZR__BITSHIFT                                        16
+#define NV_PFB_ARB_XFER_REM_ZR_0                                                0x00000000
+#define NV_PFB_ARB_XFER_REM_ZR_4                                                0x00000004
+#define NV_PFB_ARB_XFER_REM_ZR_8                                                0x00000008
+#define NV_PFB_ARB_XFER_REM_ZW                                                  0x00f00000
+#define NV_PFB_ARB_XFER_REM_ZW__BITSHIFT                                        20
+#define NV_PFB_ARB_XFER_REM_ZW_0                                                0x00000000
+#define NV_PFB_ARB_XFER_REM_ZW_4                                                0x00000004
+#define NV_PFB_ARB_XFER_REM_ZW_8                                                0x00000008
+#define NV_PFB_ARB_XFER_REM_CR                                                  0x0f000000
+#define NV_PFB_ARB_XFER_REM_CR__BITSHIFT                                        24
+#define NV_PFB_ARB_XFER_REM_CR_0                                                0x00000000
+#define NV_PFB_ARB_XFER_REM_CR_4                                                0x00000004
+#define NV_PFB_ARB_XFER_REM_CR_8                                                0x00000008
+#define NV_PFB_ARB_XFER_REM_CW                                                  0xf0000000
+#define NV_PFB_ARB_XFER_REM_CW__BITSHIFT                                        28
+#define NV_PFB_ARB_XFER_REM_CW_0                                                0x00000000
+#define NV_PFB_ARB_XFER_REM_CW_4                                                0x00000004
+#define NV_PFB_ARB_XFER_REM_CW_8                                                0x00000008
+        NV_PFB_ARB_DIFF_BANK                        = 0x00000338,
+#define NV_PFB_ARB_DIFF_BANK_EXT                                                0x00000001
+#define NV_PFB_ARB_DIFF_BANK_EXT__BITSHIFT                                      0
+#define NV_PFB_ARB_DIFF_BANK_EXT_DISABLED                                       0x00000000
+#define NV_PFB_ARB_DIFF_BANK_EXT_ENABLED                                        0x00000001
+#define NV_PFB_ARB_DIFF_BANK_LP                                                 0x00000002
+#define NV_PFB_ARB_DIFF_BANK_LP__BITSHIFT                                       1
+#define NV_PFB_ARB_DIFF_BANK_LP_DISABLED                                        0x00000000
+#define NV_PFB_ARB_DIFF_BANK_LP_ENABLED                                         0x00000001
+#define NV_PFB_ARB_DIFF_BANK_ZO                                                 0x00000004
+#define NV_PFB_ARB_DIFF_BANK_ZO__BITSHIFT                                       2
+#define NV_PFB_ARB_DIFF_BANK_ZO_DISABLED                                        0x00000000
+#define NV_PFB_ARB_DIFF_BANK_ZO_ENABLED                                         0x00000001
+#define NV_PFB_ARB_DIFF_BANK_TX                                                 0x00000008
+#define NV_PFB_ARB_DIFF_BANK_TX__BITSHIFT                                       3
+#define NV_PFB_ARB_DIFF_BANK_TX_DISABLED                                        0x00000000
+#define NV_PFB_ARB_DIFF_BANK_TX_ENABLED                                         0x00000001
+#define NV_PFB_ARB_DIFF_BANK_ZR                                                 0x00000010
+#define NV_PFB_ARB_DIFF_BANK_ZR__BITSHIFT                                       4
+#define NV_PFB_ARB_DIFF_BANK_ZR_DISABLED                                        0x00000000
+#define NV_PFB_ARB_DIFF_BANK_ZR_ENABLED                                         0x00000001
+#define NV_PFB_ARB_DIFF_BANK_ZW                                                 0x00000020
+#define NV_PFB_ARB_DIFF_BANK_ZW__BITSHIFT                                       5
+#define NV_PFB_ARB_DIFF_BANK_ZW_DISABLED                                        0x00000000
+#define NV_PFB_ARB_DIFF_BANK_ZW_ENABLED                                         0x00000001
+#define NV_PFB_ARB_DIFF_BANK_CR                                                 0x00000040
+#define NV_PFB_ARB_DIFF_BANK_CR__BITSHIFT                                       6
+#define NV_PFB_ARB_DIFF_BANK_CR_DISABLED                                        0x00000000
+#define NV_PFB_ARB_DIFF_BANK_CR_ENABLED                                         0x00000001
+#define NV_PFB_ARB_DIFF_BANK_CW                                                 0x00000080
+#define NV_PFB_ARB_DIFF_BANK_CW__BITSHIFT                                       7
+#define NV_PFB_ARB_DIFF_BANK_CW_DISABLED                                        0x00000000
+#define NV_PFB_ARB_DIFF_BANK_CW_ENABLED                                         0x00000001
+        NV_PFB_CLOSE_PAGE0                          = 0x00000340,
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_EXT                                         0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_EXT__BITSHIFT                               0
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_EXT_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_EXT_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LP                                          0x00000002
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LP__BITSHIFT                                1
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LP_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LP_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZO                                          0x00000004
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZO__BITSHIFT                                2
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZO_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZO_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_TX                                          0x00000008
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_TX__BITSHIFT                                3
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_TX_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_TX_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZR                                          0x00000010
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZR__BITSHIFT                                4
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZR_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZR_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZW                                          0x00000020
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZW__BITSHIFT                                5
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZW_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_ZW_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CR                                          0x00000040
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CR__BITSHIFT                                6
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CR_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CR_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CW                                          0x00000080
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CW__BITSHIFT                                7
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CW_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CW_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_HP                                          0x00000100
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_HP__BITSHIFT                                8
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_HP_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_HP_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CPU                                         0x00000200
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CPU__BITSHIFT                               9
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CPU_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_CPU_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LDT                                         0x00000400
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LDT__BITSHIFT                               10
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LDT_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE0_DIFF_ROW_LDT_ENABLED                                 0x00000001
+        NV_PFB_CLOSE_PAGE1                          = 0x00000344,
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_EXT                                        0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_EXT__BITSHIFT                              0
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_EXT_DISABLED                               0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_EXT_ENABLED                                0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LP                                         0x00000002
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LP__BITSHIFT                               1
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LP_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LP_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZO                                         0x00000004
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZO__BITSHIFT                               2
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZO_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZO_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_TX                                         0x00000008
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_TX__BITSHIFT                               3
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_TX_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_TX_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZR                                         0x00000010
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZR__BITSHIFT                               4
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZR_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZR_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZW                                         0x00000020
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZW__BITSHIFT                               5
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZW_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_ZW_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CR                                         0x00000040
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CR__BITSHIFT                               6
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CR_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CR_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CW                                         0x00000080
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CW__BITSHIFT                               7
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CW_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CW_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_HP                                         0x00000100
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_HP__BITSHIFT                               8
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_HP_DISABLED                                0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_HP_ENABLED                                 0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CPU                                        0x00000200
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CPU__BITSHIFT                              9
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CPU_DISABLED                               0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_CPU_ENABLED                                0x00000001
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LDT                                        0x00000400
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LDT__BITSHIFT                              10
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LDT_DISABLED                               0x00000000
+#define NV_PFB_CLOSE_PAGE1_DIFF_BANK_LDT_ENABLED                                0x00000001
+        NV_PFB_CLOSE_PAGE2                          = 0x00000348,
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_EXT                                          0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_EXT__BITSHIFT                                0
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_EXT_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_EXT_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LP                                           0x00000002
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LP__BITSHIFT                                 1
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LP_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LP_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZO                                           0x00000004
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZO__BITSHIFT                                 2
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZO_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZO_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_TX                                           0x00000008
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_TX__BITSHIFT                                 3
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_TX_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_TX_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZR                                           0x00000010
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZR__BITSHIFT                                 4
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZR_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZR_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZW                                           0x00000020
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZW__BITSHIFT                                 5
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZW_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_ZW_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CR                                           0x00000040
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CR__BITSHIFT                                 6
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CR_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CR_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CW                                           0x00000080
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CW__BITSHIFT                                 7
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CW_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CW_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_HP                                           0x00000100
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_HP__BITSHIFT                                 8
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_HP_DISABLED                                  0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_HP_ENABLED                                   0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CPU                                          0x00000200
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CPU__BITSHIFT                                9
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CPU_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_CPU_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LDT                                          0x00000400
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LDT__BITSHIFT                                10
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LDT_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE2_Q_EMPTY_LDT_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_GART                                          0x00000800
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_GART__BITSHIFT                                11
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_GART_DISABLED                                 0x00000000
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_GART_ENABLED                                  0x00000001
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_LP                                        0x00001000
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_LP__BITSHIFT                              12
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_LP_DISABLED                               0x00000000
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_LP_ENABLED                                0x00000001
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_HP                                        0x00002000
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_HP__BITSHIFT                              13
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_HP_DISABLED                               0x00000000
+#define NV_PFB_CLOSE_PAGE2_ALWAYS_WBC_HP_ENABLED                                0x00000001
+        NV_PFB_BPARB                                = 0x0000034c,
+#define NV_PFB_BPARB_HP_ARB_MODE                                                0x00000007
+#define NV_PFB_BPARB_HP_ARB_MODE__BITSHIFT                                      0
+#define NV_PFB_BPARB_HP_ARB_MODE_REL_WTRMRK_10                                  0x00000000
+#define NV_PFB_BPARB_HP_ARB_MODE_REL_WTRMRK_8                                   0x00000001
+#define NV_PFB_BPARB_HP_ARB_MODE_REL_WTRMRK_6                                   0x00000002
+#define NV_PFB_BPARB_HP_ARB_MODE_REL_WTRMRK_4                                   0x00000003
+#define NV_PFB_BPARB_HP_ARB_MODE_KEEP_NEVER                                     0x00000004
+        NV_PFB_CMDQ0                                = 0x00000350,
+#define NV_PFB_CMDQ0_FA_RW                                                      0x0000001f
+#define NV_PFB_CMDQ0_FA_RW__BITSHIFT                                            0
+#define NV_PFB_CMDQ0_FA_RW_4                                                    0x00000004
+#define NV_PFB_CMDQ0_FA_RW_5                                                    0x00000005
+#define NV_PFB_CMDQ0_FA_RW_6                                                    0x00000006
+#define NV_PFB_CMDQ0_FA_RW_7                                                    0x00000007
+#define NV_PFB_CMDQ0_FA_RW_8                                                    0x00000008
+#define NV_PFB_CMDQ0_FA_RW_16                                                   0x00000010
+#define NV_PFB_CMDQ0_FA_ACT                                                     0x00000f00
+#define NV_PFB_CMDQ0_FA_ACT__BITSHIFT                                           8
+#define NV_PFB_CMDQ0_FA_ACT_1                                                   0x00000001
+#define NV_PFB_CMDQ0_FA_ACT_2                                                   0x00000002
+#define NV_PFB_CMDQ0_FA_ACT_3                                                   0x00000003
+#define NV_PFB_CMDQ0_FA_ACT_4                                                   0x00000004
+#define NV_PFB_CMDQ0_FA_ACT_8                                                   0x00000008
+#define NV_PFB_CMDQ0_FA_PRE                                                     0x0000f000
+#define NV_PFB_CMDQ0_FA_PRE__BITSHIFT                                           12
+#define NV_PFB_CMDQ0_FA_PRE_1                                                   0x00000001
+#define NV_PFB_CMDQ0_FA_PRE_2                                                   0x00000002
+#define NV_PFB_CMDQ0_FA_PRE_3                                                   0x00000003
+#define NV_PFB_CMDQ0_FA_PRE_4                                                   0x00000004
+#define NV_PFB_CMDQ0_FA_PRE_8                                                   0x00000008
+#define NV_PFB_CMDQ0_HP_RW                                                      0x001f0000
+#define NV_PFB_CMDQ0_HP_RW__BITSHIFT                                            16
+#define NV_PFB_CMDQ0_HP_RW_4                                                    0x00000004
+#define NV_PFB_CMDQ0_HP_RW_5                                                    0x00000005
+#define NV_PFB_CMDQ0_HP_RW_6                                                    0x00000006
+#define NV_PFB_CMDQ0_HP_RW_7                                                    0x00000007
+#define NV_PFB_CMDQ0_HP_RW_8                                                    0x00000008
+#define NV_PFB_CMDQ0_HP_RW_16                                                   0x00000010
+#define NV_PFB_CMDQ0_HP_ACT                                                     0x0f000000
+#define NV_PFB_CMDQ0_HP_ACT__BITSHIFT                                           24
+#define NV_PFB_CMDQ0_HP_ACT_1                                                   0x00000001
+#define NV_PFB_CMDQ0_HP_ACT_2                                                   0x00000002
+#define NV_PFB_CMDQ0_HP_ACT_3                                                   0x00000003
+#define NV_PFB_CMDQ0_HP_ACT_4                                                   0x00000004
+#define NV_PFB_CMDQ0_HP_ACT_8                                                   0x00000008
+#define NV_PFB_CMDQ0_HP_PRE                                                     0xf0000000
+#define NV_PFB_CMDQ0_HP_PRE__BITSHIFT                                           28
+#define NV_PFB_CMDQ0_HP_PRE_1                                                   0x00000001
+#define NV_PFB_CMDQ0_HP_PRE_2                                                   0x00000002
+#define NV_PFB_CMDQ0_HP_PRE_3                                                   0x00000003
+#define NV_PFB_CMDQ0_HP_PRE_4                                                   0x00000004
+#define NV_PFB_CMDQ0_HP_PRE_8                                                   0x00000008
+        NV_PFB_CMDQ1                                = 0x00000354,
+#define NV_PFB_CMDQ1_RT_RW                                                      0x0000001f
+#define NV_PFB_CMDQ1_RT_RW__BITSHIFT                                            0
+#define NV_PFB_CMDQ1_RT_RW_3                                                    0x00000003
+#define NV_PFB_CMDQ1_RT_RW_4                                                    0x00000004
+#define NV_PFB_CMDQ1_RT_RW_5                                                    0x00000005
+#define NV_PFB_CMDQ1_RT_RW_6                                                    0x00000006
+#define NV_PFB_CMDQ1_RT_RW_7                                                    0x00000007
+#define NV_PFB_CMDQ1_RT_RW_8                                                    0x00000008
+#define NV_PFB_CMDQ1_RT_RW_10                                                   0x0000000a
+#define NV_PFB_CMDQ1_RT_RW_16                                                   0x00000010
+#define NV_PFB_CMDQ1_RT_ACT                                                     0x00000f00
+#define NV_PFB_CMDQ1_RT_ACT__BITSHIFT                                           8
+#define NV_PFB_CMDQ1_RT_ACT_1                                                   0x00000001
+#define NV_PFB_CMDQ1_RT_ACT_2                                                   0x00000002
+#define NV_PFB_CMDQ1_RT_ACT_3                                                   0x00000003
+#define NV_PFB_CMDQ1_RT_ACT_4                                                   0x00000004
+#define NV_PFB_CMDQ1_RT_ACT_6                                                   0x00000006
+#define NV_PFB_CMDQ1_RT_ACT_8                                                   0x00000008
+#define NV_PFB_CMDQ1_RT_PRE                                                     0x0000f000
+#define NV_PFB_CMDQ1_RT_PRE__BITSHIFT                                           12
+#define NV_PFB_CMDQ1_RT_PRE_1                                                   0x00000001
+#define NV_PFB_CMDQ1_RT_PRE_2                                                   0x00000002
+#define NV_PFB_CMDQ1_RT_PRE_3                                                   0x00000003
+#define NV_PFB_CMDQ1_RT_PRE_4                                                   0x00000004
+#define NV_PFB_CMDQ1_RT_PRE_6                                                   0x00000006
+#define NV_PFB_CMDQ1_RT_PRE_8                                                   0x00000008
+        NV_PFB_ILL_INSTR_0                          = 0x00000360,
+        NV_PFB_ILL_INSTR_1                          = 0x00000364,
+        NV_PFB_ILL_INSTR_2                          = 0x00000368,
+        NV_PFB_ILL_INSTR_3                          = 0x0000036c,
+#define NV_PFB_ILL_INSTR_REQID                                                  0x0000001f
+#define NV_PFB_ILL_INSTR_REQID__BITSHIFT                                        0
+#define NV_PFB_ILL_INSTR_CMD                                                    0x07ffffe0
+#define NV_PFB_ILL_INSTR_CMD__BITSHIFT                                          5
+#define NV_PFB_ILL_INSTR_CODE                                                   0x78000000
+#define NV_PFB_ILL_INSTR_CODE__BITSHIFT                                         27
+#define NV_PFB_ILL_INSTR_TRAPPED                                                0x80000000
+#define NV_PFB_ILL_INSTR_TRAPPED__BITSHIFT                                      31
+        NV_PFB_RT                                   = 0x00000400,
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP                                             0x00000007
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP__BITSHIFT                                   0
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_0                                           0x00000000
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_1                                           0x00000001
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_2                                           0x00000002
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_3                                           0x00000003
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_4                                           0x00000004
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_5                                           0x00000005
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_6                                           0x00000006
+#define NV_PFB_RT_CPU_GNT_BLOCKS_LP_7                                           0x00000007
+        NV_PFB_AUTOCLOSE                            = 0x00000404,
+#define NV_PFB_AUTOCLOSE_ACTIVE                                                 0x00000001
+#define NV_PFB_AUTOCLOSE_ACTIVE__BITSHIFT                                       0
+#define NV_PFB_AUTOCLOSE_ACTIVE_FALSE                                           0x00000000
+#define NV_PFB_AUTOCLOSE_ACTIVE_TRUE                                            0x00000001
+#define NV_PFB_AUTOCLOSE_RT                                                     0x00000010
+#define NV_PFB_AUTOCLOSE_RT__BITSHIFT                                           4
+#define NV_PFB_AUTOCLOSE_RT_DISABLED                                            0x00000000
+#define NV_PFB_AUTOCLOSE_RT_ENABLED                                             0x00000001
+#define NV_PFB_AUTOCLOSE_HP                                                     0x00000020
+#define NV_PFB_AUTOCLOSE_HP__BITSHIFT                                           5
+#define NV_PFB_AUTOCLOSE_HP_DISABLED                                            0x00000000
+#define NV_PFB_AUTOCLOSE_HP_ENABLED                                             0x00000001
+#define NV_PFB_AUTOCLOSE_FA                                                     0x00000040
+#define NV_PFB_AUTOCLOSE_FA__BITSHIFT                                           6
+#define NV_PFB_AUTOCLOSE_FA_DISABLED                                            0x00000000
+#define NV_PFB_AUTOCLOSE_FA_ENABLED                                             0x00000001
+#define NV_PFB_AUTOCLOSE_TIMEOUT                                                0x00001f00
+#define NV_PFB_AUTOCLOSE_TIMEOUT__BITSHIFT                                      8
+#define NV_PFB_AUTOCLOSE_TIMEOUT_MIN                                            0x00000000
+#define NV_PFB_AUTOCLOSE_TIMEOUT_15                                             0x0000000f
+#define NV_PFB_AUTOCLOSE_TIMEOUT_MAX                                            0x0000001f
+#define NV_PFB_AUTOCLOSE_DRAMC_DEBUG                                            0xffff0000
+#define NV_PFB_AUTOCLOSE_DRAMC_DEBUG__BITSHIFT                                  16
+#define NV_PFB_AUTOCLOSE_DRAMC_DEBUG_INIT                                       0x00000000
+        NV_PFB_WBC                                  = 0x00000410,
+#define NV_PFB_WBC_HWM                                                          0x0000001f
+#define NV_PFB_WBC_HWM__BITSHIFT                                                0
+#define NV_PFB_WBC_HWM_0                                                        0x00000000
+#define NV_PFB_WBC_HWM_1                                                        0x00000001
+#define NV_PFB_WBC_HWM_2                                                        0x00000002
+#define NV_PFB_WBC_HWM_3                                                        0x00000003
+#define NV_PFB_WBC_HWM_4                                                        0x00000004
+#define NV_PFB_WBC_HWM_5                                                        0x00000005
+#define NV_PFB_WBC_HWM_6                                                        0x00000006
+#define NV_PFB_WBC_HWM_7                                                        0x00000007
+#define NV_PFB_WBC_HWM_8                                                        0x00000008
+#define NV_PFB_WBC_HWM_9                                                        0x00000009
+#define NV_PFB_WBC_HWM_10                                                       0x0000000a
+#define NV_PFB_WBC_HWM_11                                                       0x0000000b
+#define NV_PFB_WBC_HWM_12                                                       0x0000000c
+#define NV_PFB_WBC_HWM_13                                                       0x0000000d
+#define NV_PFB_WBC_HWM_14                                                       0x0000000e
+#define NV_PFB_WBC_HWM_15                                                       0x0000000f
+#define NV_PFB_WBC_HWM_16                                                       0x00000010
+#define NV_PFB_WBC_HWM_17                                                       0x00000011
+#define NV_PFB_WBC_HWM_18                                                       0x00000012
+#define NV_PFB_WBC_HWM_19                                                       0x00000013
+#define NV_PFB_WBC_HWM_20                                                       0x00000014
+#define NV_PFB_WBC_HWM_21                                                       0x00000015
+#define NV_PFB_WBC_HWM_22                                                       0x00000016
+#define NV_PFB_WBC_HWM_23                                                       0x00000017
+#define NV_PFB_WBC_HWM_24                                                       0x00000018
+#define NV_PFB_WBC_HWM_25                                                       0x00000019
+#define NV_PFB_WBC_HWM_26                                                       0x0000001a
+#define NV_PFB_WBC_HWM_27                                                       0x0000001b
+#define NV_PFB_WBC_HWM_28                                                       0x0000001c
+#define NV_PFB_WBC_HWM_29                                                       0x0000001d
+#define NV_PFB_WBC_HWM_30                                                       0x0000001e
+#define NV_PFB_WBC_HWM_31                                                       0x0000001f
+#define NV_PFB_WBC_LWM                                                          0x00001f00
+#define NV_PFB_WBC_LWM__BITSHIFT                                                8
+#define NV_PFB_WBC_LWM_0                                                        0x00000000
+#define NV_PFB_WBC_LWM_1                                                        0x00000001
+#define NV_PFB_WBC_LWM_2                                                        0x00000002
+#define NV_PFB_WBC_LWM_3                                                        0x00000003
+#define NV_PFB_WBC_LWM_4                                                        0x00000004
+#define NV_PFB_WBC_LWM_5                                                        0x00000005
+#define NV_PFB_WBC_LWM_6                                                        0x00000006
+#define NV_PFB_WBC_LWM_7                                                        0x00000007
+#define NV_PFB_WBC_LWM_8                                                        0x00000008
+#define NV_PFB_WBC_LWM_9                                                        0x00000009
+#define NV_PFB_WBC_LWM_10                                                       0x0000000a
+#define NV_PFB_WBC_LWM_11                                                       0x0000000b
+#define NV_PFB_WBC_LWM_12                                                       0x0000000c
+#define NV_PFB_WBC_LWM_13                                                       0x0000000d
+#define NV_PFB_WBC_LWM_14                                                       0x0000000e
+#define NV_PFB_WBC_LWM_15                                                       0x0000000f
+#define NV_PFB_WBC_LWM_16                                                       0x00000010
+#define NV_PFB_WBC_LWM_17                                                       0x00000011
+#define NV_PFB_WBC_LWM_18                                                       0x00000012
+#define NV_PFB_WBC_LWM_19                                                       0x00000013
+#define NV_PFB_WBC_LWM_20                                                       0x00000014
+#define NV_PFB_WBC_LWM_21                                                       0x00000015
+#define NV_PFB_WBC_LWM_22                                                       0x00000016
+#define NV_PFB_WBC_LWM_23                                                       0x00000017
+#define NV_PFB_WBC_LWM_24                                                       0x00000018
+#define NV_PFB_WBC_LWM_25                                                       0x00000019
+#define NV_PFB_WBC_LWM_26                                                       0x0000001a
+#define NV_PFB_WBC_LWM_27                                                       0x0000001b
+#define NV_PFB_WBC_LWM_28                                                       0x0000001c
+#define NV_PFB_WBC_LWM_29                                                       0x0000001d
+#define NV_PFB_WBC_LWM_30                                                       0x0000001e
+#define NV_PFB_WBC_LWM_31                                                       0x0000001f
+#define NV_PFB_WBC_FLUSH                                                        0x00010000
+#define NV_PFB_WBC_FLUSH__BITSHIFT                                              16
+#define NV_PFB_WBC_FLUSH_NOT_PENDING                                            0x00000000
+#define NV_PFB_WBC_FLUSH_PENDING                                                0x00000001
+#define NV_PFB_WBC_FULL_BLOCKS_ISOLDT_READ                                      0x00100000
+#define NV_PFB_WBC_FULL_BLOCKS_ISOLDT_READ__BITSHIFT                            20
+#define NV_PFB_WBC_FULL_BLOCKS_ISOLDT_READ_FALSE                                0x00000000
+#define NV_PFB_WBC_FULL_BLOCKS_ISOLDT_READ_TRUE                                 0x00000001
+#define NV_PFB_WBC_FULL_BLOCKS_NONISOLDT_READ                                   0x00200000
+#define NV_PFB_WBC_FULL_BLOCKS_NONISOLDT_READ__BITSHIFT                         21
+#define NV_PFB_WBC_FULL_BLOCKS_NONISOLDT_READ_FALSE                             0x00000000
+#define NV_PFB_WBC_FULL_BLOCKS_NONISOLDT_READ_TRUE                              0x00000001
+#define NV_PFB_WBC_ATOMIC_CPU_READS                                             0x01000000
+#define NV_PFB_WBC_ATOMIC_CPU_READS__BITSHIFT                                   24
+#define NV_PFB_WBC_ATOMIC_CPU_READS_DISABLED                                    0x00000000
+#define NV_PFB_WBC_ATOMIC_CPU_READS_ENABLED                                     0x00000001
+#define NV_PFB_WBC_ATOMIC_AGP_READS                                             0x02000000
+#define NV_PFB_WBC_ATOMIC_AGP_READS__BITSHIFT                                   25
+#define NV_PFB_WBC_ATOMIC_AGP_READS_DISABLED                                    0x00000000
+#define NV_PFB_WBC_ATOMIC_AGP_READS_ENABLED                                     0x00000001
+#define NV_PFB_WBC_ATOMIC_LDT_READS                                             0x04000000
+#define NV_PFB_WBC_ATOMIC_LDT_READS__BITSHIFT                                   26
+#define NV_PFB_WBC_ATOMIC_LDT_READS_DISABLED                                    0x00000000
+#define NV_PFB_WBC_ATOMIC_LDT_READS_ENABLED                                     0x00000001
+#define NV_PFB_WBC_32B_WRITE_BLOCKS_READS                                       0x10000000
+#define NV_PFB_WBC_32B_WRITE_BLOCKS_READS__BITSHIFT                             28
+#define NV_PFB_WBC_32B_WRITE_BLOCKS_READS_DISABLED                              0x00000000
+#define NV_PFB_WBC_32B_WRITE_BLOCKS_READS_ENABLED                               0x00000001
+        NV_PFB_CMDQ_PRT                             = 0x00000418,
+#define NV_PFB_CMDQ_PRT_DISABLE                                                 0x00000001
+#define NV_PFB_CMDQ_PRT_DISABLE__BITSHIFT                                       0
+#define NV_PFB_CMDQ_PRT_DISABLE_OFF                                             0x00000000
+#define NV_PFB_CMDQ_PRT_DISABLE_ON                                              0x00000001
+#define NV_PFB_CMDQ_PRT_HP_MIN                                                  0x0000003c
+#define NV_PFB_CMDQ_PRT_HP_MIN__BITSHIFT                                        2
+#define NV_PFB_CMDQ_PRT_HP_MIN_0                                                0x00000000
+#define NV_PFB_CMDQ_PRT_HP_MIN_1                                                0x00000001
+#define NV_PFB_CMDQ_PRT_HP_MIN_2                                                0x00000002
+#define NV_PFB_CMDQ_PRT_HP_MIN_3                                                0x00000003
+#define NV_PFB_CMDQ_PRT_HP_MIN_4                                                0x00000004
+#define NV_PFB_CMDQ_PRT_HP_MIN_5                                                0x00000005
+#define NV_PFB_CMDQ_PRT_HP_MIN_6                                                0x00000006
+#define NV_PFB_CMDQ_PRT_HP_MIN_7                                                0x00000007
+#define NV_PFB_CMDQ_PRT_HP_MIN_8                                                0x00000008
+#define NV_PFB_CMDQ_PRT_HP_MIN_9                                                0x00000009
+#define NV_PFB_CMDQ_PRT_HP_MIN_10                                               0x0000000a
+#define NV_PFB_CMDQ_PRT_HP_MIN_11                                               0x0000000b
+#define NV_PFB_CMDQ_PRT_HP_MIN_12                                               0x0000000c
+#define NV_PFB_CMDQ_PRT_HP_MIN_13                                               0x0000000d
+#define NV_PFB_CMDQ_PRT_HP_MIN_14                                               0x0000000e
+#define NV_PFB_CMDQ_PRT_HP_MIN_15                                               0x0000000f
+#define NV_PFB_CMDQ_PRT_RT_MIN                                                  0x00007800
+#define NV_PFB_CMDQ_PRT_RT_MIN__BITSHIFT                                        11
+#define NV_PFB_CMDQ_PRT_RT_MIN_0                                                0x00000000
+#define NV_PFB_CMDQ_PRT_RT_MIN_1                                                0x00000001
+#define NV_PFB_CMDQ_PRT_RT_MIN_2                                                0x00000002
+#define NV_PFB_CMDQ_PRT_RT_MIN_3                                                0x00000003
+#define NV_PFB_CMDQ_PRT_RT_MIN_4                                                0x00000004
+#define NV_PFB_CMDQ_PRT_RT_MIN_5                                                0x00000005
+#define NV_PFB_CMDQ_PRT_RT_MIN_6                                                0x00000006
+#define NV_PFB_CMDQ_PRT_RT_MIN_7                                                0x00000007
+#define NV_PFB_CMDQ_PRT_RT_MIN_8                                                0x00000008
+#define NV_PFB_CMDQ_PRT_RT_MIN_9                                                0x00000009
+#define NV_PFB_CMDQ_PRT_RT_MIN_10                                               0x0000000a
+#define NV_PFB_CMDQ_PRT_RT_MIN_11                                               0x0000000b
+#define NV_PFB_CMDQ_PRT_RT_MIN_12                                               0x0000000c
+#define NV_PFB_CMDQ_PRT_RT_MIN_13                                               0x0000000d
+#define NV_PFB_CMDQ_PRT_RT_MIN_14                                               0x0000000e
+#define NV_PFB_CMDQ_PRT_RT_MIN_15                                               0x0000000f
+        NV_PFB_CPU_RRQ                              = 0x00000420,
+#define NV_PFB_CPU_RRQ_BYPASS                                                   0x00000001
+#define NV_PFB_CPU_RRQ_BYPASS__BITSHIFT                                         0
+#define NV_PFB_CPU_RRQ_BYPASS_DISABLED                                          0x00000000
+#define NV_PFB_CPU_RRQ_BYPASS_ENABLED                                           0x00000001
+#define NV_PFB_CPU_RRQ_LATENCY                                                  0x000000f0
+#define NV_PFB_CPU_RRQ_LATENCY__BITSHIFT                                        4
+#define NV_PFB_CPU_RRQ_LATENCY_MIN                                              0x00000000
+#define NV_PFB_CPU_RRQ_LATENCY_0                                                0x00000000
+#define NV_PFB_CPU_RRQ_LATENCY_1                                                0x00000001
+#define NV_PFB_CPU_RRQ_LATENCY_2                                                0x00000002
+#define NV_PFB_CPU_RRQ_LATENCY_3                                                0x00000003
+#define NV_PFB_CPU_RRQ_LATENCY_4                                                0x00000004
+#define NV_PFB_CPU_RRQ_LATENCY_5                                                0x00000005
+#define NV_PFB_CPU_RRQ_LATENCY_6                                                0x00000006
+#define NV_PFB_CPU_RRQ_LATENCY_MAX                                              0x00000006
+#define NV_PFB_CPU_RRQ_FWP                                                      0x00000f00
+#define NV_PFB_CPU_RRQ_FWP__BITSHIFT                                            8
+#define NV_PFB_CPU_RRQ_FWP_MIN                                                  0x00000003
+#define NV_PFB_CPU_RRQ_FWP_3                                                    0x00000003
+#define NV_PFB_CPU_RRQ_FWP_4                                                    0x00000004
+#define NV_PFB_CPU_RRQ_FWP_MAX                                                  0x00000004
+        NV_PFB_BYPASS                               = 0x00000424,
+#define NV_PFB_BYPASS_FAST_READ                                                 0x00000001
+#define NV_PFB_BYPASS_FAST_READ__BITSHIFT                                       0
+#define NV_PFB_BYPASS_FAST_READ_DISABLED                                        0x00000000
+#define NV_PFB_BYPASS_FAST_READ_ENABLED                                         0x00000001
+#define NV_PFB_BYPASS_SINGLE_CYCLE                                              0x00000010
+#define NV_PFB_BYPASS_SINGLE_CYCLE__BITSHIFT                                    4
+#define NV_PFB_BYPASS_SINGLE_CYCLE_DISABLED                                     0x00000000
+#define NV_PFB_BYPASS_SINGLE_CYCLE_ENABLED                                      0x00000001
+#define NV_PFB_BYPASS_BLOCK_WBC_AUTOPRE                                         0x00000020
+#define NV_PFB_BYPASS_BLOCK_WBC_AUTOPRE__BITSHIFT                               5
+#define NV_PFB_BYPASS_BLOCK_WBC_AUTOPRE_DISABLED                                0x00000000
+#define NV_PFB_BYPASS_BLOCK_WBC_AUTOPRE_ENABLED                                 0x00000001
+#define NV_PFB_BYPASS_ALLOW_CPUREAD_DURING_BYPASS                               0x00000100
+#define NV_PFB_BYPASS_ALLOW_CPUREAD_DURING_BYPASS__BITSHIFT                     8
+#define NV_PFB_BYPASS_ALLOW_CPUREAD_DURING_BYPASS_FALSE                         0x00000000
+#define NV_PFB_BYPASS_ALLOW_CPUREAD_DURING_BYPASS_TRUE                          0x00000001
+#define NV_PFB_BYPASS_DEBUG                                                     0x0000fe00
+#define NV_PFB_BYPASS_DEBUG__BITSHIFT                                           9
+#define NV_PFB_BYPASS_DEBUG_INIT                                                0x00000000
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY                                           0x000f0000
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY__BITSHIFT                                 16
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_0                                         0x00000000
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_1                                         0x00000001
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_2                                         0x00000002
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_3                                         0x00000003
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_4                                         0x00000004
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_5                                         0x00000005
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_6                                         0x00000006
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_7                                         0x00000007
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_8                                         0x00000008
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_9                                         0x00000009
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_10                                        0x0000000a
+#define NV_PFB_BYPASS_MAX_CPU_LATENCY_11                                        0x0000000b
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY                                           0x00700000
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY__BITSHIFT                                 20
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_0                                         0x00000000
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_1                                         0x00000001
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_2                                         0x00000002
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_3                                         0x00000003
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_4                                         0x00000004
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_5                                         0x00000005
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_6                                         0x00000006
+#define NV_PFB_BYPASS_MAX_MEM_LATENCY_7                                         0x00000007
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED                                           0x07000000
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED__BITSHIFT                                 24
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_0                                         0x00000000
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_1                                         0x00000001
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_2                                         0x00000002
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_3                                         0x00000003
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_4                                         0x00000004
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_5                                         0x00000005
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_6                                         0x00000006
+#define NV_PFB_BYPASS_RR_SLOTS_NEEDED_7                                         0x00000007
+#define NV_PFB_BYPASS_ROW_EARLY_NONSPEC                                         0x10000000
+#define NV_PFB_BYPASS_ROW_EARLY_NONSPEC__BITSHIFT                               28
+#define NV_PFB_BYPASS_ROW_EARLY_NONSPEC_DISABLED                                0x00000000
+#define NV_PFB_BYPASS_ROW_EARLY_NONSPEC_ENABLED                                 0x00000001
+#define NV_PFB_BYPASS_ROW_EARLY_SPEC                                            0x20000000
+#define NV_PFB_BYPASS_ROW_EARLY_SPEC__BITSHIFT                                  29
+#define NV_PFB_BYPASS_ROW_EARLY_SPEC_DISABLED                                   0x00000000
+#define NV_PFB_BYPASS_ROW_EARLY_SPEC_ENABLED                                    0x00000001
+#define NV_PFB_BYPASS_RETIRE_DELAY                                              0xc0000000
+#define NV_PFB_BYPASS_RETIRE_DELAY__BITSHIFT                                    30
+#define NV_PFB_BYPASS_RETIRE_DELAY_MIN                                          0x00000000
+#define NV_PFB_BYPASS_RETIRE_DELAY_0                                            0x00000000
+#define NV_PFB_BYPASS_RETIRE_DELAY_1                                            0x00000001
+#define NV_PFB_BYPASS_RETIRE_DELAY_2                                            0x00000002
+#define NV_PFB_BYPASS_RETIRE_DELAY_3                                            0x00000003
+#define NV_PFB_BYPASS_RETIRE_DELAY_MAX                                          0x00000003
+};
+
+static const char *const nv2a_pfb_name[] = {
+    NAMER(NV_PFB_DEBUG_0),
+    NAMER(NV_PFB_RDI_INDEX),
+    NAMER(NV_PFB_RDI_DATA_0),
+    NAMER(NV_PFB_RDI_DATA_1),
+    NAMER(NV_PFB_RDI_DATA_2),
+    NAMER(NV_PFB_RDI_DATA_3),
+    NAMER(NV_PFB_RDI_DATA_4),
+    NAMER(NV_PFB_RDI_DATA_5),
+    NAMER(NV_PFB_RDI_DATA_6),
+    NAMER(NV_PFB_RDI_DATA_7),
+    NAMER(NV_PFB_RDI_DATA_8),
+    NAMER(NV_PFB_RDI_DATA_9),
+    NAMER(NV_PFB_RDI_DATA_10),
+    NAMER(NV_PFB_RDI_DATA_11),
+    NAMER(NV_PFB_RDI_DATA_12),
+    NAMER(NV_PFB_RDI_DATA_13),
+    NAMER(NV_PFB_RDI_DATA_14),
+    NAMER(NV_PFB_RDI_DATA_15),
+    NAMER(NV_PFB_CFG0),
+    NAMER(NV_PFB_CFG1),
+    NAMER(NV_PFB_CSTATUS),
+    NAMER(NV_PFB_REFCTRL),
+    NAMER(NV_PFB_NVM),
+    NAMER(NV_PFB_PIN),
+    NAMER(NV_PFB_PAD),
+    NAMER(NV_PFB_TIMING0),
+    NAMER(NV_PFB_TIMING1),
+    NAMER(NV_PFB_TIMING2),
+    NAMER(NV_PFB_TILE_0),
+    NAMER(NV_PFB_TILE_1),
+    NAMER(NV_PFB_TILE_2),
+    NAMER(NV_PFB_TILE_3),
+    NAMER(NV_PFB_TILE_4),
+    NAMER(NV_PFB_TILE_5),
+    NAMER(NV_PFB_TILE_6),
+    NAMER(NV_PFB_TILE_7),
+    NAMER(NV_PFB_TLIMIT_0),
+    NAMER(NV_PFB_TLIMIT_1),
+    NAMER(NV_PFB_TLIMIT_2),
+    NAMER(NV_PFB_TLIMIT_3),
+    NAMER(NV_PFB_TLIMIT_4),
+    NAMER(NV_PFB_TLIMIT_5),
+    NAMER(NV_PFB_TLIMIT_6),
+    NAMER(NV_PFB_TLIMIT_7),
+    NAMER(NV_PFB_TSIZE_0),
+    NAMER(NV_PFB_TSIZE_1),
+    NAMER(NV_PFB_TSIZE_2),
+    NAMER(NV_PFB_TSIZE_3),
+    NAMER(NV_PFB_TSIZE_4),
+    NAMER(NV_PFB_TSIZE_5),
+    NAMER(NV_PFB_TSIZE_6),
+    NAMER(NV_PFB_TSIZE_7),
+    NAMER(NV_PFB_TSTATUS_0),
+    NAMER(NV_PFB_TSTATUS_1),
+    NAMER(NV_PFB_TSTATUS_2),
+    NAMER(NV_PFB_TSTATUS_3),
+    NAMER(NV_PFB_TSTATUS_4),
+    NAMER(NV_PFB_TSTATUS_5),
+    NAMER(NV_PFB_TSTATUS_6),
+    NAMER(NV_PFB_TSTATUS_7),
+    NAMER(NV_PFB_MRS),
+    NAMER(NV_PFB_EMRS),
+    NAMER(NV_PFB_MRS_EXT),
+    NAMER(NV_PFB_EMRS_EXT),
+    NAMER(NV_PFB_REF),
+    NAMER(NV_PFB_PRE),
+    NAMER(NV_PFB_ZCOMP_0),
+    NAMER(NV_PFB_ZCOMP_1),
+    NAMER(NV_PFB_ZCOMP_2),
+    NAMER(NV_PFB_ZCOMP_3),
+    NAMER(NV_PFB_ZCOMP_4),
+    NAMER(NV_PFB_ZCOMP_5),
+    NAMER(NV_PFB_ZCOMP_6),
+    NAMER(NV_PFB_ZCOMP_7),
+    NAMER(NV_PFB_ZCOMP_MAX_TAG),
+    NAMER(NV_PFB_ZCOMP_OFFSET),
+    NAMER(NV_PFB_ARB_PREDIVIDER),
+    NAMER(NV_PFB_ARB_TIMEOUT),
+    NAMER(NV_PFB_ARB_XFER_SZ),
+    NAMER(NV_PFB_ARB_XFER_REM),
+    NAMER(NV_PFB_ARB_DIFF_BANK),
+    NAMER(NV_PFB_CLOSE_PAGE0),
+    NAMER(NV_PFB_CLOSE_PAGE1),
+    NAMER(NV_PFB_CLOSE_PAGE2),
+    NAMER(NV_PFB_BPARB),
+    NAMER(NV_PFB_CMDQ0),
+    NAMER(NV_PFB_CMDQ1),
+    NAMER(NV_PFB_ILL_INSTR_0),
+    NAMER(NV_PFB_ILL_INSTR_1),
+    NAMER(NV_PFB_ILL_INSTR_2),
+    NAMER(NV_PFB_ILL_INSTR_3),
+    NAMER(NV_PFB_RT),
+    NAMER(NV_PFB_AUTOCLOSE),
+    NAMER(NV_PFB_WBC),
+    NAMER(NV_PFB_CMDQ_PRT),
+    NAMER(NV_PFB_CPU_RRQ),
+    NAMER(NV_PFB_BYPASS),
+};
+

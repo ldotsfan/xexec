@@ -196,7 +196,7 @@ signal_segv(int signum, siginfo_t *info, void *ptr) {
     register uint32_t i = info->si_code;
     uint32_t v;
 
-    if (i == SEGV_ACCERR && MEM_MAP_DIRTY_SET(info->si_addr, 1)) return;
+    if (i == SEGV_ACCERR && MEM_DIRTY_ON(info->si_addr) >= 2) return;
     if (i == SEGV_ACCERR || i == SEGV_MAPERR) {
         do {
             i = (typeof(i))info->si_addr;
