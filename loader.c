@@ -1,7 +1,7 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *  Copyright (c) 2012 Michael Saga. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -2057,7 +2057,8 @@ main(int argc, char **argv) {
         return 1;
     }
     addr = (void *)XBE_BASE_ADDR;
-    if (xboxkrnl_mmap(MEM_EXEC,
+    if (xboxkrnl_mmap(
+            MEM_EXEC,
             addr,
             PAGESIZE,
             PROT_READ | PROT_WRITE,
@@ -2117,7 +2118,8 @@ main(int argc, char **argv) {
                 vaddr, raddr, vsize);
 
             addr = (typeof(addr))vaddr;
-            if (xboxkrnl_mmap(MEM_EXEC,
+            if (xboxkrnl_mmap(
+                    MEM_EXEC,
                     addr,
                     vsize,
                     PROT_READ | PROT_WRITE | PROT_EXEC,

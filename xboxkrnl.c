@@ -1,7 +1,7 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *  Copyright (c) 2017 Michael Saga. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -345,9 +345,12 @@ static pthread_cond_t *     xboxkrnl_dpc_cond = NULL;
 
 static void                 (*xboxkrnl_entry)(void) = NULL;
 
+static pthread_mutex_t      xboxkrnl_tsc_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int                  xboxkrnl_tsc_intercept = 0;
 static uint128_t            xboxkrnl_tsc_hz = uint128_0;
 static uint128_t            xboxkrnl_tsc_scaler = uint128_0;
+#define TSC_LOCK            pthread_mutex_lock(&xboxkrnl_tsc_mutex)
+#define TSC_UNLOCK          pthread_mutex_unlock(&xboxkrnl_tsc_mutex)
 
 int
 xboxkrnl_tsc_on(void) {
@@ -430,10 +433,10 @@ xboxkrnl_tsc(uint32_t *lo, uint32_t *hi, uint64_t *v, int xbox) {
     register uint32_t a;
     register uint32_t d;
 
+    TSC_LOCK;
+
     xboxkrnl_tsc_on();
-
     __asm__ __volatile__("rdtsc" : "=a" (a), "=d" (d));
-
     xboxkrnl_tsc_off();
 
     if (xbox && xboxkrnl_tsc_scaler.lo) {
@@ -447,31 +450,36 @@ xboxkrnl_tsc(uint32_t *lo, uint32_t *hi, uint64_t *v, int xbox) {
         }
         if (lo) *lo = tick.lo & 0xffffffff;
         if (hi) *hi = tick.lo >> 32;
-        if (v) *v = tick.lo;
-        return;
+        if (v)  *v  = tick.lo;
+    } else {
+        if (lo) *lo = a;
+        if (hi) *hi = d;
+        if (v)  *v  = ((uint64_t)d << 32) | a;
     }
 
-    if (lo) *lo = a;
-    if (hi) *hi = d;
-    if (v) *v = ((uint64_t)d << 32) | a;
+    TSC_UNLOCK;
 }
 
 void
 xboxkrnl_clock_local(struct timeval *tv) {
+    TSC_LOCK;
+
     if (xboxkrnl_entry) xboxkrnl_tsc_on();
-
     gettimeofday(tv, NULL);
-
     if (xboxkrnl_entry) xboxkrnl_tsc_off();
+
+    TSC_UNLOCK;
 }
 
 void
 xboxkrnl_clock_wall(struct timespec *tp) {
+    TSC_LOCK;
+
     if (xboxkrnl_entry) xboxkrnl_tsc_on();
-
     clock_gettime(CLOCK_MONOTONIC, tp);
-
     if (xboxkrnl_entry) xboxkrnl_tsc_off();
+
+    TSC_UNLOCK;
 }
 
 void *
