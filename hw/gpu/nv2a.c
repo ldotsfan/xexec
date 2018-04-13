@@ -1,9 +1,9 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (C) 2012  espes
- *  Copyright (C) 2015  Jannik Vogel
- *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *  Copyright (c) 2012 espes
+ *  Copyright (c) 2015 Jannik Vogel
+ *  Copyright (c) 2017 Michael Saga. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -69,11 +69,11 @@ typedef struct {
     union {
         uint32_t            flags;
         struct {
-            uint32_t        class  : 12;
-            uint32_t        pad1   : 4;
-            uint32_t        target : 2;
-            uint32_t        pad2   : 2;
-            uint32_t        adjust : 12;
+            uint32_t        class  : 12;            /*  0 */
+            uint32_t        pad1   : 4;             /* 12 */
+            uint32_t        target : 2;             /* 16 */
+            uint32_t        pad2   : 2;             /* 18 */
+            uint32_t        adjust : 12;            /* 20 */
         } PACKED;
     } PACKED;
     uint32_t                limit;

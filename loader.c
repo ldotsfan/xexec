@@ -2047,13 +2047,18 @@ main(int argc, char **argv) {
         fprintf(stderr, "error: xboxkrnl_init() initialization failed\n");
         return 1;
     }
+    if (sigaction(SIGSEGV, &s, NULL) < 0) {
+        PRINT("error: sigaction(): '%s'", strerror(errno));
+        return 1;
+    }
 
     if ((fd = open(argv[1], O_RDONLY)) < 0) {
         PRINT("error: open(): '%s': '%s'", argv[1], strerror(errno));
         return 1;
     }
     addr = (void *)XBE_BASE_ADDR;
-    if (mmap(addr,
+    if (xboxkrnl_mmap(MEM_EXEC,
+            addr,
             PAGESIZE,
             PROT_READ | PROT_WRITE,
             MAP_PRIVATE | MAP_FIXED | MAP_POPULATE | MAP_NORESERVE,
@@ -2112,7 +2117,8 @@ main(int argc, char **argv) {
                 vaddr, raddr, vsize);
 
             addr = (typeof(addr))vaddr;
-            if (mmap(addr,
+            if (xboxkrnl_mmap(MEM_EXEC,
+                    addr,
                     vsize,
                     PROT_READ | PROT_WRITE | PROT_EXEC,
                     MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS | MAP_NORESERVE,
@@ -2164,11 +2170,6 @@ main(int argc, char **argv) {
     }
 
     xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
-
-    if (sigaction(SIGSEGV, &s, NULL) < 0) {
-        PRINT("error: sigaction(): '%s'", strerror(errno));
-        return 1;
-    }
 
     PRINT("/* spawning entry thread with entry point @ %p */", xbeh->dwEntryAddr);
 
