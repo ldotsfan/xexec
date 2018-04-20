@@ -979,7 +979,7 @@ INT3;//XXX
             pos  = NV2A_REG32(p, NV_097, SET_SEMAPHORE_OFFSET);
             if (pos > dma.limit) INT3;
             pos += NV2A_DMA_ADDRESS(&dma);
-            xboxkrnl_dma_write(pos, c->param, 4);
+            xboxkrnl_write(pos, &c->param, 4);
             break;
 #endif
 #if 1

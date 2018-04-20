@@ -2193,7 +2193,7 @@ xboxkrnl_init(void/* **x*/) {
 
 /* helpers */
 static void
-xboxkrnl_dma_write(uint32_t addr, uint32_t val, size_t sz) {
+xboxkrnl_dma_write(uint32_t addr, const uint32_t *val, size_t sz) {
     register uint32_t wr = addr;
     register int ret;
 
@@ -2201,18 +2201,16 @@ xboxkrnl_dma_write(uint32_t addr, uint32_t val, size_t sz) {
 
     switch (sz) {
     case 1:
-        val &= 0xff;
-        PRINT("DMA: write: [0x%.08x]       (0x%.02hhx) <- 0x%.02hhx", addr, REG08(wr), val);
-        REG08(wr) = val;
+        PRINT("DMA: write: [0x%.08x]       (0x%.02hhx) <- 0x%.02hhx", addr, REG08(wr), REG08(val));
+        REG08(wr) = REG08(val);
         break;
     case 2:
-        val &= 0xffff;
-        PRINT("DMA: write: [0x%.08x]     (0x%.04hx) <- 0x%.04hx", addr, REG16(wr), val);
-        REG16(wr) = val;
+        PRINT("DMA: write: [0x%.08x]     (0x%.04hx) <- 0x%.04hx", addr, REG16(wr), REG16(val));
+        REG16(wr) = REG16(val);
         break;
     case 4:
-//        PRINT("DMA: write: [0x%.08x] (0x%.08x) <- 0x%.08x", addr, REG32(wr), val);
-        REG32(wr) = val;
+//        PRINT("DMA: write: [0x%.08x] (0x%.08x) <- 0x%.08x", addr, REG32(wr), REG32(val));
+        REG32(wr) = REG32(val);
         break;
     default:
         INT3;
@@ -2278,7 +2276,7 @@ xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
         aci_write(addr, val, sz);
 
     if (!ret) {
-        xboxkrnl_dma_write(addr, REG32(val), sz);
+        xboxkrnl_dma_write(addr, val, sz);
         ret = 1;
     }
 
