@@ -49,12 +49,15 @@
 #define STRDUMPN(x,y)       VARDUMP5(STRING,x,0,0,0,y)
 #define STRDUMPR(x)         VARDUMP5(STRING,&x,0,0,0,sizeof(x))
 #define VARDUMP(x,y)        VARDUMP5(x,y,0,0,0,0)
+#define VARDUMPN(x,n,y)     xboxkrnl_vardump(xboxkrnl_stack,x,(uint64_t)y,n,0,0,0,0)
 #define VARDUMPD(x,y)       if (y) VARDUMP5(x,*y,0,0,0,0)
 #define VARDUMPD2(x,y,z)    if (y) VARDUMP5(x,y->z,0,0,0,0)
 /* value name w/o bit mask: z = const *char[] name in relation to y; f = 0 */
 #define VARDUMP2(x,y,z)     VARDUMP5(x,y,z,ARRAY_SIZE(z),0,0)
+#define VARDUMPN2(x,n,y,z)  xboxkrnl_vardump(xboxkrnl_stack,x,(uint64_t)y,n,z,ARRAY_SIZE(z),0,0)
 /* value name w/ bit mask:  z == const *char[] index bit masking y;  f = 1 */
 #define VARDUMP3(x,y,z)     VARDUMP5(x,y,z,ARRAY_SIZE(z),1,0)
+#define VARDUMPN3(x,n,y,z)  xboxkrnl_vardump(xboxkrnl_stack,x,(uint64_t)y,n,z,ARRAY_SIZE(z),1,0)
 /* register name:           z = const *char[] name in relation to y; f = 0, r = register size */
 #define VARDUMP4(x,y,z)     VARDUMP5(x,y,z,ARRAY_SIZE(z),0,4)
 #define VARDUMP5(x,y,z,l,f,r) xboxkrnl_vardump(xboxkrnl_stack,x,(uint64_t)y,#y,z,l,f,r)
@@ -140,7 +143,7 @@ xboxkrnl_vardump(
 
     if (!dbg) return;
 
-    if (v >> 32 == ~0UL) v &= ~0UL; /* sign extension from 32-bit to 64-bit */
+    if (v >> 32 == ~0UL) v &= ~0UL; /* unwanted sign extension from 32-bit to 64-bit */
     a = *(char **)&v;
 
     if (nsz) {
@@ -826,15 +829,6 @@ typedef struct {
     int32_t                 Type;
 } PACKED xboxkrnl_mem_basic;
 
-typedef union {
-    uint32_t                field;
-    struct {
-        uint32_t            enable : 1;     /* 0 */
-        uint32_t            bit    : 1;     /* 1 */
-        uint32_t            pad    : 30;    /* 2 */
-    } PACKED;
-} PACKED xboxkrnl_mem_dirty_t;
-
 typedef struct {
     void *                  BaseAddress;
     void *                  AllocationBase;
@@ -845,10 +839,10 @@ typedef struct {
     int32_t                 Type;
     /* internal */
     int                     index;
-    xboxkrnl_mem_dirty_t    dirty;
     int                     prot;
     int                     flags;
     off_t                   offset;
+    int                     dirty;
     void *                  parent;     /* to write-protect parent page allocation for a dirty write catch */
 } PACKED xboxkrnl_mem;
 
@@ -857,7 +851,7 @@ typedef struct {
     int                     index;
     const char *            name;
     xboxkrnl_mem *          mem;
-    size_t                  sz;
+    ssize_t                 sz;
 } PACKED xboxkrnl_mem_table;
 
 enum MEM_TABLE_INDEX {
@@ -892,6 +886,7 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_RET(x,y)                xboxkrnl_mem_ret((x), (void *)(y))
 #define MEM_RET_LOCKED(x,y)         xboxkrnl_mem_ret_locked((x), (void *)(y), NULL)
 #define MEM_RET_LOCKED2(x,y)        xboxkrnl_mem_ret_locked((x), NULL, (void *)(y))
+#define MEM_DIRTY_PARENT_RET_LOCKED(x) xboxkrnl_mem_dirty_parent_ret_locked((void *)(x))
 #define MEM_DIRTY_ENABLE(x,y)       xboxkrnl_mem_dirty_enable((void *)(x), (y))
 #define MEM_DIRTY_DISABLE(x)        xboxkrnl_mem_dirty_disable((void *)(x))
 #define MEM_DIRTY_ON(x)             xboxkrnl_mem_dirty_on((void *)(x))
@@ -902,7 +897,15 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_DIRTY_OFF_LOCKED2(x)    xboxkrnl_mem_dirty_off_locked(NULL, (x))
 #define MEM_DIRTY_ON_MPROTECT(x)    if (mprotect((x)->AllocationBase, (x)->RegionSize, (x)->prot)) INT3
 #define MEM_DIRTY_OFF_MPROTECT(x)   if (mprotect((x)->AllocationBase, (x)->RegionSize, (x)->prot & ~PROT_WRITE)) INT3
-#define MEM_DIRTY_GET(x)            xboxkrnl_mem_dirty_stat((void *)(x))
+#define MEM_DIRTY_ON_LOCKED_PRE(x,y) do { \
+            if (!MEM_DIRTY_ON_LOCKED((y)) && ((x) = MEM_DIRTY_PARENT_RET_LOCKED((y))) && !(x)->dirty) { \
+                MEM_DIRTY_ON_MPROTECT((x)); \
+            } else { \
+                (x) = NULL; \
+            } \
+        } while (0)
+#define MEM_DIRTY_ON_LOCKED_POST(x) if ((x)) MEM_DIRTY_OFF_MPROTECT((x))
+#define MEM_DIRTY_GET(x)            xboxkrnl_mem_dirty_get((void *)(x))
 
 static pthread_mutex_t              xboxkrnl_mem_mutex = PTHREAD_MUTEX_INITIALIZER;
 xboxkrnl_mem *                      xboxkrnl_mem_dirty_parent_ret_locked(void *addr);
@@ -917,7 +920,7 @@ int                                 xboxkrnl_mem_dirty_on_locked(void *addr, xbo
 int                                 xboxkrnl_mem_dirty_off_locked(void *addr, xboxkrnl_mem *m);
 int                                 xboxkrnl_mem_dirty_on(void *addr);
 int                                 xboxkrnl_mem_dirty_off(void *addr);
-xboxkrnl_mem_dirty_t                xboxkrnl_mem_dirty_stat(void *addr);
+int                                 xboxkrnl_mem_dirty_get(void *addr);
 
 static int
 xboxkrnl_mem_prot_unix_to_winnt(int prot, int flags) {
@@ -950,7 +953,7 @@ xboxkrnl_mem_prot_unix_to_winnt(int prot, int flags) {
 
 xboxkrnl_mem *
 xboxkrnl_mem_dirty_parent_ret_locked(void *addr) {
-    register xboxkrnl_mem *m = NULL;
+    register xboxkrnl_mem *m;
 
     do {
         if ((m = MEM_RET_LOCKED(MEM_HEAP, addr)) ||
@@ -985,7 +988,7 @@ xboxkrnl_mem_push(int index, const xboxkrnl_mem *in, int locked) {
     m  = &t->mem[t->sz - 1];
     *m = *in;
 
-    m->dirty.bit = 1;
+    m->dirty = 1;
     if (m->parent) MEM_DIRTY_OFF_LOCKED2(m);
 
     if (!locked) MEM_UNLOCK;
@@ -996,13 +999,13 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
     register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[index];
     register xboxkrnl_mem *m;
     xboxkrnl_mem mem;
-    register size_t i;
+    register ssize_t i;
     register int ret = 0;
 
     if (!locked) MEM_LOCK;
 
     if (t->mem) {
-        for (i = 0; i < t->sz; ++i) {
+        for (i = t->sz - 1; i >= 0; --i) {
             m = &t->mem[i];
             if (m->BaseAddress == addr) {
                 mem = *m;
@@ -1017,16 +1020,16 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
 
     if (ret) {
         if (mem.parent) {
-            for (i = 0; i <= t->sz; ++i) {
-                if (i >= t->sz) {
-                    if ((m = xboxkrnl_mem_dirty_parent_ret_locked(mem.parent))) {
-                        m->dirty.bit = 1;
+            for (i = t->sz - 1; i >= 0; --i) {
+                m = &t->mem[i];
+                if (m->parent == mem.parent && !m->dirty) break;
+                if (!i) {
+                    if ((m = MEM_DIRTY_PARENT_RET_LOCKED(mem.parent)) && !m->dirty) {
+                        m->dirty = 1;
                         MEM_DIRTY_ON_MPROTECT(m);
                     }
                     break;
                 }
-                m = &t->mem[i];
-                if (m->parent == mem.parent && !m->dirty.bit) break;
             }
         } else {
             while ((m = xboxkrnl_mem_ret_locked(MEM_DIRTY, NULL, mem.BaseAddress))) {
@@ -1042,11 +1045,11 @@ static xboxkrnl_mem *
 xboxkrnl_mem_ret_locked(int index, void *addr, void *parent) {
     register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[index];
     register xboxkrnl_mem *m;
-    register size_t i;
+    register ssize_t i;
     register xboxkrnl_mem *ret = NULL;
 
     if (t->mem) {
-        for (i = 0; i < t->sz; ++i) {
+        for (i = t->sz - 1; i >= 0; --i) {
             m = &t->mem[i];
             if (parent) {
                 if (m->parent == parent) {
@@ -1089,13 +1092,12 @@ xboxkrnl_mem_dirty_enable(void *addr, size_t len) {
 
     do {
         if (MEM_RET_LOCKED(MEM_DIRTY, addr)) break;
-        if (!(m = xboxkrnl_mem_dirty_parent_ret_locked(addr))) break;
+        if (!(m = MEM_DIRTY_PARENT_RET_LOCKED(addr))) break;
         mem              = *m;
         mem.parent       = mem.BaseAddress;
         mem.BaseAddress  = addr;
         mem.RegionSize   = len;
-        mem.dirty.field  = 0;
-        mem.dirty.enable = 1;
+        mem.dirty        = 0;
         MEM_PUSH_LOCKED(MEM_DIRTY, &mem);
     } while ((ret = 0));
 
@@ -1111,27 +1113,39 @@ xboxkrnl_mem_dirty_disable(void *addr) {
 
 int
 xboxkrnl_mem_dirty_on_locked(void *addr, xboxkrnl_mem *m) {
+    register xboxkrnl_mem_table *t;
     register xboxkrnl_mem *p;
+    register ssize_t i;
     register int ret = 0;
 
-    if ((m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr))) && m->dirty.enable) {
-        if (!m->dirty.bit) {
-            m->dirty.bit = 1;
+    if ((m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr)))) {
+        if (!m->dirty) {
+            m->dirty = 1;
             PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu)",
                 addr,
                 m->BaseAddress,
                 m->RegionSize,
                 m->RegionSize);//TODO loglevel
-            if (m->parent && (p = xboxkrnl_mem_dirty_parent_ret_locked(m->parent))) {
-                p->dirty.bit = 1;
-                PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu) (parent)",
-                    addr,
-                    p->BaseAddress,
-                    p->RegionSize,
-                    p->RegionSize);//TODO loglevel
-                MEM_DIRTY_ON_MPROTECT(p);
+            if (m->parent) {
+                t = &xboxkrnl_mem_tables[MEM_DIRTY];
+                for (i = t->sz - 1; i >= 0; --i) {
+                    p = &t->mem[i];
+                    if (p != m && p->parent == m->parent && !p->dirty) break;
+                    if (!i) {
+                        if ((p = MEM_DIRTY_PARENT_RET_LOCKED(m->parent)) && !p->dirty) {
+                            p->dirty = 1;
+                            PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu) (parent)",
+                                addr,
+                                p->BaseAddress,
+                                p->RegionSize,
+                                p->RegionSize);//TODO loglevel
+                            MEM_DIRTY_ON_MPROTECT(p);
+                            ++ret;
+                        }
+                        break;
+                    }
+                }
             }
-            ++ret;
         }
         ++ret;
     }
@@ -1141,28 +1155,17 @@ xboxkrnl_mem_dirty_on_locked(void *addr, xboxkrnl_mem *m) {
 
 int
 xboxkrnl_mem_dirty_off_locked(void *addr, xboxkrnl_mem *m) {
-    register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[MEM_DIRTY];
     register xboxkrnl_mem *p;
-    register size_t i;
     register int ret = 0;
 
-    if ((m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr))) && m->dirty.enable) {
-        if (m->dirty.bit) {
-            m->dirty.bit = 0;
-            if (m->parent) {
-                for (i = 0; i <= t->sz; ++i) {
-                    if (i >= t->sz) {
-                        if ((p = xboxkrnl_mem_dirty_parent_ret_locked(m->parent))) {
-                            p->dirty.bit = 0;
-                            MEM_DIRTY_OFF_MPROTECT(p);
-                        }
-                        break;
-                    }
-                    p = &t->mem[i];
-                    if (p != m && p->parent == m->parent && p->dirty.bit) break;
-                }
+    if ((m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr)))) {
+        if (m->dirty) {
+            m->dirty = 0;
+            if (m->parent && (p = MEM_DIRTY_PARENT_RET_LOCKED(m->parent)) && p->dirty) {
+                p->dirty = 0;
+                MEM_DIRTY_OFF_MPROTECT(p);
+                ++ret;
             }
-            ++ret;
         }
         ++ret;
     }
@@ -1196,10 +1199,10 @@ xboxkrnl_mem_dirty_off(void *addr) {
     return ret;
 }
 
-xboxkrnl_mem_dirty_t
-xboxkrnl_mem_dirty_stat(void *addr) {
+int
+xboxkrnl_mem_dirty_get(void *addr) {
     register xboxkrnl_mem *m;
-    xboxkrnl_mem_dirty_t ret = { };
+    register int ret = -1;
 
     MEM_LOCK;
 
@@ -2208,7 +2211,7 @@ xboxkrnl_dma_write(uint32_t addr, uint32_t val, size_t sz) {
         REG16(wr) = val;
         break;
     case 4:
-        PRINT("DMA: write: [0x%.08x] (0x%.08x) <- 0x%.08x", addr, REG32(wr), val);
+//        PRINT("DMA: write: [0x%.08x] (0x%.08x) <- 0x%.08x", addr, REG32(wr), val);
         REG32(wr) = val;
         break;
     default:
@@ -2226,11 +2229,11 @@ xboxkrnl_dma_read(uint32_t addr, uint32_t *val, size_t sz) {
     switch (sz) {
     case 1:
         REG08(val) = REG08(rd);
-//        PRINT("DMA:  read: [0x%.08x]              -> 0x%.02hhx", addr, REG08(val));
+        PRINT("DMA:  read: [0x%.08x]              -> 0x%.02hhx", addr, REG08(val));
         break;
     case 2:
         REG16(val) = REG16(rd);
-//        PRINT("DMA:  read: [0x%.08x]              -> 0x%.04hx", addr, REG16(val));
+        PRINT("DMA:  read: [0x%.08x]              -> 0x%.04hx", addr, REG16(val));
         break;
     case 4:
         REG32(val) = REG32(rd);
@@ -2244,36 +2247,42 @@ xboxkrnl_dma_read(uint32_t addr, uint32_t *val, size_t sz) {
 
 static int
 xboxkrnl_address_validate(uint32_t addr) {
-    return ((addr < 0x00001000) ||
-            (addr & 0xf8000000) == host->memreg_base ||
-            (addr & 0xff000000) == nv2a->memreg_base ||
-            (addr >= usb0->memreg_base && addr < usb0->memreg_base + usb0->memreg_size) ||
-            (addr >= usb1->memreg_base && addr < usb1->memreg_base + usb1->memreg_size) ||
-            (addr >= apu->memreg_base && addr < apu->memreg_base + apu->memreg_size) ||
-            (addr >= aci->memreg_base && addr < aci->memreg_base + aci->memreg_size));
+    register int ret;
+
+    ret =
+        ((addr < 0x00001000) ||
+        (addr & 0xf8000000) == host->memreg_base ||
+        (addr & 0xff000000) == nv2a->memreg_base ||
+        (addr >= usb0->memreg_base && addr < usb0->memreg_base + usb0->memreg_size) ||
+        (addr >= usb1->memreg_base && addr < usb1->memreg_base + usb1->memreg_size) ||
+        (addr >= apu->memreg_base && addr < apu->memreg_base + apu->memreg_size) ||
+        (addr >= aci->memreg_base && addr < aci->memreg_base + aci->memreg_size) ||
+        MEM_DIRTY_PARENT_RET_LOCKED(addr));
+
+    return ret;
 }
 
 static int
 xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
+    register xboxkrnl_mem *m;
     register int ret;
 
-    if (addr < PAGESIZE) {
-        MEM_DIRTY_ON(addr);
-        xboxkrnl_dma_write(addr, *(uint32_t *)val, sz);
+    if ((addr & 0xf8000000) == host->memreg_base) addr &= host->memreg_size - 1;
+
+    MEM_DIRTY_ON_LOCKED_PRE(m, addr);
+
+    ret =
+        nv2a_write(addr, val, sz) ||
+        ohci_write(addr, val, sz) ||
+        apu_write(addr, val, sz) ||
+        aci_write(addr, val, sz);
+
+    if (!ret) {
+        xboxkrnl_dma_write(addr, REG32(val), sz);
         ret = 1;
-    } else if ((addr & 0xf8000000) == host->memreg_base) {
-        addr &= host->memreg_size - 1;
-        MEM_DIRTY_ON(addr);
-        xboxkrnl_dma_write(addr, *(uint32_t *)val, sz);
-        ret = 1;
-    } else {
-        MEM_DIRTY_ON(addr);
-        ret =
-            nv2a_write(addr, val, sz) ||
-            ohci_write(addr, val, sz) ||
-            apu_write(addr, val, sz) ||
-            aci_write(addr, val, sz);
     }
+
+    MEM_DIRTY_ON_LOCKED_POST(m);
 
     return ret;
 }
@@ -2282,19 +2291,17 @@ static int
 xboxkrnl_read(uint32_t addr, void *val, size_t sz) {
     register int ret;
 
-    if (addr < PAGESIZE) {
+    if ((addr & 0xf8000000) == host->memreg_base) addr &= host->memreg_size - 1;
+
+    ret =
+        nv2a_read(addr, val, sz) ||
+        ohci_read(addr, val, sz) ||
+        apu_read(addr, val, sz) ||
+        aci_read(addr, val, sz);
+
+    if (!ret) {
         xboxkrnl_dma_read(addr, val, sz);
         ret = 1;
-    } else if ((addr & 0xf8000000) == host->memreg_base) {
-        addr &= host->memreg_size - 1;
-        xboxkrnl_dma_read(addr, val, sz);
-        ret = 1;
-    } else {
-        ret =
-            nv2a_read(addr, val, sz) ||
-            ohci_read(addr, val, sz) ||
-            apu_read(addr, val, sz) ||
-            aci_read(addr, val, sz);
     }
 
     return ret;
