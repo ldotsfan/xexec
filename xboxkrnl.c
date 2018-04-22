@@ -841,7 +841,6 @@ typedef struct {
     int                     index;
     int                     prot;
     int                     flags;
-    off_t                   offset;
     int                     dirty;
     void *                  parent;     /* to write-protect parent page allocation for a dirty write catch */
 } PACKED xboxkrnl_mem;
@@ -1004,17 +1003,15 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
 
     if (!locked) MEM_LOCK;
 
-    if (t->mem) {
-        for (i = t->sz - 1; i >= 0; --i) {
-            m = &t->mem[i];
-            if (m->BaseAddress == addr) {
-                mem = *m;
-                ++i;
-                if (i < t->sz) memmove(m, m + 1, sizeof(*t->mem) * (t->sz - i));
-                --t->sz;
-                ret = 1;
-                break;
-            }
+    for (i = t->sz - 1; i >= 0; --i) {
+        m = &t->mem[i];
+        if (m->BaseAddress == addr) {
+            mem = *m;
+            ++i;
+            if (i < t->sz) memmove(m, m + 1, sizeof(*t->mem) * (t->sz - i));
+            --t->sz;
+            ret = 1;
+            break;
         }
     }
 
@@ -1048,19 +1045,17 @@ xboxkrnl_mem_ret_locked(int index, void *addr, void *parent) {
     register ssize_t i;
     register xboxkrnl_mem *ret = NULL;
 
-    if (t->mem) {
-        for (i = t->sz - 1; i >= 0; --i) {
-            m = &t->mem[i];
-            if (parent) {
-                if (m->parent == parent) {
-                    ret = m;
-                    break;
-                }
-            } else {
-                if (addr >= m->BaseAddress && addr < m->BaseAddress + m->RegionSize) {
-                    ret = m;
-                    break;
-                }
+    for (i = t->sz - 1; i >= 0; --i) {
+        m = &t->mem[i];
+        if (parent) {
+            if (m->parent == parent) {
+                ret = m;
+                break;
+            }
+        } else {
+            if (addr >= m->BaseAddress && addr < m->BaseAddress + m->RegionSize) {
+                ret = m;
+                break;
             }
         }
     }
@@ -1086,20 +1081,19 @@ int
 xboxkrnl_mem_dirty_enable(void *addr, size_t len) {
     register xboxkrnl_mem *m;
     xboxkrnl_mem mem;
-    register int ret = 1;
+    register int ret = 0;
 
     MEM_LOCK;
 
-    do {
-        if (MEM_RET_LOCKED(MEM_DIRTY, addr)) break;
-        if (!(m = MEM_DIRTY_PARENT_RET_LOCKED(addr))) break;
-        mem              = *m;
-        mem.parent       = mem.BaseAddress;
-        mem.BaseAddress  = addr;
-        mem.RegionSize   = len;
-        mem.dirty        = 0;
+    if (!MEM_RET_LOCKED(MEM_DIRTY, addr) && (m = MEM_DIRTY_PARENT_RET_LOCKED(addr))) {
+        mem             = *m;
+        mem.parent      = mem.BaseAddress;
+        mem.BaseAddress = addr;
+        mem.RegionSize  = len;
+        mem.dirty       = 0;
         MEM_PUSH_LOCKED(MEM_DIRTY, &mem);
-    } while ((ret = 0));
+        ret             = 1;
+    }
 
     MEM_UNLOCK;
 
@@ -1118,7 +1112,7 @@ xboxkrnl_mem_dirty_on_locked(void *addr, xboxkrnl_mem *m) {
     register ssize_t i;
     register int ret = 0;
 
-    if ((m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr)))) {
+    if (m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr))) {
         if (!m->dirty) {
             m->dirty = 1;
             PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu)",
@@ -1158,7 +1152,7 @@ xboxkrnl_mem_dirty_off_locked(void *addr, xboxkrnl_mem *m) {
     register xboxkrnl_mem *p;
     register int ret = 0;
 
-    if ((m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr)))) {
+    if (m || (m = MEM_RET_LOCKED(MEM_DIRTY, addr))) {
         if (m->dirty) {
             m->dirty = 0;
             if (m->parent && (p = MEM_DIRTY_PARENT_RET_LOCKED(m->parent)) && p->dirty) {
@@ -1230,7 +1224,6 @@ xboxkrnl_mmap(int index, void *addr, size_t length, int prot, int flags, int fd,
         m.Type              = ((flags & MAP_PRIVATE) ? XBOXKRNL_MEM_PRIVATE /* 0x20000 */ : 0) | XBOXKRNL_MEM_MAPPED /* 0x40000 */;
         m.prot              = prot;
         m.flags             = flags;
-        m.offset            = offset;
         m.index             = index;
         MEM_PUSH(index, &m);
         MEM_DIRTY_ENABLE(ret, length);
@@ -2248,7 +2241,7 @@ xboxkrnl_address_validate(uint32_t addr) {
     register int ret;
 
     ret =
-        ((addr < 0x00001000) ||
+        ((addr < PAGESIZE) ||
         (addr & 0xf8000000) == host->memreg_base ||
         (addr & 0xff000000) == nv2a->memreg_base ||
         (addr >= usb0->memreg_base && addr < usb0->memreg_base + usb0->memreg_size) ||
