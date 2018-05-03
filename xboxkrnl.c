@@ -916,6 +916,8 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_HEAP_BASE                   (void *)(host->memreg_size / 2)
 #define MEM_HEAP_LIMIT                  (size_t)(host->memreg_size / 2)
 #define MEM_HEAP_BRK_ALIGN              0x00100000  /* 1 MiB */
+#define MEM_HEAP_BRK_ADJUST             xboxkrnl_mem_heap_brk_adjust(0)
+#define MEM_HEAP_BRK_ADJUST__LOCKED     xboxkrnl_mem_heap_brk_adjust(1)
 
 static pthread_mutex_t                  xboxkrnl_mem_mutex = PTHREAD_MUTEX_INITIALIZER;
 static size_t                           xboxkrnl_mem_heap_brk = 0;
@@ -936,6 +938,7 @@ int                                     xboxkrnl_mem_dirty_clear__locked(void *a
 int                                     xboxkrnl_mem_dirty_set(void *addr);
 int                                     xboxkrnl_mem_dirty_clear(void *addr);
 int                                     xboxkrnl_mem_dirty_get(void *addr);
+size_t                                  xboxkrnl_mem_heap_brk_adjust(int locked);
 void *                                  xboxkrnl_mem_heap_alloc(size_t size);
 void *                                  xboxkrnl_mem_heap_realloc(void *ptr, size_t size);
 void                                    xboxkrnl_mem_heap_free(void *ptr);
@@ -1282,13 +1285,52 @@ xboxkrnl_mem_dirty_get(void *addr) {
     return ret;
 }
 
+size_t
+xboxkrnl_mem_heap_brk_adjust(int locked) {
+    register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[MEM_HEAP];
+    register xboxkrnl_mem *m;
+    register size_t brk;
+
+    if (!locked) MEM_LOCK;
+
+    if (t->sz) {
+        if (!(m = &t->mem[t->sz - 1])) INT3;
+        if ((brk = ALIGN(MEM_HEAP_BRK_ALIGN, m->BaseAddress + m->RegionSize)) != xboxkrnl_mem_heap_brk) {
+            if ((void *)brk > MEM_HEAP_BASE + MEM_HEAP_LIMIT) INT3;
+            if (!xboxkrnl_mem_heap_brk) {
+                if (mmap(
+                    MEM_HEAP_BASE,
+                    brk,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE,
+                    -1,
+                    0) != MEM_HEAP_BASE) INT3;
+            } else {
+                if (mremap(
+                    MEM_HEAP_BASE,
+                    xboxkrnl_mem_heap_brk,
+                    brk,
+                    0) != MEM_HEAP_BASE) INT3;
+            }
+            PRINT("MEM: heap break: was 0x%.08zx, now 0x%.08zx", xboxkrnl_mem_heap_brk, brk);
+            xboxkrnl_mem_heap_brk = brk;
+        }
+    } else if (xboxkrnl_mem_heap_brk) {
+        if (munmap(MEM_HEAP_BASE, xboxkrnl_mem_heap_brk)) INT3;
+        xboxkrnl_mem_heap_brk = 0;
+    }
+
+    if (!locked) MEM_UNLOCK;
+
+    return brk;
+}
+
 void *
 xboxkrnl_mem_heap_alloc(size_t size) {
     register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[MEM_HEAP];
     register xboxkrnl_mem *m;
     register xboxkrnl_mem *n;
     xboxkrnl_mem mem;
-    size_t brk;
     register ssize_t i;
     register void *ret = NULL;
 
@@ -1318,27 +1360,7 @@ xboxkrnl_mem_heap_alloc(size_t size) {
 
     if (ret) {
         /* if we have a page, then init heap or adjust the heap break */
-        if (!(n = &t->mem[t->sz - 1])) INT3;
-        if ((brk = ALIGN(MEM_HEAP_BRK_ALIGN, n->BaseAddress + n->RegionSize)) != xboxkrnl_mem_heap_brk) {
-            if ((void *)brk > MEM_HEAP_BASE + MEM_HEAP_LIMIT) INT3;
-            if (!xboxkrnl_mem_heap_brk) {
-                if (mmap(
-                    MEM_HEAP_BASE,
-                    brk,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE,
-                    -1,
-                    0) != MEM_HEAP_BASE) INT3;
-            } else {
-                if (mremap(
-                    MEM_HEAP_BASE,
-                    xboxkrnl_mem_heap_brk,
-                    brk,
-                    0) != MEM_HEAP_BASE) INT3;
-            }
-            PRINT("MEM: heap break: was 0x%.08zx, now 0x%.08zx", xboxkrnl_mem_heap_brk, brk);
-            xboxkrnl_mem_heap_brk = brk;
-        }
+        MEM_HEAP_BRK_ADJUST__LOCKED;
         memset(ret, 0, size);
     }
 
@@ -1398,6 +1420,7 @@ fprintf(stderr,"realloc reloc end\n");//XXX
 void
 xboxkrnl_mem_heap_free(void *ptr) {
     MEM_POP(MEM_HEAP, ptr);
+    MEM_HEAP_BRK_ADJUST;
 }
 
 static void *
