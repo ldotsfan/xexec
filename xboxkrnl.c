@@ -939,9 +939,9 @@ int                                     xboxkrnl_mem_dirty_set(void *addr);
 int                                     xboxkrnl_mem_dirty_clear(void *addr);
 int                                     xboxkrnl_mem_dirty_get(void *addr);
 size_t                                  xboxkrnl_mem_heap_brk_adjust(int locked);
-void *                                  xboxkrnl_mem_heap_alloc(size_t size);
-void *                                  xboxkrnl_mem_heap_realloc(void *ptr, size_t size);
-void                                    xboxkrnl_mem_heap_free(void *ptr);
+void *                                  xboxkrnl_mem_heap_alloc(size_t size, int locked);
+void *                                  xboxkrnl_mem_heap_realloc(void *ptr, size_t size, int locked);
+void                                    xboxkrnl_mem_heap_free(void *ptr, int locked);
 
 static int
 xboxkrnl_mem_prot_unix_to_winnt(int prot, int flags) {
@@ -1294,7 +1294,7 @@ xboxkrnl_mem_heap_brk_adjust(int locked) {
     if (!locked) MEM_LOCK;
 
     if (t->sz) {
-        if (!(m = &t->mem[t->sz - 1])) INT3;
+        if (!(m = &t->mem[t->sz - 1])) INT3; /* last page is the highest allocation */
         if ((brk = ALIGN(MEM_HEAP_BRK_ALIGN, m->BaseAddress + m->RegionSize)) != xboxkrnl_mem_heap_brk) {
             if ((void *)brk > MEM_HEAP_BASE + MEM_HEAP_LIMIT) INT3;
             if (!xboxkrnl_mem_heap_brk) {
@@ -1326,7 +1326,7 @@ xboxkrnl_mem_heap_brk_adjust(int locked) {
 }
 
 void *
-xboxkrnl_mem_heap_alloc(size_t size) {
+xboxkrnl_mem_heap_alloc(size_t size, int locked) {
     register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[MEM_HEAP];
     register xboxkrnl_mem *m;
     register xboxkrnl_mem *n;
@@ -1334,7 +1334,7 @@ xboxkrnl_mem_heap_alloc(size_t size) {
     register ssize_t i;
     register void *ret = NULL;
 
-    MEM_LOCK;
+    if (!locked) MEM_LOCK;
 
     /* find a free range to do the allocation */
     i = 0;
@@ -1364,22 +1364,22 @@ xboxkrnl_mem_heap_alloc(size_t size) {
         memset(ret, 0, size);
     }
 
-    MEM_UNLOCK;
+    if (!locked) MEM_UNLOCK;
 
     return ret;
 }
 
 void *
-xboxkrnl_mem_heap_realloc(void *ptr, size_t size) {
+xboxkrnl_mem_heap_realloc(void *ptr, size_t size, int locked) {
     register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[MEM_HEAP];
     register xboxkrnl_mem *m;
     register xboxkrnl_mem *n;
     register ssize_t i;
     register void *ret = NULL;
 
-    if (!ptr) return xboxkrnl_mem_heap_alloc(size);
+    if (!ptr) return xboxkrnl_mem_heap_alloc(size, 0);
 
-    MEM_LOCK;
+    if (!locked) MEM_LOCK;
 
     /* find the page to resize within bounds */
     for (i = 0; i < t->sz; ++i) {
@@ -1401,26 +1401,30 @@ xboxkrnl_mem_heap_realloc(void *ptr, size_t size) {
         }
     }
 
-    MEM_UNLOCK;
-
     /* otherwise, relocate */
     if (!ret) {
-        if (!(ret = xboxkrnl_mem_heap_alloc(size))) INT3;
+        if (!(ret = xboxkrnl_mem_heap_alloc(size, 1))) INT3;
 fprintf(stderr,"realloc reloc start | %p -> %p\n",ptr,ret);//XXX
         if (ptr) {
             memcpy(ret, ptr, size);
-            xboxkrnl_mem_heap_free(ptr);
+            xboxkrnl_mem_heap_free(ptr, 1);
         }
 fprintf(stderr,"realloc reloc end\n");//XXX
     }
+
+    if (!locked) MEM_UNLOCK;
 
     return ret;
 }
 
 void
-xboxkrnl_mem_heap_free(void *ptr) {
-    MEM_POP(MEM_HEAP, ptr);
-    MEM_HEAP_BRK_ADJUST;
+xboxkrnl_mem_heap_free(void *ptr, int locked) {
+    if (!locked) MEM_LOCK;
+
+    MEM_POP__LOCKED(MEM_HEAP, ptr);
+    MEM_HEAP_BRK_ADJUST__LOCKED;
+
+    if (!locked) MEM_UNLOCK;
 }
 
 static void *
@@ -1453,7 +1457,7 @@ xboxkrnl_munmap(void *addr, size_t length) {
 
 static void *
 xboxkrnl_malloc(size_t size) {
-    return xboxkrnl_mem_heap_alloc(size);
+    return xboxkrnl_mem_heap_alloc(size, 0);
 #if 0
     xboxkrnl_mem m;
     register void *ret;
@@ -1469,7 +1473,7 @@ xboxkrnl_malloc(size_t size) {
 
 static void *
 xboxkrnl_calloc(size_t nmemb, size_t size) {
-    return xboxkrnl_mem_heap_alloc(nmemb * size);
+    return xboxkrnl_mem_heap_alloc(nmemb * size, 0);
 #if 0
     xboxkrnl_mem m;
     register void *ret;
@@ -1485,7 +1489,7 @@ xboxkrnl_calloc(size_t nmemb, size_t size) {
 
 static void *
 xboxkrnl_realloc(void *ptr, size_t size) {
-    return xboxkrnl_mem_heap_realloc(ptr, size);
+    return xboxkrnl_mem_heap_realloc(ptr, size, 0);
 #if 0
     xboxkrnl_mem m;
     register void *ret;
@@ -1503,7 +1507,7 @@ xboxkrnl_realloc(void *ptr, size_t size) {
 
 static void
 xboxkrnl_free(void *ptr) {
-    xboxkrnl_mem_heap_free(ptr);
+    xboxkrnl_mem_heap_free(ptr, 0);
 #if 0
     if (!ptr) return;
 
