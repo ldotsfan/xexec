@@ -1686,7 +1686,7 @@ nv2a_pfifo_pusher(register void *p) {
             c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_PROTECTION;
             break;
         }
-        xboxkrnl_dma_read(addr + *get, &v, 4);
+        xboxkrnl_read_dma(addr + *get, &v, 4);
         o     = v;
         *get += 4;
 //PRINT("pfifo_pusher: state/param:0x%.08x | method:0x%.03hx | subchannel:0x%.02hx | method_count:0x%.02hx | non_inc:%hhu | dcount:%u | error:%u",o,c->method,c->subchannel,c->method_count,c->non_inc,*d,c->error);//XXX

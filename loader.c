@@ -219,6 +219,7 @@ signal_segv(int signum, siginfo_t *info, void *ptr) {
     if (i == SEGV_ACCERR || i == SEGV_MAPERR) {
         do {
             i = (typeof(i))info->si_addr;
+//if (i == 0x8001030) break;//XXX
             if (xboxkrnl_address_validate(i)) {
                 if ((prefix = (REG08(*ip) == 0x66))) {              /* operand-size override prefix */
                     sz   = 2;
@@ -233,9 +234,10 @@ signal_segv(int signum, siginfo_t *info, void *ptr) {
                         register uint32_t *di  = (void *)&uc->uc_mcontext.gregs[REG_EDI];
                         register uint32_t **si = (void *)&uc->uc_mcontext.gregs[REG_ESI];
                         while (*c && xboxkrnl_write(*di, *si, sz)) {
+//PRINT("x86: rep movsd: c=%u di=%p si=%p (0x%.08x)",*c,*di,*si,**si);//XXX
                             --*c;
-                            if (fl->df) *di -= 4, *si -= 4;
-                            else        *di += 4, *si += 4;
+                            if (fl->df) *di -= 4, *si -= 1;
+                            else        *di += 4, *si += 1;
                         }
                         if (!*c) {
                             *ip += 2;                               //   opcode: 0xf3 0xa5

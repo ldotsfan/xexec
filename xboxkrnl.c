@@ -326,8 +326,6 @@ xboxkrnl_print(int8_t stack, const char *format, ...) {
 #define STDCALL             __attribute__((__stdcall__))
 #define FASTCALL            __attribute__((__fastcall__))
 
-static void *               xboxkrnl_mem_contiguous = NULL;
-
 #define ENTER               xboxkrnl_enter(&xboxkrnl_stack, __func__, NULL)
 #define LEAVE               xboxkrnl_leave(&xboxkrnl_stack, __func__, NULL)
 #define PRINT(x,...)        xboxkrnl_print(xboxkrnl_stack, (x), __VA_ARGS__)
@@ -853,10 +851,13 @@ typedef struct {
 
 /* page tables */
 typedef struct {
-    int                     index;
+    const int               index;
     const char *            name;
+    const size_t            align;
     xboxkrnl_mem *          mem;
     ssize_t                 sz;
+    size_t                  commit;
+    size_t                  reserve;
 } xboxkrnl_mem_table;
 
 enum MEM_TABLE_INDEX {
@@ -869,59 +870,84 @@ enum MEM_TABLE_INDEX {
 };
 
 static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
-#define MEM_TABLE(x) \
-    { .index = MEM_ ## x, .name = #x }
-    MEM_TABLE(DIRTY),                   /* dirty page tracking */
-    MEM_TABLE(EXEC),                    /* host executable virtual memory */
-    MEM_TABLE(HEAP),                    /* guest virtual memory heap; trackable parent page table */
-    MEM_TABLE(MAP),                     /* guest virtual memory map; trackable parent page table */
-    MEM_TABLE(ALLOC),                   /* host virtual memory allocation; trackable parent page table */
-    MEM_TABLE(RESERVE),                 /* host virtual memory reserve */
-#undef MEM_TABLE
+#define MEM_TABLE1(x) \
+        MEM_TABLE2(x,PAGESIZE)
+#define MEM_TABLE2(x,y) \
+    { .index = MEM_ ## x, .name = #x, .align = (y) }
+    MEM_TABLE2(DIRTY, 0),               /* dirty page map */
+    MEM_TABLE1(EXEC),                   /* host executable virtual memory map */
+    MEM_TABLE2(HEAP, 8),                /* guest virtual memory heap */
+    MEM_TABLE1(MAP),                    /* guest virtual memory map */
+    MEM_TABLE1(ALLOC),                  /* host virtual memory map */
+    MEM_TABLE1(RESERVE),                /* host reserved virtual memory map */
+#undef MEM_TABLE2
+#undef MEM_TABLE1
     { .index = -1 }
 };
 
 #define MEM_LOCK                        pthread_mutex_lock(&xboxkrnl_mem_mutex)
+#define MEM_TRYLOCK                     pthread_mutex_trylock(&xboxkrnl_mem_mutex)
 #define MEM_UNLOCK                      pthread_mutex_unlock(&xboxkrnl_mem_mutex)
-#define MEM_RELEASE(x)                  xboxkrnl_mem_release((x))
-#define MEM_PUSH(x,y)                   xboxkrnl_mem_push((x), (y), 0)
-#define MEM_PUSH__LOCKED(x,y)           xboxkrnl_mem_push((x), (y), 1)
-#define MEM_POP(x,y)                    xboxkrnl_mem_pop((x), (void *)(y), 0)
-#define MEM_POP__LOCKED(x,y)            xboxkrnl_mem_pop((x), (void *)(y), 1)
-#define MEM_RET(x,y)                    xboxkrnl_mem_ret((x), (void *)(y))
-#define MEM_RET__LOCKED(x,y)            xboxkrnl_mem_ret__locked((x), (void *)(y), NULL)
-#define MEM_RET__LOCKED2(x,y)           xboxkrnl_mem_ret__locked((x), NULL, (void *)(y))
+#define MEM_RELEASE(x)                  xboxkrnl_mem_release(x)
+#define MEM_PUSH(x,y)                   xboxkrnl_mem_push(x,y,0)
+#define MEM_PUSH__LOCKED(x,y)           xboxkrnl_mem_push(x,y,1)
+#define MEM_POP(x,y)                    xboxkrnl_mem_pop(x,(void *)(y),0)
+#define MEM_POP__LOCKED(x,y)            xboxkrnl_mem_pop(x,(void *)(y),1)
+#define MEM_RET(x,y)                    xboxkrnl_mem_ret(x,(void *)(y))
+#define MEM_RET__LOCKED(x,y)            xboxkrnl_mem_ret__locked(x,(void *)(y),NULL)
+#define MEM_RET2__LOCKED(x,y)           xboxkrnl_mem_ret__locked(x,NULL,(void *)(y))
 #define MEM_DIRTY_WP0(x)                if (mprotect((x)->AllocationBase, (x)->RegionSize, (x)->prot)) INT3
 #define MEM_DIRTY_WP1(x)                if (mprotect((x)->AllocationBase, (x)->RegionSize, (x)->prot & ~PROT_WRITE)) INT3
 #define MEM_DIRTY_PARENT_RET__LOCKED(x) xboxkrnl_mem_dirty_parent_ret__locked((void *)(x))
-#define MEM_DIRTY_CREATE(x,y)           xboxkrnl_mem_dirty_create((void *)(x), (y))
+#define MEM_DIRTY_CREATE(x,y)           xboxkrnl_mem_dirty_create((void *)(x),y,0)
+#define MEM_DIRTY_CREATE__LOCKED(x,y)   xboxkrnl_mem_dirty_create((void *)(x),y,1)
 #define MEM_DIRTY_DESTROY(x)            xboxkrnl_mem_dirty_destroy((void *)(x))
 #define MEM_DIRTY_SET(x)                xboxkrnl_mem_dirty_set((void *)(x))
-#define MEM_DIRTY_SET__LOCKED(x)        xboxkrnl_mem_dirty_set__locked((void *)(x), NULL)
-#define MEM_DIRTY_SET__LOCKED2(x)       xboxkrnl_mem_dirty_set__locked(NULL, (x))
-#define MEM_DIRTY_SET__LOCKED_PRE(x,y) \
+#define MEM_DIRTY_SET__LOCKED(x)        xboxkrnl_mem_dirty_set__locked((void *)(x),NULL)
+#define MEM_DIRTY_SET2__LOCKED(x)       xboxkrnl_mem_dirty_set__locked(NULL,x)
+#define MEM_DIRTY_SET3_PRE__LOCKED(x,y) \
         do { \
-            if (!MEM_DIRTY_SET__LOCKED((y)) && ((x) = MEM_DIRTY_PARENT_RET__LOCKED((y))) && !(x)->dirty) { \
-                MEM_DIRTY_WP0((x)); \
+            if (MEM_DIRTY_SET__LOCKED(y) < 2 && \
+                (((x) = MEM_RET__LOCKED(MEM_HEAP, y)) || ((x) = MEM_DIRTY_PARENT_RET__LOCKED(y))) && \
+                !(x)->dirty) { \
+                MEM_DIRTY_WP0(x); \
             } else { \
                 (x) = NULL; \
             } \
         } while (0)
-#define MEM_DIRTY_SET__LOCKED_POST(x)   if ((x)) MEM_DIRTY_WP1((x))
+#define MEM_DIRTY_SET3_POST__LOCKED(x)  if (x) MEM_DIRTY_WP1(x)
 #define MEM_DIRTY_CLEAR(x)              xboxkrnl_mem_dirty_clear((void *)(x))
-#define MEM_DIRTY_CLEAR__LOCKED(x)      xboxkrnl_mem_dirty_clear__locked((void *)(x), NULL)
-#define MEM_DIRTY_CLEAR__LOCKED2(x)     xboxkrnl_mem_dirty_clear__locked(NULL, (x))
+#define MEM_DIRTY_CLEAR__LOCKED(x)      xboxkrnl_mem_dirty_clear__locked((void *)(x),NULL)
+#define MEM_DIRTY_CLEAR2__LOCKED(x)     xboxkrnl_mem_dirty_clear__locked(NULL,x)
 #define MEM_DIRTY_GET(x)                xboxkrnl_mem_dirty_get((void *)(x))
-
-#define MEM_HEAP_BASE                   (void *)(host->memreg_size / 2)
-#define MEM_HEAP_LIMIT                  (size_t)(host->memreg_size / 2)
+#define MEM_HEAP_BASE                   ((void *)host->memreg_size)
+#define MEM_HEAP_LIMIT                  (host->memreg_size / 2)
 #define MEM_HEAP_BRK_ALIGN              0x00100000  /* 1 MiB */
 #define MEM_HEAP_BRK_ADJUST             xboxkrnl_mem_heap_brk_adjust(0)
 #define MEM_HEAP_BRK_ADJUST__LOCKED     xboxkrnl_mem_heap_brk_adjust(1)
+#define MEM_PROT_NONE                   PROT_NONE
+#define MEM_PROT_RDONLY                 PROT_READ
+#define MEM_PROT_RDWR                   PROT_READ | PROT_WRITE
+#define MEM_ALLOC_HEAP(x)               xboxkrnl_mem_alloc(MEM_HEAP,x,NULL,0,0,-1,0,0)
+#define MEM_ALLOC_HEAP__LOCKED(x)       xboxkrnl_mem_alloc(MEM_HEAP,x,NULL,0,0,-1,0,1)
+#define MEM_ALLOC_RESERVE(x,y)          xboxkrnl_mem_alloc(MEM_RESERVE,y,x,MEM_PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0,0)
+#define MEM_ALLOC_RESERVE__LOCKED(x,y)  xboxkrnl_mem_alloc(MEM_RESERVE,y,x,MEM_PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0,1)
+#define MEM_ALLOC_MAP(x,y,z)            xboxkrnl_mem_alloc(x,z,y,MEM_PROT_RDWR,MAP_SHARED|MAP_ANONYMOUS,-1,0,0)
+#define MEM_ALLOC_MAP__LOCKED(x,y,z)    xboxkrnl_mem_alloc(x,z,y,MEM_PROT_RDWR,MAP_SHARED|MAP_ANONYMOUS,-1,0,1)
+#define MEM_FREE_HEAP(x)                xboxkrnl_mem_free(MEM_HEAP,x,0)
+#define MEM_FREE_HEAP__LOCKED(x)        xboxkrnl_mem_free(MEM_HEAP,x,1)
+#define MEM_FREE_MAP(x,y)               xboxkrnl_mem_free(x,y,0)
+#define MEM_FREE_MAP__LOCKED(x,y)       xboxkrnl_mem_free(x,y,1)
+
+#define xboxkrnl_mmap(a,b,c,d,e,f,g)    xboxkrnl_mem_alloc(a,c,b,d,e,f,g,0)
+#define xboxkrnl_munmap(x,y,z)          xboxkrnl_mem_free(x,y,0)
+#define xboxkrnl_malloc(x)              MEM_ALLOC_HEAP(x)
+#define xboxkrnl_calloc(x,y)            MEM_ALLOC_HEAP((x) * (y))
+#define xboxkrnl_free(x)                MEM_FREE_HEAP(x)
 
 static pthread_mutex_t                  xboxkrnl_mem_mutex = PTHREAD_MUTEX_INITIALIZER;
 static size_t                           xboxkrnl_mem_heap_brk = 0;
-static size_t                           xboxkrnl_mem_heap_sz = 0;
+static void *                           xboxkrnl_mem_contiguous = NULL;
 
 static int                              xboxkrnl_mem_prot_unix_to_winnt(int prot, int flags);
 static void                             xboxkrnl_mem_populate(xboxkrnl_mem *m, int index, void *addr, size_t size, int prot, int flags);
@@ -931,7 +957,7 @@ static xboxkrnl_mem *                   xboxkrnl_mem_push(int index, const xboxk
 static void                             xboxkrnl_mem_pop(int index, void *addr, int locked);
 static xboxkrnl_mem *                   xboxkrnl_mem_ret__locked(int index, void *addr, void *parent);
 static xboxkrnl_mem                     xboxkrnl_mem_ret(int index, void *addr);
-int                                     xboxkrnl_mem_dirty_create(void *addr, size_t len);
+int                                     xboxkrnl_mem_dirty_create(void *addr, size_t size, int locked);
 void                                    xboxkrnl_mem_dirty_destroy(void *addr);
 int                                     xboxkrnl_mem_dirty_set__locked(void *addr, xboxkrnl_mem *m);
 int                                     xboxkrnl_mem_dirty_clear__locked(void *addr, xboxkrnl_mem *m);
@@ -939,9 +965,9 @@ int                                     xboxkrnl_mem_dirty_set(void *addr);
 int                                     xboxkrnl_mem_dirty_clear(void *addr);
 int                                     xboxkrnl_mem_dirty_get(void *addr);
 size_t                                  xboxkrnl_mem_heap_brk_adjust(int locked);
-void *                                  xboxkrnl_mem_heap_alloc(size_t size, int locked);
+void *                                  xboxkrnl_mem_alloc(int index, size_t size, void *addr, int prot, int flags, int fd, off_t offset, int locked);
 void *                                  xboxkrnl_mem_heap_realloc(void *ptr, size_t size, int locked);
-void                                    xboxkrnl_mem_heap_free(void *ptr, int locked);
+int                                     xboxkrnl_mem_free(int index, void *ptr, int locked);
 
 static int
 xboxkrnl_mem_prot_unix_to_winnt(int prot, int flags) {
@@ -988,7 +1014,6 @@ xboxkrnl_mem_populate(xboxkrnl_mem *m, int index, void *addr, size_t size, int p
     m->index              = index;
     m->prot               = prot;
     m->flags              = flags;
-    m->dirty              = 1;
 }
 
 xboxkrnl_mem *
@@ -996,9 +1021,9 @@ xboxkrnl_mem_dirty_parent_ret__locked(void *addr) {
     register xboxkrnl_mem *m;
 
     do {
-        if ((m = MEM_RET__LOCKED(MEM_HEAP, addr)) ||
-            (m = MEM_RET__LOCKED(MEM_MAP, addr)) ||
-            (m = MEM_RET__LOCKED(MEM_ALLOC, addr))) break;
+        if ((m = MEM_RET__LOCKED(MEM_MAP, addr)) ||
+            (m = MEM_RET__LOCKED(MEM_ALLOC, addr)) ||
+            (m = MEM_RET__LOCKED(MEM_RESERVE, addr))) break;
     } while (0);
 
     return m;
@@ -1014,6 +1039,7 @@ xboxkrnl_mem_release(int index) {
         free(t->mem);
         t->mem = NULL;
         t->sz  = 0;
+        if (index == MEM_HEAP) MEM_HEAP_BRK_ADJUST__LOCKED;
     }
 
     MEM_UNLOCK;
@@ -1023,48 +1049,40 @@ static xboxkrnl_mem *
 xboxkrnl_mem_push(int index, const xboxkrnl_mem *in, int locked) {
     register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[index];
     register xboxkrnl_mem *m;
-    register xboxkrnl_mem *p;
     register ssize_t i;
-    register int ret = 0;
+    register xboxkrnl_mem *ret;
 
     if (!locked) MEM_LOCK;
 
     if (!(t->mem = realloc(t->mem, sizeof(*t->mem) * ++t->sz))) INT3;
-    m = &t->mem[t->sz - 1];
+    ret = &t->mem[t->sz - 1];
 
-    if (t->sz > 1) {
-        for (i = 0; i < t->sz; ++i) {
-            if ((p = &t->mem[i]) == m) {
-                ret = 1;
-                break;
-            }
-            if (in->BaseAddress == p->BaseAddress) INT3;
-            if (in->BaseAddress < p->BaseAddress) {
-                m = p;
+    if (index != MEM_DIRTY && t->sz > 1) {
+        for (i = 0; (m = &t->mem[i]) != ret; ++i) {
+            if (in->BaseAddress == m->BaseAddress) INT3;
+            if (in->BaseAddress < m->BaseAddress) {
                 ++i;
                 if (i < t->sz) memmove(m + 1, m, sizeof(*m) * (t->sz - i));
-                ret = 1;
+                ret = m;
                 break;
             }
         }
-    } else {
-        ret = 1;
     }
 
-    if (ret) {
-        *m = *in;
-        if (index == MEM_HEAP) xboxkrnl_mem_heap_sz += in->RegionSize;
-    }
-
-    if (m->parent) MEM_DIRTY_CLEAR__LOCKED2(m);
+    if (index != MEM_RESERVE) t->commit += in->RegionSize;
+    t->reserve += ALIGN(t->align, in->RegionSize);
+    *ret = *in;
+    ret->dirty = 1;
+    if (ret->parent) MEM_DIRTY_CLEAR2__LOCKED(ret);
 #if 1
+m=ret;
 fprintf(stderr,"start %p\n",m->BaseAddress);
-for (i=0;i<t->sz;++i) fprintf(stderr,"%s: %p-%p (0x%zx / %zu)\n",t->name,t->mem[i].BaseAddress,t->mem[i].BaseAddress+t->mem[i].RegionSize,t->mem[i].RegionSize,t->mem[i].RegionSize);//XXX
+for (i=0;i<t->sz;++i) m=&t->mem[i],fprintf(stderr,"%s: %p-%p (dirty=%i) (0x%zx / %zu)\n",t->name,m->BaseAddress,m->BaseAddress+m->RegionSize,m->dirty,m->RegionSize,m->RegionSize);//XXX
 fprintf(stderr,"end\n");
 #endif
     if (!locked) MEM_UNLOCK;
 
-    return m;
+    return ret;
 }
 
 static void
@@ -1090,7 +1108,8 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
     }
 
     if (ret) {
-        if (index == MEM_HEAP) xboxkrnl_mem_heap_sz -= mem.RegionSize;
+        if (index != MEM_RESERVE) t->commit -= mem.RegionSize;
+        t->reserve -= ALIGN(t->align, mem.RegionSize);
         if (mem.parent) {
             for (i = t->sz - 1; i >= 0; --i) {
                 m = &t->mem[i];
@@ -1104,7 +1123,7 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
                 }
             }
         } else {
-            while ((m = MEM_RET__LOCKED2(MEM_DIRTY, mem.BaseAddress))) {
+            while ((m = MEM_RET2__LOCKED(MEM_DIRTY, mem.BaseAddress))) {
                 MEM_POP__LOCKED(MEM_DIRTY, m->BaseAddress);
             }
         }
@@ -1156,24 +1175,23 @@ xboxkrnl_mem_ret(int index, void *addr) {
 }
 
 int
-xboxkrnl_mem_dirty_create(void *addr, size_t len) {
+xboxkrnl_mem_dirty_create(void *addr, size_t size, int locked) {
     register xboxkrnl_mem *m;
     xboxkrnl_mem mem;
     register int ret = 0;
 
-    MEM_LOCK;
+    if (!locked) MEM_LOCK;
 
     if (!MEM_RET__LOCKED(MEM_DIRTY, addr) && (m = MEM_DIRTY_PARENT_RET__LOCKED(addr))) {
         mem             = *m;
         mem.parent      = mem.BaseAddress;
         mem.BaseAddress = addr;
-        mem.RegionSize  = len;
-        mem.dirty       = 0;
+        mem.RegionSize  = size;
         MEM_PUSH__LOCKED(MEM_DIRTY, &mem);
-        ret             = 1;
+        ret = 1;
     }
 
-    MEM_UNLOCK;
+    if (!locked) MEM_UNLOCK;
 
     return ret;
 }
@@ -1206,11 +1224,12 @@ xboxkrnl_mem_dirty_set__locked(void *addr, xboxkrnl_mem *m) {
                     if (!i) {
                         if ((p = MEM_DIRTY_PARENT_RET__LOCKED(m->parent)) && !p->dirty) {
                             p->dirty = 1;
-                            PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu) (parent)",
+                            PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu) (%s)",
                                 addr,
                                 p->BaseAddress,
                                 p->RegionSize,
-                                p->RegionSize);//TODO loglevel
+                                p->RegionSize,
+                                xboxkrnl_mem_tables[p->index].name);//TODO loglevel
                             MEM_DIRTY_WP0(p);
                             ++ret;
                         }
@@ -1289,7 +1308,9 @@ size_t
 xboxkrnl_mem_heap_brk_adjust(int locked) {
     register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[MEM_HEAP];
     register xboxkrnl_mem *m;
+    xboxkrnl_mem mem;
     register size_t brk;
+    register size_t sz;
 
     if (!locked) MEM_LOCK;
 
@@ -1297,25 +1318,31 @@ xboxkrnl_mem_heap_brk_adjust(int locked) {
         if (!(m = &t->mem[t->sz - 1])) INT3; /* last page is the highest allocation */
         if ((brk = ALIGN(MEM_HEAP_BRK_ALIGN, m->BaseAddress + m->RegionSize)) != xboxkrnl_mem_heap_brk) {
             if ((void *)brk > MEM_HEAP_BASE + MEM_HEAP_LIMIT) INT3;
+            sz = brk - (typeof(brk))MEM_HEAP_BASE;
             if (!xboxkrnl_mem_heap_brk) {
                 if (mmap(
                     MEM_HEAP_BASE,
-                    brk,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE,
+                    sz,
+                    (mem.prot = MEM_PROT_RDWR),
+                    (mem.flags = MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE),
                     -1,
                     0) != MEM_HEAP_BASE) INT3;
+                xboxkrnl_mem_populate(&mem, MEM_MAP, MEM_HEAP_BASE, sz, mem.prot, mem.flags);
+                MEM_PUSH__LOCKED(MEM_MAP, &mem);
             } else {
                 if (mremap(
                     MEM_HEAP_BASE,
                     xboxkrnl_mem_heap_brk,
-                    brk,
+                    sz,
                     0) != MEM_HEAP_BASE) INT3;
+                if (!(m = MEM_RET__LOCKED(MEM_MAP, MEM_HEAP_BASE))) INT3;
+                m->RegionSize = sz;
             }
             PRINT("MEM: heap break: was 0x%.08zx, now 0x%.08zx", xboxkrnl_mem_heap_brk, brk);
             xboxkrnl_mem_heap_brk = brk;
         }
     } else if (xboxkrnl_mem_heap_brk) {
+        MEM_POP__LOCKED(MEM_MAP, MEM_HEAP_BASE);
         if (munmap(MEM_HEAP_BASE, xboxkrnl_mem_heap_brk)) INT3;
         xboxkrnl_mem_heap_brk = 0;
     }
@@ -1326,43 +1353,112 @@ xboxkrnl_mem_heap_brk_adjust(int locked) {
 }
 
 void *
-xboxkrnl_mem_heap_alloc(size_t size, int locked) {
-    register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[MEM_HEAP];
+xboxkrnl_mem_alloc(int index, size_t size, void *addr, int prot, int flags, int fd, off_t offset, int locked) {
+    register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[index];
     register xboxkrnl_mem *m;
     register xboxkrnl_mem *n;
     xboxkrnl_mem mem;
     register ssize_t i;
-    register void *ret = NULL;
+    register void *ret;
 
     if (!locked) MEM_LOCK;
 
-    /* find a free range to do the allocation */
+    /* find a free range */
     i = 0;
     do {
         m = (t->sz) ? &t->mem[i] : NULL;
         n = (i + 1 < t->sz) ? &t->mem[i + 1] : NULL;
         if (!m) {
-            ret = (typeof(ret))ALIGN(8, MEM_HEAP_BASE);
-        } else {
-            ret = (typeof(ret))ALIGN(8, m->BaseAddress + m->RegionSize) + 8;
-            if (n && ret + size >= n->BaseAddress) ret = NULL;
-        }
-        if (ret) {
-            if (ret + size > MEM_HEAP_BASE + MEM_HEAP_LIMIT) {
-                ret = NULL;
+            switch (index) {
+            case MEM_HEAP:
+                if (!(ret = MEM_HEAP_BASE)) INT3;
+                break;
+            case MEM_MAP:
+                if (!(ret = xboxkrnl_mem_contiguous)) INT3;
+                if (addr && addr >= ret) ret = addr;
+                break;
+            case MEM_EXEC:
+            case MEM_ALLOC:
+            case MEM_RESERVE:
+                ret = addr;
+                break;
+            default:
+                INT3;
                 break;
             }
-            xboxkrnl_mem_populate(&mem, MEM_HEAP, ret, size, 0, 0);
-            if (!(m = MEM_PUSH__LOCKED(MEM_HEAP, &mem))) INT3;
-            break;
+        } else {
+            ret = m->BaseAddress + m->RegionSize;
+            switch (index) {
+            case MEM_HEAP:
+                break;
+            case MEM_MAP:
+                if (addr) ret = (addr >= ret) ? addr : MAP_FAILED;
+                break;
+            case MEM_EXEC:
+            case MEM_ALLOC:
+            case MEM_RESERVE:
+                ret = addr;
+                break;
+            default:
+                INT3;
+                break;
+            }
+        }
+        if (ret != MAP_FAILED) {
+            ret = (typeof(ret))ALIGN(t->align, ret);
+            switch (index) {
+            case MEM_HEAP:
+                if (m) ret += t->align;
+            case MEM_MAP:
+                if (n && ret + size > n->BaseAddress) ret = MAP_FAILED;
+                break;
+            }
+            if (ret != MAP_FAILED) {
+                switch (index) {
+                case MEM_HEAP:
+                    if (ret && ret + size > MEM_HEAP_BASE + MEM_HEAP_LIMIT) ret = MAP_FAILED;
+                    break;
+                case MEM_MAP:
+                    if (ret && ret + size > MEM_HEAP_BASE) ret = MAP_FAILED;
+                    break;
+                }
+                if (ret != MAP_FAILED && ret) {
+                    xboxkrnl_mem_populate(&mem, index, ret, size, prot, flags);
+                    if (!(m = MEM_PUSH__LOCKED(index, &mem))) INT3;
+                }
+                break;
+            }
         }
     } while (++i < t->sz);
 
-    if (ret) {
-        /* if we have a page, then init heap or adjust the heap break */
-        MEM_HEAP_BRK_ADJUST__LOCKED;
-        memset(ret, 0, size);
+    /* do the allocation */
+    if (ret != MAP_FAILED) {
+        i = ALIGN(t->align, size);
+        switch (index) {
+        case MEM_HEAP:
+            MEM_HEAP_BRK_ADJUST__LOCKED;
+            memset(ret, 0, i);
+            break;
+        case MEM_EXEC:
+        case MEM_MAP:
+        case MEM_ALLOC:
+        case MEM_RESERVE:
+            flags |= MAP_NORESERVE;
+            if (!ret) {
+                if ((ret = mmap(NULL, i, prot, flags, fd, offset)) != MAP_FAILED) {
+                    xboxkrnl_mem_populate(&mem, index, ret, size, prot, flags);
+                    if (!(m = MEM_PUSH__LOCKED(index, &mem))) INT3;
+                }
+            } else {
+                if ((ret = mmap(ret, i, prot, flags | MAP_FIXED, fd, offset)) == MAP_FAILED) {
+                    MEM_POP__LOCKED(index, ret);
+                }
+            }
+            break;
+        }
     }
+
+    if (ret != MAP_FAILED) MEM_DIRTY_CREATE__LOCKED(ret, size);
 
     if (!locked) MEM_UNLOCK;
 
@@ -1377,7 +1473,7 @@ xboxkrnl_mem_heap_realloc(void *ptr, size_t size, int locked) {
     register ssize_t i;
     register void *ret = NULL;
 
-    if (!ptr) return xboxkrnl_mem_heap_alloc(size, 0);
+    if (!ptr) return xboxkrnl_malloc(size);
 
     if (!locked) MEM_LOCK;
 
@@ -1393,8 +1489,12 @@ xboxkrnl_mem_heap_realloc(void *ptr, size_t size, int locked) {
                     ret = NULL;
                     break;
                 }
-                xboxkrnl_mem_heap_sz -= m->RegionSize;
-                xboxkrnl_mem_heap_sz += size;
+//                if (index != MEM_RESERVE) {
+                    t->commit -= m->RegionSize;
+                    t->commit += size;
+//                }
+                t->reserve -= ALIGN(t->align, m->RegionSize);
+                t->reserve += ALIGN(t->align, size);
                 m->RegionSize = size;
             }
             break;
@@ -1403,11 +1503,11 @@ xboxkrnl_mem_heap_realloc(void *ptr, size_t size, int locked) {
 
     /* otherwise, relocate */
     if (!ret) {
-        if (!(ret = xboxkrnl_mem_heap_alloc(size, 1))) INT3;
+        if (!(ret = MEM_ALLOC_HEAP__LOCKED(size))) INT3;
 fprintf(stderr,"realloc reloc start | %p -> %p\n",ptr,ret);//XXX
         if (ptr) {
             memcpy(ret, ptr, size);
-            xboxkrnl_mem_heap_free(ptr, 1);
+            MEM_FREE_HEAP__LOCKED(ptr);
         }
 fprintf(stderr,"realloc reloc end\n");//XXX
     }
@@ -1417,18 +1517,40 @@ fprintf(stderr,"realloc reloc end\n");//XXX
     return ret;
 }
 
-void
-xboxkrnl_mem_heap_free(void *ptr, int locked) {
+int
+xboxkrnl_mem_free(int index, void *ptr, int locked) {
+    register xboxkrnl_mem_table *t = &xboxkrnl_mem_tables[index];
+    register xboxkrnl_mem *m;
+
     if (!locked) MEM_LOCK;
 
-    MEM_POP__LOCKED(MEM_HEAP, ptr);
-    MEM_HEAP_BRK_ADJUST__LOCKED;
+    switch (index) {
+    case MEM_HEAP:
+        MEM_POP__LOCKED(index, ptr);
+        MEM_HEAP_BRK_ADJUST__LOCKED;
+        break;
+    case MEM_EXEC:
+    case MEM_MAP:
+    case MEM_ALLOC:
+    case MEM_RESERVE:
+        if (!(m = MEM_RET__LOCKED(index, ptr))) INT3;
+        if (munmap(ptr, ALIGN(t->align, m->RegionSize))) INT3;
+        MEM_POP__LOCKED(index, ptr);
+        break;
+    default:
+        INT3;
+        break;
+    }
 
     if (!locked) MEM_UNLOCK;
-}
 
+    return 0;
+}
+#if 0
 static void *
 xboxkrnl_mmap(int index, void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+    return (index != MEM_HEAP) ? xboxkrnl_mem_alloc(index, length, addr, prot, flags, fd, offset, 0) : MAP_FAILED;
+#if 0
     xboxkrnl_mem m;
     register void *ret;
 
@@ -1441,10 +1563,14 @@ xboxkrnl_mmap(int index, void *addr, size_t length, int prot, int flags, int fd,
     }
 
     return ret;
+#endif
 }
 
 static int
-xboxkrnl_munmap(void *addr, size_t length) {
+xboxkrnl_munmap(int index, void *addr, size_t length) {
+    (void)length;
+    return (index != MEM_HEAP) ? MEM_FREE_MAP(index, addr) : -1;
+#if 0
     xboxkrnl_mem m = MEM_RET(MEM_MAP, addr);
     register int ret;
 
@@ -1453,11 +1579,12 @@ xboxkrnl_munmap(void *addr, size_t length) {
     if (!(ret = munmap(addr, length))) MEM_POP(MEM_MAP, addr);
 
     return ret;
+#endif
 }
 
 static void *
 xboxkrnl_malloc(size_t size) {
-    return xboxkrnl_mem_heap_alloc(size, 0);
+    return MEM_ALLOC_HEAP(size);
 #if 0
     xboxkrnl_mem m;
     register void *ret;
@@ -1473,7 +1600,7 @@ xboxkrnl_malloc(size_t size) {
 
 static void *
 xboxkrnl_calloc(size_t nmemb, size_t size) {
-    return xboxkrnl_mem_heap_alloc(nmemb * size, 0);
+    return MEM_ALLOC_HEAP(nmemb * size);
 #if 0
     xboxkrnl_mem m;
     register void *ret;
@@ -1486,7 +1613,7 @@ xboxkrnl_calloc(size_t nmemb, size_t size) {
     return ret;
 #endif
 }
-
+#endif
 static void *
 xboxkrnl_realloc(void *ptr, size_t size) {
     return xboxkrnl_mem_heap_realloc(ptr, size, 0);
@@ -1504,10 +1631,10 @@ xboxkrnl_realloc(void *ptr, size_t size) {
     return ret;
 #endif
 }
-
+#if 0
 static void
 xboxkrnl_free(void *ptr) {
-    xboxkrnl_mem_heap_free(ptr, 0);
+    MEM_FREE_HEAP(ptr);
 #if 0
     if (!ptr) return;
 
@@ -1516,7 +1643,7 @@ xboxkrnl_free(void *ptr) {
     free(ptr);
 #endif
 }
-
+#endif
 typedef struct {
     uint16_t                Length;
     uint16_t                MaximumLength;
@@ -2269,59 +2396,46 @@ xboxkrnl_worker(void *arg) {
 
 static int
 xboxkrnl_init_hw(void) {
-    register void *ptr;
+    register void *p;
     register size_t sz;
     register size_t i;
-    register int ret = 1;
+    register int ret = 0;
     ENTER;
 
-    for (i = 0; i < ARRAY_SIZE(xpci) && xpci[i].name; ++i) {
-        if ((ptr = (typeof(ptr))xpci[i].memreg_base)) {
+    MEM_LOCK;
+
+    for (i = 0; !ret && i < ARRAY_SIZE(xpci) && xpci[i].name; ++i) {
+        if ((p = (typeof(p))xpci[i].memreg_base)) {
             sz = xpci[i].memreg_size;
-            PRINT("/* reserve: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, ptr, sz, sz);
-            if (xboxkrnl_mmap(
-                    MEM_RESERVE,
-                    ptr,
-                    sz,
-                    PROT_NONE,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE,
-                    -1,
-                    0) != ptr) {
-                PRINT("error: failed to reserve hardware memory: mmap(): address %p size %p (%lu): '%s'",
-                    ptr,
-                    sz,
-                    sz,
-                    strerror(errno));
-                LEAVE;
-                return ret;
+            PRINT("/* reserve: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, p, sz, sz);
+            if (MEM_ALLOC_RESERVE__LOCKED(p, sz) != p) {
+                PRINT("error: failed to reserve hardware memory: mmap(): address %p size %p (%lu): '%s'", p, sz, sz, strerror(errno));
+                ret = 1;
+                break;
             }
         }
     }
-    for (i = 0; i < ARRAY_SIZE(xpci) && xpci[i].name; ++i) {
-        if ((ptr = (typeof(ptr))xpci[i].memreg_base)) {
+    for (i = 0; !ret && i < ARRAY_SIZE(xpci) && xpci[i].name; ++i) {
+        if ((p = (typeof(p))xpci[i].memreg_base)) {
             sz = xpci[i].memreg_size;
-            if ((ptr = xboxkrnl_mmap(
-                    MEM_EXEC,
-                    NULL,
-                    sz,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
-                    -1,
-                    0)) == MAP_FAILED) {
-                PRINT("error: failed to allocate hardware memory: mmap(): size %p (%lu): '%s'",
-                    sz,
-                    sz,
-                    strerror(errno));
-                LEAVE;
-                return ret;
+            if ((p = MEM_ALLOC_MAP__LOCKED(MEM_EXEC, NULL, sz)) == MAP_FAILED) {
+                PRINT("error: failed to allocate hardware memory: mmap(): size %p (%lu): '%s'", sz, sz, strerror(errno));
+                ret = 1;
+                break;
             }
-            xpci[i].memreg = ptr;
-            PRINT("/* allocate: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, ptr, sz, sz);
+            xpci[i].memreg = p;
+            PRINT("/* allocate: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, p, sz, sz);
         }
     }
-    do {
-        if (nv2a_init()) break;
-    } while ((ret = 0));
+
+    MEM_UNLOCK;
+
+    if (!ret) {
+        ret = 1;
+        do {
+            if (nv2a_init()) break;
+        } while ((ret = 0));
+    }
 
     LEAVE;
     return ret;
@@ -2391,7 +2505,7 @@ xboxkrnl_init(void/* **x*/) {
 
 /* helpers */
 static void
-xboxkrnl_dma_write(uint32_t addr, const uint32_t *val, size_t sz) {
+xboxkrnl_write_dma(uint32_t addr, const uint32_t *val, size_t sz) {
     register uint32_t wr = addr;
     register int ret;
 
@@ -2417,7 +2531,7 @@ xboxkrnl_dma_write(uint32_t addr, const uint32_t *val, size_t sz) {
 }
 
 static void
-xboxkrnl_dma_read(uint32_t addr, uint32_t *val, size_t sz) {
+xboxkrnl_read_dma(uint32_t addr, uint32_t *val, size_t sz) {
     register uint32_t rd = addr;
 
     if (addr < PAGESIZE) rd += (typeof(addr))host->memreg;
@@ -2442,17 +2556,27 @@ xboxkrnl_dma_read(uint32_t addr, uint32_t *val, size_t sz) {
 }
 
 static int
+xboxkrnl_address_validate_hw(uint32_t addr) {
+    register int ret;
+
+    ret =
+        ((addr & 0xff000000) == nv2a->memreg_base ||
+        (addr >= usb0->memreg_base && addr < usb0->memreg_base + usb0->memreg_size) ||
+        (addr >= usb1->memreg_base && addr < usb1->memreg_base + usb1->memreg_size) ||
+        (addr >= apu->memreg_base && addr < apu->memreg_base + apu->memreg_size) ||
+        (addr >= aci->memreg_base && addr < aci->memreg_base + aci->memreg_size));
+
+    return ret;
+}
+
+static int
 xboxkrnl_address_validate(uint32_t addr) {
     register int ret;
 
     ret =
         ((addr < PAGESIZE) ||
         (addr & 0xf8000000) == host->memreg_base ||
-        (addr & 0xff000000) == nv2a->memreg_base ||
-        (addr >= usb0->memreg_base && addr < usb0->memreg_base + usb0->memreg_size) ||
-        (addr >= usb1->memreg_base && addr < usb1->memreg_base + usb1->memreg_size) ||
-        (addr >= apu->memreg_base && addr < apu->memreg_base + apu->memreg_size) ||
-        (addr >= aci->memreg_base && addr < aci->memreg_base + aci->memreg_size) ||
+        xboxkrnl_address_validate_hw(addr) ||
         MEM_DIRTY_PARENT_RET__LOCKED(addr));
 
     return ret;
@@ -2461,47 +2585,46 @@ xboxkrnl_address_validate(uint32_t addr) {
 static int
 xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
     register xboxkrnl_mem *m;
-    register int phys;
+    register int locked;
     register int ret;
 
-    phys = ((addr & 0xf8000000) == host->memreg_base);
+    locked = !MEM_TRYLOCK;
 
-    if (phys || addr < PAGESIZE || MEM_DIRTY_PARENT_RET__LOCKED(addr)) {
-        if (phys) addr &= host->memreg_size - 1;
-        MEM_DIRTY_SET__LOCKED_PRE(m, addr);
-        xboxkrnl_dma_write(addr, val, sz);
-        MEM_DIRTY_SET__LOCKED_POST(m);
-        ret = 1;
-    } else {
-        MEM_DIRTY_SET__LOCKED_PRE(m, addr);
+    if (xboxkrnl_address_validate_hw(addr)) {
+        MEM_DIRTY_SET3_PRE__LOCKED(m, addr);
         ret =
             (nv2a_write(addr, val, sz) ||
             ohci_write(addr, val, sz) ||
             apu_write(addr, val, sz) ||
             aci_write(addr, val, sz));
-        MEM_DIRTY_SET__LOCKED_POST(m);
+        MEM_DIRTY_SET3_POST__LOCKED(m);
+    } else {
+        if ((addr & 0xf8000000) == host->memreg_base) addr &= host->memreg_size - 1;
+        MEM_DIRTY_SET3_PRE__LOCKED(m, addr);
+        xboxkrnl_write_dma(addr, val, sz);
+        MEM_DIRTY_SET3_POST__LOCKED(m);
+        ret = 1;
     }
+
+    if (locked) MEM_UNLOCK;
 
     return ret;
 }
 
 static int
 xboxkrnl_read(uint32_t addr, void *val, size_t sz) {
-    register int phys;
     register int ret;
 
-    phys = ((addr & 0xf8000000) == host->memreg_base);
-
-    if (phys || addr < PAGESIZE || MEM_DIRTY_PARENT_RET__LOCKED(addr)) {
-        if (phys) addr &= host->memreg_size - 1;
-        xboxkrnl_dma_read(addr, val, sz);
-        ret = 1;
-    } else {
+    if (xboxkrnl_address_validate_hw(addr)) {
         ret =
             (nv2a_read(addr, val, sz) ||
             ohci_read(addr, val, sz) ||
             apu_read(addr, val, sz) ||
             aci_read(addr, val, sz));
+    } else {
+        if ((addr & 0xf8000000) == host->memreg_base) addr &= host->memreg_size - 1;
+        xboxkrnl_read_dma(addr, val, sz);
+        ret = 1;
     }
 
     return ret;
@@ -2873,7 +2996,7 @@ xboxkrnl_ExAllocatePool( /* 014 (0x00e) */
     ENTER;
     VARDUMP(VAR_IN, NumberOfBytes);
 
-    if (!(ret = xboxkrnl_malloc(NumberOfBytes)) && NumberOfBytes) INT3;
+    if (!(ret = MEM_ALLOC_HEAP(NumberOfBytes))) INT3;
 
     VARDUMP(DUMP, ret);
     LEAVE;
@@ -2889,7 +3012,8 @@ xboxkrnl_ExAllocatePoolWithTag( /* 015 (0x00f) */
     VARDUMP(VAR_IN, Tag);
     STRDUMPR(Tag);
 
-    if (!(ret = xboxkrnl_malloc(NumberOfBytes)) && NumberOfBytes) INT3;
+    if (!(ret = MEM_ALLOC_HEAP(NumberOfBytes))) INT3;
+    //TODO save tag
 
     VARDUMP(DUMP, ret);
     LEAVE;
@@ -4829,29 +4953,12 @@ xboxkrnl_LaunchDataPage; /* 164 (0x0a4) */
 static STDCALL void *
 xboxkrnl_MmAllocateContiguousMemory( /* 165 (0x0a5) */
         /* in */ size_t NumberOfBytes) {
-    register size_t sz;
     register void *ret;
     ENTER;
     VARDUMP(VAR_IN, NumberOfBytes);
 
-    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
+    if ((ret = MEM_ALLOC_MAP(MEM_MAP, NULL, NumberOfBytes)) == MAP_FAILED) INT3;
 
-    if ((sz = NumberOfBytes & PAGEMASK)) sz = NumberOfBytes + PAGESIZE - sz;
-    else sz = NumberOfBytes;
-    VARDUMP(DUMP, sz);
-
-    if ((ret = xboxkrnl_mmap(
-            MEM_MAP,
-            xboxkrnl_mem_contiguous,
-            sz,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
-            -1,
-            0)) == MAP_FAILED) INT3;
-
-    xboxkrnl_mem_contiguous += sz;
-
-    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
     VARDUMP(DUMP, ret);
     LEAVE;
     return ret;
@@ -4863,7 +4970,6 @@ xboxkrnl_MmAllocateContiguousMemoryEx( /* 166 (0x0a6) */
         /* in */ uint32_t HighestAcceptableAddress,
         /* in */ uint32_t Alignment,
         /* in */ uint32_t Protect) {
-    register size_t sz;
     register void *ret;
     ENTER;
     VARDUMP(VAR_IN,  NumberOfBytes);
@@ -4872,24 +4978,8 @@ xboxkrnl_MmAllocateContiguousMemoryEx( /* 166 (0x0a6) */
     VARDUMP(VAR_IN,  Alignment);
     VARDUMP3(VAR_IN, Protect, xboxkrnl_page_type_name);
 
-    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
+    if ((ret = MEM_ALLOC_MAP(MEM_MAP, NULL, NumberOfBytes)) == MAP_FAILED) INT3;
 
-    if ((sz = NumberOfBytes & PAGEMASK)) sz = NumberOfBytes + PAGESIZE - sz;
-    else sz = NumberOfBytes;
-    VARDUMP(DUMP, sz);
-
-    if ((ret = xboxkrnl_mmap(
-            MEM_MAP,
-            xboxkrnl_mem_contiguous,
-            sz,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
-            -1,
-            0)) == MAP_FAILED) INT3;
-
-    xboxkrnl_mem_contiguous += sz;
-
-    VARDUMP(DUMP, xboxkrnl_mem_contiguous);
     VARDUMP(DUMP, ret);
     LEAVE;
     return ret;
@@ -4917,7 +5007,7 @@ xboxkrnl_MmClaimGpuInstanceMemory( /* 168 (0x0a8) */
     if (NumberOfBytes == ~0UL) {
         ret = xboxkrnl_gpuinstmem + xboxkrnl_gpuinstsz;
     } else {
-        if (xboxkrnl_gpuinstmem) xboxkrnl_munmap(xboxkrnl_gpuinstmem, xboxkrnl_gpuinstsz);
+        if (xboxkrnl_gpuinstmem) xboxkrnl_munmap(MEM_MAP, xboxkrnl_gpuinstmem, xboxkrnl_gpuinstsz);
         if ((tmp = NumberOfBytes & PAGEMASK)) NumberOfBytes += PAGESIZE - tmp;
         if ((ret = xboxkrnl_mmap(
                 MEM_MAP,
@@ -5129,7 +5219,6 @@ xboxkrnl_NtAllocateVirtualMemory( /* 184 (0x0b8) */
         /* i/o */      size_t *RegionSize,
         /* in */       uint32_t AllocationType,
         /* in */       uint32_t Protect) {
-    register int flag = 0;
     register int ret = -1;
     ENTER;
     VARDUMP(VAR_IN,  BaseAddress);
@@ -5142,17 +5231,7 @@ xboxkrnl_NtAllocateVirtualMemory( /* 184 (0x0b8) */
     VARDUMP3(VAR_IN, Protect, xboxkrnl_page_type_name);
 
     if (AllocationType & XBOXKRNL_MEM_RESERVE /* 0x2000 */) {
-        if (Protect & XBOXKRNL_PAGE_NOCACHE /* 0x200 */ ||
-            Protect & XBOXKRNL_PAGE_WRITECOMBINE /* 0x400 */) flag |= MAP_NORESERVE;
-        if ((*BaseAddress = xboxkrnl_mmap(
-                MEM_MAP,
-                *BaseAddress,
-                *RegionSize,
-                PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_ANONYMOUS | flag,
-                -1,
-                0)) == MAP_FAILED) {
-            PRINT("error: mmap(): '%s'", strerror(errno));
+        if ((*BaseAddress = MEM_ALLOC_MAP(MEM_MAP, *BaseAddress, *RegionSize)) == MAP_FAILED) {
             *BaseAddress = NULL;
         } else {
             ret = 0;
@@ -5164,7 +5243,6 @@ xboxkrnl_NtAllocateVirtualMemory( /* 184 (0x0b8) */
     if (ret) INT3;
 
     VARDUMP(DUMP, *BaseAddress);
-    VARDUMP(DUMP, *RegionSize);
     VARDUMP(DUMP, ret);
     LEAVE;
     return ret;
@@ -5505,7 +5583,7 @@ xboxkrnl_NtFreeVirtualMemory( /* 199 (0x0c7) */
     VARDUMP3(VAR_IN, FreeType, xboxkrnl_mem_type_name);
 
     if (FreeType & XBOXKRNL_MEM_RELEASE /* 0x8000 */) {
-        if (xboxkrnl_munmap(BaseAddress, *RegionSize) < 0) {
+        if (xboxkrnl_munmap(MEM_MAP, BaseAddress, *RegionSize) < 0) {
             PRINT("error: munmap(): '%s'", strerror(errno));
         } else {
             ret = 0;
