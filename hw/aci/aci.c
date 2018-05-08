@@ -1,8 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (C) 2006  InnoTek Systemberatung GmbH
- *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *  Copyright (c) 2006 InnoTek Systemberatung GmbH
+ *  Copyright (c) 2017 Michael Saga. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -66,11 +66,11 @@
 
 static int
 aci_offset(register uint32_t *addr) {
-    if (*addr >= aci->memreg_base && *addr < aci->memreg_base + aci->memreg_size) {
-        *addr -= aci->memreg_base;
-        return 0;
-    }
-    return 1;
+    register int ret;
+
+    if ((ret = RANGE(aci->memreg_base, aci->memreg_size, *addr))) *addr -= aci->memreg_base;
+
+    return !ret;
 }
 
 static const aci_block *
@@ -84,7 +84,7 @@ aci_block_lookup(register uint32_t addr, register const char **reg) {
     for (i = 0; i <= ARRAY_SIZE(aci_blocks); ++i) {
         if (i >= ARRAY_SIZE(aci_blocks)) INT3;
         b = &aci_blocks[i];
-        if (addr >= b->offset && addr < b->offset + b->size) {
+        if (RANGE(b->offset, b->size, addr)) {
             if (reg) {
                 i = addr - b->offset;
                 switch (b->index) {

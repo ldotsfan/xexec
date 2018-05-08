@@ -1,7 +1,7 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *  Copyright (c) 2017 Michael Saga. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -65,11 +65,11 @@
 
 static int
 apu_offset(register uint32_t *addr) {
-    if (*addr >= apu->memreg_base && *addr < apu->memreg_base + apu->memreg_size) {
-        *addr -= apu->memreg_base;
-        return 0;
-    }
-    return 1;
+    register int ret;
+
+    if ((ret = RANGE(apu->memreg_base, apu->memreg_size, *addr))) *addr -= apu->memreg_base;
+
+    return !ret;
 }
 
 static const apu_block *
@@ -83,7 +83,7 @@ apu_block_lookup(register uint32_t addr, register const char **reg) {
     for (i = 0; i <= ARRAY_SIZE(apu_blocks); ++i) {
         if (i >= ARRAY_SIZE(apu_blocks)) INT3;
         b = &apu_blocks[i];
-        if (addr >= b->offset && addr < b->offset + b->size) {
+        if (RANGE(b->offset, b->size, addr)) {
             if (reg) {
                 i = (addr - b->offset) / 4;
                 switch (b->index) {

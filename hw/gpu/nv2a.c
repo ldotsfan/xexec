@@ -225,11 +225,11 @@ nv2a_pfifo_cache_dequeue(register nv2a_pfifo_cache *c) {
 
 static int
 nv2a_offset(register uint32_t *addr) {
-    if ((*addr & 0xff000000) == nv2a->memreg_base) {
-        *addr &= 0x00ffffff;
-        return 0;
-    }
-    return 1;
+    register int ret;
+
+    if ((ret = (*addr & 0xff000000) == nv2a->memreg_base)) *addr &= ~0xff000000;
+
+    return !ret;
 }
 
 static const nv2a_block *
@@ -243,7 +243,7 @@ nv2a_block_lookup(register uint32_t addr, register const char **reg) {
     for (i = 0; i <= ARRAY_SIZE(nv2a_blocks); ++i) {
         if (i >= ARRAY_SIZE(nv2a_blocks)) INT3;
         b = &nv2a_blocks[i];
-        if (addr >= b->offset && addr < b->offset + b->size) {
+        if (RANGE(b->offset, b->size, addr)) {
             if (reg) {
                 i = (addr - b->offset) / 4;
                 switch (b->index) {

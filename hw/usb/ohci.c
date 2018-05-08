@@ -1,7 +1,7 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (C) 2012-2018  Michael Saga. All rights reserved.
+ *  Copyright (c) 2017 Michael Saga. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -63,17 +63,17 @@
 
 static int
 ohci_offset(register uint32_t *addr, register int *i) {
-    if (*addr >= usb0->memreg_base && *addr < usb0->memreg_base + usb0->memreg_size) {
+    register int ret;
+
+    if ((ret = RANGE(usb0->memreg_base, usb0->memreg_size, *addr))) {
         *addr -= usb0->memreg_base;
         *i     = 0;
-        return 0;
-    }
-    if (*addr >= usb1->memreg_base && *addr < usb1->memreg_base + usb1->memreg_size) {
+    } else if ((ret = RANGE(usb1->memreg_base, usb1->memreg_size, *addr))) {
         *addr -= usb1->memreg_base;
         *i     = 1;
-        return 0;
     }
-    return 1;
+
+    return !ret;
 }
 
 int
