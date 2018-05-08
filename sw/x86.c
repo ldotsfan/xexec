@@ -1841,13 +1841,11 @@ _exit(0);//XXX
         if (prefix) *ip -= 1;
         do {
 #define EIP_PATCH(x,y,z) \
-            do { \
-                if (!memcmp((x), (y), sizeof((y)) - 1)) { \
-                    memcpy((x), (z), sizeof((z)) - 1); \
-                    ret = 1; \
-                    break; \
-                } \
-            } while (0)
+            if (!memcmp((x), (y), sizeof((y)) - 1)) { \
+                memcpy((x), (z), sizeof((z)) - 1); \
+                ret = 1; \
+                break; \
+            }
 
             EIP_PATCH(*ip,                              // SetLastError() / GetLastError()
                 "\x64\x0f\xb6\x05\x24\x00\x00\x00",     // 1: movzx   eax, large byte ptr fs:24h
