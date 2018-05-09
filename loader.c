@@ -198,141 +198,128 @@ main(int argc, char **argv) {
     };
     pthread_t entry;
     XbeHeader *xbeh;
-    void *addr;
-    int fd;
-    size_t i;
+    int fd = -1;
+    int ret = 1;
 
     setbuf(stdout, NULL);
 
     if (argc < 2) {
         fprintf(stderr, "usage: %s <xbox executable>.xbe [GDB flag]\n", argv[0]);
-        return 1;
+        return ret;
     }
 
     if (xboxkrnl_init()) {
-        fprintf(stderr, "error: xboxkrnl_init() initialization failed\n");
-        return 1;
+        fprintf(stderr, "error: xboxkrnl initialization failed\n");
+        return ret;
     }
     if (sigaction(SIGSEGV, &s, NULL) < 0) {
         PRINT("error: sigaction(): '%s'", strerror(errno));
-        return 1;
+        return ret;
     }
-
     if ((fd = open(argv[1], O_RDONLY)) < 0) {
         PRINT("error: open(): '%s': '%s'", argv[1], strerror(errno));
-        return 1;
+        return ret;
     }
-    addr = (void *)XBE_BASE_ADDR;
-    if (xboxkrnl_mmap(
-            MEM_EXEC,
-            addr,
-            PAGESIZE,
-            PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_FIXED | MAP_POPULATE | MAP_NORESERVE,
-            fd,
-            0) != addr) {
-        PRINT("error: mmap(): failed to map XBE header @ %p", addr);
-        close(fd);
-        return 1;
-    }
-    xbeh = addr;
-    if (xbeh->dwMagic != *(uint32_t *)XBE_MAGIC) {
-        PRINT("error: invalid XBE magic: 0x%.08x", xbeh->dwMagic);
-        close(fd);
-        return 1;
-    }
-    XbeHeader_dump(xbeh);
 
-    memset(&xbeh->dwInitFlags, 0, sizeof(xbeh->dwInitFlags));
-
-    xbeh->dwEntryAddr ^=
-        ((xbeh->dwEntryAddr ^ XBE_XOR_EP_RETAIL) > 0x1000000)
-            ? XBE_XOR_EP_DEBUG
-            : XBE_XOR_EP_RETAIL;
-    xbeh->dwKernelImageThunkAddr ^=
-        ((xbeh->dwKernelImageThunkAddr ^ XBE_XOR_KT_RETAIL) > 0x1000000)
-            ? XBE_XOR_KT_DEBUG
-            : XBE_XOR_KT_RETAIL;
-
-    PRINT("XBE entry: %p | thunk table: %p", xbeh->dwEntryAddr, xbeh->dwKernelImageThunkAddr);
-
-    {
+    do {
         XbeSectionHeader *xbes;
         const char *sname;
         uint32_t vaddr;
         uint32_t vsize;
         uint32_t raddr;
         uint32_t rsize;
-        ssize_t rd;
+        register ssize_t rd;
+        register size_t i;
 
-        if (xbeh->dwSections) {
-            xbes   = (typeof(xbes))xbeh->dwSectionHeadersAddr;
-            vaddr  = ALIGN(PAGESIZE, xbes[0].dwVirtualAddr);
-            raddr  = xbes[xbeh->dwSections - 1].dwVirtualAddr;
-            raddr += xbes[xbeh->dwSections - 1].dwVirtualSize;
-            raddr  = ALIGN(PAGESIZE, raddr);
-            vsize  = raddr - vaddr;
+        xbeh = (void *)XBE_BASE;
+        if (MEM_ALLOC_EXEC(xbeh, PAGESIZE) != xbeh) {
+            PRINT("error: mmap(): failed to map XBE header @ %p: '%s'", xbeh, strerror(errno));
+            break;
+        }
+        if ((rd = read(fd, xbeh, PAGESIZE)) != PAGESIZE) {
+            PRINT("error: read(): '%s': '%s'", argv[1], (rd < 0) ? strerror(errno) : "short read");
+            break;
+        }
+        if (xbeh->dwMagic != REG32(XBE_MAGIC)) {
+            PRINT("error: invalid XBE: '%s'", argv[1]);
+            break;
+        }
+        XbeHeader_dump(xbeh);
 
-            xboxkrnl_mem_contiguous = (void *)raddr;
+        memset(&xbeh->dwInitFlags, 0, sizeof(xbeh->dwInitFlags));//TODO catch flag cases
 
-            PRINT("mmap(): total section map: "
-                "start: 0x%.08x | "
-                "end: 0x%.08x | "
-                "size: 0x%.08x",
-                vaddr, raddr, vsize);
+        xbeh->dwEntryAddr ^=
+            ((xbeh->dwEntryAddr ^ XBE_XOR_EP_RETAIL) > 0x1000000)
+                ? XBE_XOR_EP_DEBUG
+                : XBE_XOR_EP_RETAIL;
+        xbeh->dwKernelImageThunkAddr ^=
+            ((xbeh->dwKernelImageThunkAddr ^ XBE_XOR_KT_RETAIL) > 0x1000000)
+                ? XBE_XOR_KT_DEBUG
+                : XBE_XOR_KT_RETAIL;
 
-            addr = (typeof(addr))vaddr;
-            if (xboxkrnl_mmap(
-                    MEM_EXEC,
-                    addr,
-                    vsize,
-                    PROT_READ | PROT_WRITE | PROT_EXEC,
-                    MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS | MAP_NORESERVE,
-                    -1,
-                    0) != addr) {
-                PRINT("error: mmap(): failed to map XBE sections: '%s'", strerror(errno));
-                close(fd);
-                return 1;
+        PRINT("XBE entry: %p | thunk table: %p", xbeh->dwEntryAddr, xbeh->dwKernelImageThunkAddr);
+
+        if (!xbeh->dwSections) {
+            PRINT("error: XBE has no sections to map: '%s'", argv[1]);
+            break;
+        }
+
+        xbes   = (typeof(xbes))xbeh->dwSectionHeadersAddr;
+        vaddr  = ALIGN(PAGESIZE, xbes[0].dwVirtualAddr);
+        raddr  = xbes[xbeh->dwSections - 1].dwVirtualAddr;
+        raddr += xbes[xbeh->dwSections - 1].dwVirtualSize;
+        raddr  = ALIGN(PAGESIZE, raddr);
+        vsize  = raddr - vaddr;
+
+        xboxkrnl_mem_contiguous = (void *)raddr;
+
+        PRINT("mmap(): total section map: "
+            "start: 0x%.08x | "
+            "end: 0x%.08x | "
+            "size: 0x%.08x",
+            vaddr, raddr, vsize);
+
+        if (MEM_ALLOC_EXEC((void *)vaddr, vsize) != (void *)vaddr) {
+            PRINT("error: mmap(): failed to map XBE sections @ %p: '%s'", vaddr, strerror(errno));
+            break;
+        }
+        for (i = 0; i < xbeh->dwSections; ++i) {
+            XbeSectionHeader_dump(&xbes[i]);
+            sname = (typeof(sname))xbes[i].dwSectionNameAddr;
+            vaddr = xbes[i].dwVirtualAddr;
+            vsize = xbes[i].dwVirtualSize;
+            raddr = xbes[i].dwRawAddr;
+            rsize = xbes[i].dwSizeofRaw;
+
+            PRINT("mmap(): section %2u | "
+                "name %10s | "
+                "virtual: address 0x%.08x size 0x%.08x | "
+                "raw: address 0x%.08x size 0x%.08x",
+                i, sname, vaddr, vsize, raddr, rsize);
+
+            if (lseek(fd, raddr, SEEK_SET) != (ssize_t)raddr) {
+                PRINT("error: lseek(): '%s': '%s'", argv[1], strerror(errno));
+                break;
             }
-            for (i = 0; i < xbeh->dwSections; ++i) {
-                XbeSectionHeader_dump(&xbes[i]);
-                sname = (typeof(sname))xbes[i].dwSectionNameAddr;
-                vaddr = xbes[i].dwVirtualAddr;
-                vsize = xbes[i].dwVirtualSize;
-                raddr = xbes[i].dwRawAddr;
-                rsize = xbes[i].dwSizeofRaw;
-
-                PRINT("mmap(): section %2u | "
-                    "name %10s | "
-                    "virtual: address 0x%.08x size 0x%.08x | "
-                    "raw: address 0x%.08x size 0x%.08x",
-                    i, sname, vaddr, vsize, raddr, rsize);
-
-                if (lseek(fd, raddr, SEEK_SET) != (int)raddr) {
-                    PRINT("error: lseek(): '%s'", strerror(errno));
-                    close(fd);
-                    return 1;
-                }
-                if ((rd = read(fd, (void *)vaddr, rsize)) != (typeof(rd))rsize) {
-                    PRINT("error: read(): '%s'", (rd < 0) ? strerror(errno) : "short read");
-                    close(fd);
-                    return 1;
-                }
-                if (!strncmp(sname, ".text", sizeof(".text"))) {
-                    xbeh->dwEntryAddr = vaddr;//FIXME
-                }
+            if ((rd = read(fd, (void *)vaddr, rsize)) != (ssize_t)rsize) {
+                PRINT("error: read(): '%s': '%s'", argv[1], (rd < 0) ? strerror(errno) : "short read");
+                break;
+            }
+            if (!strncmp(sname, ".text", sizeof(".text"))) {
+                xbeh->dwEntryAddr = vaddr;//FIXME
             }
         }
-    }
+    } while ((ret = 0));
 
     close(fd);
+    if (ret) return ret;
 
     XbeTLS_dump((void *)xbeh->dwTLSAddr);
 
     {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "cat /proc/%hu/maps", getpid());
-        system(buf);
+        char cat[32];
+        snprintf(cat, sizeof(cat), "cat /proc/%hu/maps", getpid());
+        system(cat);
     }
 
     xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);

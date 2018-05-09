@@ -940,10 +940,13 @@ fprintf(stderr,"WP1!\n");/*XXX*/ \
 #define MEM_PROT_NONE                   PROT_NONE
 #define MEM_PROT_RDONLY                 PROT_READ
 #define MEM_PROT_RDWR                   PROT_READ | PROT_WRITE
+#define MEM_PROT_EXEC                   PROT_READ | PROT_WRITE | PROT_EXEC
 #define MEM_ALLOC_HEAP(x)               xboxkrnl_mem_alloc(MEM_HEAP,x,NULL,0,0,-1,0,0)
 #define MEM_ALLOC_HEAP__LOCKED(x)       xboxkrnl_mem_alloc(MEM_HEAP,x,NULL,0,0,-1,0,1)
 #define MEM_ALLOC_RESERVE(x,y)          xboxkrnl_mem_alloc(MEM_RESERVE,y,x,MEM_PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0,0)
 #define MEM_ALLOC_RESERVE__LOCKED(x,y)  xboxkrnl_mem_alloc(MEM_RESERVE,y,x,MEM_PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0,1)
+#define MEM_ALLOC_EXEC(x,y)             xboxkrnl_mem_alloc(MEM_EXEC,y,x,MEM_PROT_EXEC,MAP_SHARED|MAP_ANONYMOUS,-1,0,0)
+#define MEM_ALLOC_EXEC__LOCKED(x,y)     xboxkrnl_mem_alloc(MEM_EXEC,y,x,MEM_PROT_EXEC,MAP_SHARED|MAP_ANONYMOUS,-1,0,1)
 #define MEM_ALLOC_MAP(x,y,z)            xboxkrnl_mem_alloc(x,z,y,MEM_PROT_RDWR,MAP_SHARED|MAP_ANONYMOUS,-1,0,0)
 #define MEM_ALLOC_MAP__LOCKED(x,y,z)    xboxkrnl_mem_alloc(x,z,y,MEM_PROT_RDWR,MAP_SHARED|MAP_ANONYMOUS,-1,0,1)
 #define MEM_FREE_HEAP(x)                xboxkrnl_mem_free(MEM_HEAP,x,0)
@@ -2454,7 +2457,7 @@ xboxkrnl_init_hw(void) {
         ret = 1;
         do {
             if (nv2a_init()) break;
-//MEM_DIRTY_CLEAR(MEM_ALLOC_HEAP(0x1000));//XXX
+MEM_DIRTY_CLEAR(MEM_ALLOC_HEAP(0x1000));//XXX
         } while ((ret = 0));
     }
 
