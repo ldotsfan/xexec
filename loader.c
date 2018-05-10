@@ -212,12 +212,12 @@ main(int argc, char **argv) {
         fprintf(stderr, "error: xboxkrnl initialization failed\n");
         return ret;
     }
-    if (sigaction(SIGSEGV, &s, NULL) < 0) {
-        PRINT("error: sigaction(): '%s'", strerror(errno));
-        return ret;
-    }
     if ((fd = open(argv[1], O_RDONLY)) < 0) {
         PRINT("error: open(): '%s': '%s'", argv[1], strerror(errno));
+        return ret;
+    }
+    if (sigaction(SIGSEGV, &s, NULL) < 0) {
+        PRINT("error: sigaction(): '%s'", strerror(errno));
         return ret;
     }
 
@@ -312,27 +312,28 @@ main(int argc, char **argv) {
     } while ((ret = 0));
 
     close(fd);
-    if (ret) return ret;
 
-    XbeTLS_dump((void *)xbeh->dwTLSAddr);
+    if (!ret) {
+        XbeTLS_dump((void *)xbeh->dwTLSAddr);
 
-    {
-        char cat[32];
-        snprintf(cat, sizeof(cat), "cat /proc/%hu/maps", getpid());
-        system(cat);
+        {
+            char cat[32];
+            snprintf(cat, sizeof(cat), "cat /proc/%hu/maps", getpid());
+            system(cat);
+        }
+
+        xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
+
+        PRINT("/* spawning entry thread with entry point @ %p */", xbeh->dwEntryAddr);
+
+        if (argc >= 3) INT3;
+
+        pthread_create(&entry, NULL, xboxkrnl_entry_thread, (void *)xbeh->dwEntryAddr);
+        pthread_join(entry, NULL);
+
+        /* TODO: do other stuff */
     }
 
-    xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
-
-    PRINT("/* spawning entry thread with entry point @ %p */", xbeh->dwEntryAddr);
-
-    if (argc >= 3) INT3;
-
-    pthread_create(&entry, NULL, xboxkrnl_entry_thread, (void *)xbeh->dwEntryAddr);
-    pthread_join(entry, NULL);
-
-    /* TODO: do other stuff */
-
-    return 0;
+    return ret;
 }
 

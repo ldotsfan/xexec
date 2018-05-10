@@ -891,7 +891,7 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_LOCK                        (void)pthread_mutex_lock(&xboxkrnl_mem_mutex)
 #define MEM_TRYLOCK                     !pthread_mutex_trylock(&xboxkrnl_mem_mutex)
 #define MEM_UNLOCK                      (void)pthread_mutex_unlock(&xboxkrnl_mem_mutex)
-#define MEM_CACHE                       xboxkrnl_mem_cache_ptr
+#define MEM_CACHE                       xboxkrnl_mem_cache
 #define MEM_CACHE_TEST(a)               ((MEM_CACHE && RANGE(MEM_CACHE->BaseAddress, MEM_CACHE->RegionSize, a)) || (MEM_CACHE = NULL))
 #define MEM_RELEASE(x)                  xboxkrnl_mem_release(x)
 #define MEM_PUSH(x,y)                   xboxkrnl_mem_push(x,y,0)
@@ -961,7 +961,7 @@ fprintf(stderr,"WP1!\n");/*XXX*/ \
 #define xboxkrnl_free(x)                MEM_FREE_HEAP(x)
 
 static pthread_mutex_t                  xboxkrnl_mem_mutex = PTHREAD_MUTEX_INITIALIZER;
-static xboxkrnl_mem *                   xboxkrnl_mem_cache_ptr = NULL;
+static xboxkrnl_mem *                   xboxkrnl_mem_cache = NULL;
 static size_t                           xboxkrnl_mem_heap_brk = 0;
 static void *                           xboxkrnl_mem_contiguous = NULL;
 
