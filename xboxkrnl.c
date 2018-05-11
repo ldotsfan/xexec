@@ -2539,7 +2539,7 @@ xboxkrnl_address_validate(uint32_t addr) {
         (MEM_CACHE_TEST(addr) ||
         addr < PAGESIZE ||
         (MEM_CACHE = MEM_DIRTY_PARENT_RET__LOCKED(addr)) ||
-        (addr & 0xf8000000) == host->memreg_base ||
+        (addr & 0xf8000000) == 0x80000000 ||
         xboxkrnl_address_validate_hw(addr));
 
     return ret;
@@ -2553,7 +2553,7 @@ xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
 
     locked = MEM_TRYLOCK;
 
-    if ((phys = ((addr & 0xf8000000) == host->memreg_base))) addr &= host->memreg_size - 1;
+    if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= 0x80000000 - 1;
 
     MEM_DIRTY_SET3__TRY__LOCKED(addr);
 
@@ -2581,7 +2581,7 @@ xboxkrnl_read(uint32_t addr, void *val, size_t sz) {
     register int phys;
     register int ret = 0;
 
-    if ((phys = ((addr & 0xf8000000) == host->memreg_base))) addr &= host->memreg_size - 1;
+    if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= 0x80000000 - 1;
 
     if (!phys) {
         ret =
@@ -5047,7 +5047,7 @@ xboxkrnl_MmGetPhysicalAddress( /* 173 (0x0ad) */
     ENTER;
     VARDUMP(VAR_IN, BaseAddress);
 
-    if ((ret & 0xf8000000) == host->memreg_base) ret &= host->memreg_size - 1;
+    if ((ret & 0xf8000000) == 0x80000000) ret &= 0x80000000 - 1;
 
     VARDUMP(DUMP, ret);
     LEAVE;
