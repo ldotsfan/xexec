@@ -22,6 +22,8 @@
 
 #include "nv2a.h"
 
+#include "swizzle.c" //TODO move to a makefile
+
 #define DEBUG_NV2A 2
 
 #ifdef DEBUG_NV2A
@@ -84,11 +86,115 @@ typedef struct {
 #define NV2A_DMA_ADDRESS(x) ((((x)->frame & /* NV_DMA_ADDRESS */ 0xfffff000) | ((x)->adjust << 20)) & (host->memreg_size - 1))
 
 typedef struct {
-    int                     dirty;
-    size_t                  ref;
-    GLenum                  gl_target;
-    GLuint                  gl_texture;
+    GLuint                          gl_texture;
+    GLenum                          gl_target;
+    int                             ref;
+} nv2a_pgraph_texture_binding;
+
+typedef struct {
+    size_t                          index;
+    int                             dirty;
+    nv2a_pgraph_texture_binding *   binding;
+    uint32_t                        offset;
+    void *                          ctx;
+    size_t                          length;
+    uint32_t                        poffset;
+    void *                          pctx;
+    size_t                          plength;
+    union {
+        uint32_t     field;
+        struct {
+            uint32_t context_dma         : 2;       /*  0 */
+            uint32_t cubemap             : 1;       /*  2 */
+            uint32_t border_source       : 1;       /*  3 */
+            uint32_t dimensionality      : 4;       /*  4 */
+            uint32_t color               : 8;       /*  8 */
+            uint32_t mipmap_levels       : 4;       /* 16 */
+            uint32_t base_size_u         : 4;       /* 20 */
+            uint32_t base_size_v         : 4;       /* 24 */
+            uint32_t base_size_p         : 4;       /* 28 */
+        } PACKED;
+    } PACKED                        format;
+    union {
+        uint32_t     field;
+        struct {
+            uint32_t u                   : 4;       /*  0 */
+            uint32_t cylwrap_u           : 4;       /*  4 */
+            uint32_t v                   : 4;       /*  8 */
+            uint32_t cylwrap_v           : 4;       /* 12 */
+            uint32_t p                   : 4;       /* 16 */
+            uint32_t cylwrap_p           : 4;       /* 20 */
+            uint32_t cylwrap_q           : 8;       /* 24 */
+        } PACKED;
+    } PACKED                        address;
+    union {
+        uint32_t     field;
+        struct {
+            uint32_t color_key_operation : 2;       /*  0 */
+            uint32_t alpha_kill_enable   : 1;       /*  2 */
+            uint32_t image_field_enable  : 1;       /*  3 */
+            uint32_t log_max_aniso       : 2;       /*  4 */
+            uint32_t max_lod_clamp       : 12;      /*  6 */
+            uint32_t min_lod_clamp       : 12;      /* 18 */
+            uint32_t enable              : 2;       /* 30 */
+        } PACKED;
+    } PACKED                        ctl0;
+    uint32_t                        pitch;
+    union {
+        uint32_t     field;
+        struct {
+            uint32_t mipmap_lod_bias     : 13;      /*  0 */
+            uint32_t convolution_kernel  : 3;       /* 13 */
+            uint32_t min                 : 8;       /* 16 */
+            uint32_t mag                 : 4;       /* 24 */
+            uint32_t asigned_enabled     : 1;       /* 28 */
+            uint32_t rsigned_enabled     : 1;       /* 29 */
+            uint32_t gsigned_enabled     : 1;       /* 30 */
+            uint32_t bsigned_enabled     : 1;       /* 31 */
+        } PACKED;
+    } PACKED                        filter;
+    uint32_t                        width;
+    uint32_t                        height;
+    uint32_t                        depth;
+    union {
+        uint32_t     field;
+        struct {
+            uint32_t context_dma         : 2;       /*  0 */
+            uint32_t length              : 4;       /*  2 */
+            uint32_t offset              : 26;      /*  6 */
+        } PACKED;
+    } PACKED                        palette;
+    nv2a_color_bgra                 bcolor;
+    uint32_t                        mlevels;
 } nv2a_pgraph_texture;
+
+static const GLenum nv2a_pgraph_texture_filter_min_map[] = {
+    0,
+    GL_NEAREST,
+    GL_LINEAR,
+    GL_NEAREST_MIPMAP_NEAREST,
+    GL_LINEAR_MIPMAP_NEAREST,
+    GL_NEAREST_MIPMAP_LINEAR,
+    GL_LINEAR_MIPMAP_LINEAR,
+    GL_LINEAR, /* TODO: Convolution filter... */
+};
+
+static const GLenum nv2a_pgraph_texture_filter_mag_map[] = {
+    0,
+    GL_NEAREST,
+    GL_LINEAR,
+    0,
+    GL_LINEAR, /* TODO: Convolution filter... */
+};
+
+static const GLenum nv2a_pgraph_texture_wrap_map[] = {
+    0,
+    GL_REPEAT,
+    GL_MIRRORED_REPEAT,
+    GL_CLAMP_TO_EDGE,
+    GL_CLAMP_TO_BORDER,
+//    GL_CLAMP,
+};
 
 typedef struct {
     glo_context *           glo;
@@ -411,114 +517,386 @@ INT3;//XXX
 }
 
 static void
-nv2a_pgraph_texture_bind(register void *p, size_t index) {
+nv2a_color_convert_yuy2_to_rgb(
+        const uint8_t *line,
+        uint32_t ix,
+        uint8_t *r,
+        uint8_t *g,
+        uint8_t *b) {
+    register int c;
+    register int d;
+    register int e;
     ENTER_NV2A;
 
-    if (index >= NV2A_MAX_TEXTURES) INT3;
-#if 0
-    uint32_t ctl_0        = pg->regs[NV_PGRAPH_TEXCTL0_0 + i*4];
-//    uint32_t ctl_1        = pg->regs[NV_PGRAPH_TEXCTL1_0 + i*4];
-    uint32_t fmt          = pg->regs[NV_PGRAPH_TEXFMT0 + i*4];
-    uint32_t filter       = pg->regs[NV_PGRAPH_TEXFILTER0 + i*4];
-    uint32_t address      = pg->regs[NV_PGRAPH_TEXADDRESS0 + i*4];
-    uint32_t palette      = pg->regs[NV_PGRAPH_TEXPALETTE0 + i*4];
+    c = (int)line[ix * 2] - 16;
+    if (ix % 2) {
+        d = (int)line[ix * 2 - 1] - 128;
+        e = (int)line[ix * 2 + 1] - 128;
+    } else {
+        d = (int)line[ix * 2 + 1] - 128;
+        e = (int)line[ix * 2 + 3] - 128;
+    }
+    *r = CLIP08((298 * c + 409 * e + 128) >> 8);
+    *g = CLIP08((298 * c - 100 * d - 208 * e + 128) >> 8);
+    *b = CLIP08((298 * c + 516 * d + 128) >> 8);
 
-    uint32_t rect_width   = GET_MASK(pg->regs[NV_PGRAPH_TEXIMAGERECT0 + i*4], NV_PGRAPH_TEXIMAGERECT0_WIDTH);
-    uint32_t rect_height  = GET_MASK(pg->regs[NV_PGRAPH_TEXIMAGERECT0 + i*4], NV_PGRAPH_TEXIMAGERECT0_HEIGHT);
+    LEAVE_NV2A;
+}
 
-    uint32_t border_color = pg->regs[NV_PGRAPH_BORDERCOLOR0 + i*4];
-    uint32_t offset       = pg->regs[NV_PGRAPH_TEXOFFSET0 + i*4];
-#endif
-    register size_t pos = index * 64;
-    register uint32_t addr;
-    register uint32_t offset = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_OFFSET);      //0x00001b00,
-    union {
-        uint32_t     field;
-        struct {
-            uint32_t context_dma         : 2;   /*  0 */
-            uint32_t cubemap_enable      : 1;   /*  2 */
-            uint32_t border_source       : 1;   /*  3 */
-            uint32_t dimensionality      : 4;   /*  4 */
-            uint32_t color               : 8;   /*  8 */
-            uint32_t mipmap_levels       : 4;   /* 16 */
-            uint32_t base_size_u         : 4;   /* 20 */
-            uint32_t base_size_v         : 4;   /* 24 */
-            uint32_t base_size_p         : 4;   /* 28 */
-        } PACKED;
-    } PACKED format     = { .field = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_FORMAT) };//0x00001b04
-    uint32_t address    = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_ADDRESS);     //0x00001b08,
-    union {
-        uint32_t     field;
-        struct {
-            uint32_t color_key_operation : 2;   /*  0 */
-            uint32_t alpha_kill_enable   : 1;   /*  2 */
-            uint32_t image_field_enable  : 1;   /*  3 */
-            uint32_t log_max_aniso       : 2;   /*  4 */
-            uint32_t max_lod_clamp       : 12;  /*  6 */
-            uint32_t min_lod_clamp       : 12;  /* 18 */
-            uint32_t enable              : 2;   /* 30 */
-        } PACKED;
-    } PACKED ctl0       = { .field = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_CONTROL0) };//0x00001b0c
-    uint32_t pitch      = NV2A_REG32_MASK_BITSHIFT_GET(p + pos, NV_097, SET_TEXTURE_CONTROL1, IMAGE_PITCH);//0x00001b10,
-    union {
-        uint32_t     field;
-        struct {
-            uint32_t mipmap_lod_bias     : 13;  /*  0 */
-            uint32_t convolution_kernel  : 3;   /* 13 */
-            uint32_t min                 : 8;   /* 16 */
-            uint32_t mag                 : 4;   /* 24 */
-            uint32_t asigned_enabled     : 1;   /* 28 */
-            uint32_t rsigned_enabled     : 1;   /* 29 */
-            uint32_t gsigned_enabled     : 1;   /* 30 */
-            uint32_t bsigned_enabled     : 1;   /* 31 */
-        } PACKED;
-    } PACKED filter     = { .field = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_FILTER) };//0x00001b14
-    uint32_t width      = NV2A_REG32_MASK_BITSHIFT_GET(p + pos, NV_097, SET_TEXTURE_IMAGE_RECT, WIDTH);//0x00001b1c
-    uint32_t height     = NV2A_REG32_MASK_BITSHIFT_GET(p + pos, NV_097, SET_TEXTURE_IMAGE_RECT, HEIGHT);//0x00001b1c
-    uint32_t depth;
-    union {
-        uint32_t     field;
-        struct {
-            uint32_t context_dma         : 2;   /*  0 */
-            uint32_t length              : 4;   /*  2 */
-            uint32_t offset              : 26;  /*  6 */
-        } PACKED;
-    } PACKED palette    = { .field = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_PALETTE) };//0x00001b20
-    uint32_t bcolor     = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_BORDER_COLOR);//0x00001b24,
-    uint32_t plength, mlevel, bsizeu, bsizev, bsizep, maxlod;
-    nv2a_pgraph_texture *t;
-    const nv2a_pgraph_texture_format *tf;
-    nv2a_dma dma;
-    void *tfc, *tpc;
-    uint32_t length = 0, w = width, h = height, bsize;
-    register uint32_t i;
+static uint8_t *
+nv2a_texture_convert(
+        nv2a_pgraph_texture *t,
+        const uint8_t *in,
+        const uint8_t *pin,
+        uint32_t width,
+        uint32_t height,
+        uint32_t depth,
+        uint32_t pitch,
+        uint32_t pslice) {
+    register uint32_t x;
+    register uint32_t y;
+    register uint8_t *ret = NULL;
+    ENTER_NV2A;
 
-    if (filter.asigned_enabled ||
-        filter.rsigned_enabled ||
-        filter.gsigned_enabled ||
-        filter.bsigned_enabled) INT3;
-
-    switch (palette.length) {
-    case NV_097_SET_TEXTURE_PALETTE_LENGTH_256 /* 0 */:
-        plength = 256;
+    switch (t->format.color) {
+    case NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8 /* 11 */:
+        if (depth != 1) INT3;//FIXME
+        if (!(ret = malloc(width * height * 4))) INT3;
+        for (y = 0; y < height; ++y) {
+            for (x = 0; x < width; ++x) {
+                REG32(&ret[y * width * 4 + x * 4]) = REG32(&pin[in[y * pitch + x] * 4]);
+            }
+        }
         break;
-    case NV_097_SET_TEXTURE_PALETTE_LENGTH_128 /* 1 */:
-        plength = 128;
+    case NV_097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_CR8YB8CB8YA8 /* 36 */:
+        if (depth != 1) INT3;//FIXME
+        if (!(ret = malloc(width * height * 4))) INT3;
+        for (y = 0; y < height; ++y) {
+            register const uint8_t *line = &in[y * width * 2];
+            for (x = 0; x < width; ++x) {
+                register uint8_t *p = &ret[(y * width + x) * 4];
+                /* FIXME: Actually needs uyvy? */
+                nv2a_color_convert_yuy2_to_rgb(line, x, &p[0], &p[1], &p[2]);
+                p[3] = 255;
+            }
+        }
         break;
-    case NV_097_SET_TEXTURE_PALETTE_LENGTH_64  /* 2 */:
-        plength = 64;
+    case NV_097_SET_TEXTURE_FORMAT_COLOR_SZ_R6G5B5 /* 39 */:
+        if (depth != 1) INT3;//FIXME
+        if (!(ret = malloc(width * height * 3))) INT3;
+        for (y = 0; y < height; ++y) {
+            for (x = 0; x < width; ++x) {
+                register nv2a_color_r6g5b5 rgb655 = *(typeof(rgb655) *)&in[y * pitch + x * 2];
+                register int8_t *p = (void *)&ret[(y * width + x) * 3];
+                /* Maps 5 bit G and B signed value range to 8 bit
+                 * signed values. R is probably unsigned.
+                 */
+                rgb655.field ^= (1 << 9) | (1 << 4);
+                p[0] = rgb655.r * 0x7f / 0x3f;
+                p[1] = rgb655.g * 0xff / 0x1f - 0x80;
+                p[2] = rgb655.b * 0xff / 0x1f - 0x80;
+            }
+        }
         break;
-    case NV_097_SET_TEXTURE_PALETTE_LENGTH_32  /* 3 */:
-        plength = 32;
+    }
+
+    LEAVE_NV2A;
+    return ret;
+}
+
+static void
+nv2a_pgraph_texture_binding_upload(
+        nv2a_pgraph_texture_binding *tb,
+        nv2a_pgraph_texture *t,
+        const void *in,
+        const void *pin) {
+    register const nv2a_pgraph_texture_format *tf;
+    register const void *p;
+    register void *u;
+    register void *c;
+    register uint32_t w;
+    register uint32_t h;
+    register uint32_t d;
+    register uint32_t b;
+    register size_t pitch;
+    register size_t pslice;
+    register size_t length;
+    register size_t i;
+    ENTER_NV2A;
+
+    if (t->format.color >= ARRAY_SIZE(nv2a_pgraph_texture_formats)) INT3;
+    tf = &nv2a_pgraph_texture_formats[t->format.color];
+    if (!tf->name) INT3;
+
+    switch (tb->gl_target) {
+    case GL_TEXTURE_1D:
+        INT3;
+        break;
+    case GL_TEXTURE_RECTANGLE:
+        /* cannot handle strides unaligned to pixels */
+        if (t->pitch % tf->bytes_per_pixel) INT3;
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, t->pitch / tf->bytes_per_pixel);
+        c = nv2a_texture_convert(t, in, pin, t->width, t->height, 1, t->pitch, 0);
+        glTexImage2D(tb->gl_target, 0, tf->gl_internal_format, t->width, t->height, 0, tf->gl_format, tf->gl_type, (c) ? c : in);
+        if (c) free(c);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        break;
+    case GL_TEXTURE_2D:
+    case GL_TEXTURE_CUBE_MAP:
+    case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+    case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+    case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+    case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+    case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+    case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
+        if (tf->gl_format) {
+            for (p = in, w = t->width, h = t->height, i = 0; i < t->mlevels; ++i) {
+                w       = MAX(w, 1);
+                h       = MAX(h, 1);
+                pitch   = w * tf->bytes_per_pixel;
+                length  = h * pitch;
+                if (!(u = malloc(length))) INT3;
+                unswizzle_rect(p, w, h, u, pitch, tf->bytes_per_pixel);
+                c       = nv2a_texture_convert(t, u, pin, w, h, 1, pitch, 0);
+                glTexImage2D(tb->gl_target, i, tf->gl_internal_format, w, h, 0, tf->gl_format, tf->gl_type, (c) ? c : u);
+                if (c) free(c);
+                free(u);
+                p      += length;
+                w      /= 2;
+                h      /= 2;
+            }
+        } else {
+            /* compressed */
+            switch (tf->gl_internal_format) {
+            case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+                b = 8;
+                break;
+            default:
+                b = 16;
+                break;
+            }
+            for (p = in, w = t->width, h = t->height, i = 0; i < t->mlevels; ++i) {
+                w       = MAX(w, 4);
+                h       = MAX(h, 4);
+                length  = (w / 4) * (h / 4) * b;
+                glCompressedTexImage2D(tb->gl_target, i, tf->gl_internal_format, w, h, 0, length, p);
+                p      += length;
+                w      /= 2;
+                h      /= 2;
+            }
+        }
+        break;
+    case GL_TEXTURE_3D:
+        if (tf->gl_format) {
+            if (tf->linear) INT3;
+            for (p = in, w = t->width, h = t->height, d = t->depth, i = 0; i < t->mlevels; ++i) {
+                w       = MAX(w, 1);
+                h       = MAX(h, 1);
+                d       = MAX(d, 1);
+                pitch   = w * tf->bytes_per_pixel;
+                pslice  = h * pitch;
+                length  = d * pslice;
+                if (!(u = malloc(length))) INT3;
+                unswizzle_box(p, w, h, d, u, pitch, pslice, tf->bytes_per_pixel);
+                c       = nv2a_texture_convert(t, u, pin, w, h, d, pitch, pslice);
+                glTexImage3D(tb->gl_target, i, tf->gl_internal_format, w, h, d, 0, tf->gl_format, tf->gl_type, (c) ? c : u);
+                if (c) free(c);
+                free(u);
+                p      += length;
+                w      /= 2;
+                h      /= 2;
+                d      /= 2;
+            }
+        } else {
+            /* FIXME: compressed not supported yet */
+            INT3;
+        }
         break;
     default:
         INT3;
         break;
     }
 
+    LEAVE_NV2A;
+}
+
+static nv2a_pgraph_texture_binding *
+nv2a_pgraph_texture_binding_create(nv2a_pgraph_texture *t) {
+    register nv2a_pgraph_texture_binding *tb;
+    register const nv2a_pgraph_texture_format *tf;
+    register uint32_t w;
+    register uint32_t h;
+    register size_t length;
+    register size_t i;
+    ENTER_NV2A;
+
+    if (t->format.color >= ARRAY_SIZE(nv2a_pgraph_texture_formats)) INT3;
+    tf = &nv2a_pgraph_texture_formats[t->format.color];
+    if (!tf->name) INT3;
+
+    if (!(tb = calloc(1, sizeof(*tb)))) INT3;
+    tb->ref = 1;
+    glGenTextures(1, &tb->gl_texture);
+
+    if (t->format.cubemap) {
+        if (tf->linear) INT3;
+        if (t->format.dimensionality != 2) INT3;
+        tb->gl_target = GL_TEXTURE_CUBE_MAP;
+    } else if (tf->linear) {
+        /* linear textures use unnormalised texcoords.
+         * GL_TEXTURE_RECTANGLE_ARB conveniently also does, but
+         * does not allow repeat and mirror wrap modes.
+         *  (or mipmapping, but xbox d3d says 'Non swizzled and non
+         *   compressed textures cannot be mip mapped.')
+         * Not sure if that'll be an issue. */
+        /* FIXME: GLSL 330 provides us with textureSize()! Use that? */
+        if (t->format.dimensionality != 2) INT3;
+        tb->gl_target = GL_TEXTURE_RECTANGLE;
+    } else {
+        switch (t->format.dimensionality) {
+        case 1: tb->gl_target = GL_TEXTURE_1D; break;
+        case 2: tb->gl_target = GL_TEXTURE_2D; break;
+        case 3: tb->gl_target = GL_TEXTURE_3D; break;
+        default:
+            INT3;
+            break;
+        }
+    }
+
+    glBindTexture(tb->gl_target, tb->gl_texture);
+
+    PRINT_NV2A("%s(): "
+        "texture: index %zu, "
+        "%u dimensions%s, "
+        "w=%u x h=%u x depth=%u x bpp=%u | "
+        "format: '%s%s'",
+        __func__,
+        t->index,
+        t->format.dimensionality,
+        (t->format.cubemap) ? " (cubemap)" : "",
+        t->width,
+        t->height,
+        t->depth,
+        tf->bytes_per_pixel * 8,
+        tf->name,
+        (!tf->linear) ? " (sz)" : "");
+
+    if (tb->gl_target == GL_TEXTURE_CUBE_MAP) {
+        /* FIXME: This is wrong for compressed textures and textures with 1x? non-square mipmaps */
+        for (length = 0, w = t->width, h = t->height, i = 0; i < t->mlevels; ++i) {
+            length += w * h * tf->bytes_per_pixel;
+            w      /= 2;
+            h      /= 2;
+        }
+        for (i = 0; i < 6; ++i) {
+            nv2a_pgraph_texture_binding_upload(tb, t, t->ctx + i * length, t->pctx);
+        }
+    } else {
+        nv2a_pgraph_texture_binding_upload(tb, t, t->ctx, t->pctx);
+    }
+
+    /* linear textures do not support mipmapping */
+    if (!tf->linear) {
+        glTexParameteri(tb->gl_target, GL_TEXTURE_BASE_LEVEL, t->ctl0.min_lod_clamp);
+        glTexParameteri(tb->gl_target, GL_TEXTURE_MAX_LEVEL, t->mlevels - 1);
+    }
+    if (tf->gl_swizzle_mask[0] ||
+        tf->gl_swizzle_mask[1] ||
+        tf->gl_swizzle_mask[2] ||
+        tf->gl_swizzle_mask[3]) {
+        glTexParameteriv(tb->gl_target, GL_TEXTURE_SWIZZLE_RGBA, tf->gl_swizzle_mask);
+    }
+
+    LEAVE_NV2A;
+    return tb;
+}
+
+static int
+nv2a_pgraph_texture_binding_destroy(nv2a_pgraph_texture_binding **tb, int now) {
+    register int ret = 0;
+    ENTER_NV2A;
+
+    if (tb && *tb) {
+        if (!now && (*tb)->ref <= 0) INT3;
+        if (now || !--(*tb)->ref) {
+            glDeleteTextures(1, &(*tb)->gl_texture);
+            free(*tb);
+            *tb = NULL;
+            ret = 1;
+        }
+    }
+
+    LEAVE_NV2A;
+    return ret;
+}
+
+static void
+nv2a_pgraph_texture_bind(register void *p, size_t index) {
+    register nv2a_pgraph_texture *t;
+    register nv2a_pgraph_texture_binding *tb;
+    register const nv2a_pgraph_texture_format *tf;
+    nv2a_dma dma;
+    uint32_t bsizeu;
+    uint32_t bsizev;
+    uint32_t bsizep;
+    GLfloat gl_border_color[4];
+    register size_t pos;
+    register uint32_t w;
+    register uint32_t h;
+    register uint32_t b;
+    register uint32_t i;
+    ENTER_NV2A;
+
+    if (index >= NV2A_MAX_TEXTURES) INT3;
+
     do {
         glActiveTexture(GL_TEXTURE0 + index);
-        if (!ctl0.enable) {
+        t  = &nv2a_ctx->texture[index];
+        tb = t->binding;
+        if (!t->dirty && tb) {
+            glBindTexture(tb->gl_target, tb->gl_texture);
+            break;
+        }
+        pos               = index * 64;
+        t->index          = index;
+        t->offset         = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_OFFSET);
+        t->format.field   = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_FORMAT);
+        t->address.field  = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_ADDRESS);
+        t->ctl0.field     = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_CONTROL0);
+        t->pitch          = NV2A_REG32_MASK_BITSHIFT_GET(p + pos, NV_097, SET_TEXTURE_CONTROL1, IMAGE_PITCH);
+        t->filter.field   = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_FILTER);
+        t->width          = NV2A_REG32_MASK_BITSHIFT_GET(p + pos, NV_097, SET_TEXTURE_IMAGE_RECT, WIDTH);
+        t->height         = NV2A_REG32_MASK_BITSHIFT_GET(p + pos, NV_097, SET_TEXTURE_IMAGE_RECT, HEIGHT);
+        t->palette.field  = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_PALETTE);
+        t->bcolor.field   = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_BORDER_COLOR);
+        t->poffset        = t->palette.offset << 6;
+        if (t->format.color >= ARRAY_SIZE(nv2a_pgraph_texture_formats)) INT3;
+        tf = &nv2a_pgraph_texture_formats[t->format.color];
+        if (!tf->name) INT3;
+
+        PRINT_NV2A("%s(): "
+            "texture: index %zu, "
+            "%u dimensions%s, "
+            "pitch=%u, "
+            "w=%u x h=%u x depth=%u x bpp=%u | "
+            "format: '%s%s', "
+            "w=%u x h=%u x depth=%u",
+            __func__,
+            t->index,
+            t->format.dimensionality,
+            (t->format.cubemap) ? " (cubemap)" : "",
+            t->pitch,
+            t->width,
+            t->height,
+            t->depth,
+            tf->bytes_per_pixel * 8,
+            tf->name,
+            (!tf->linear) ? " (sz)" : "",
+            1 << t->format.base_size_u,
+            1 << t->format.base_size_v,
+            1 << t->format.base_size_p);
+
+        if (!t->ctl0.enable) {
             glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
             glBindTexture(GL_TEXTURE_RECTANGLE, 0);
             glBindTexture(GL_TEXTURE_1D, 0);
@@ -526,27 +904,24 @@ nv2a_pgraph_texture_bind(register void *p, size_t index) {
             glBindTexture(GL_TEXTURE_3D, 0);
             break;
         }
-        t = &nv2a_ctx->texture[index];
-        if (!t->dirty && t->ref) {
-            glBindTexture(t->gl_target, t->gl_texture);
-            break;
-        }
-        if (format.color >= ARRAY_SIZE(nv2a_pgraph_texture_formats)) INT3;
-        tf = &nv2a_pgraph_texture_formats[format.color];
-        if (!tf->name) INT3;
+        /* FIXME: check for unsupported features */
+        if (t->filter.asigned_enabled ||
+            t->filter.rsigned_enabled ||
+            t->filter.gsigned_enabled ||
+            t->filter.bsigned_enabled) INT3;
         if (tf->linear) {
-            if (format.dimensionality != 2) INT3;
-            depth  = 1;
+            if (t->format.dimensionality != 2) INT3;
+            t->depth   = 1;
         } else {
-            bsizeu = format.base_size_u;
-            bsizev = format.base_size_v;
-            bsizep = format.base_size_p;
-            width  = 1 << bsizeu;
-            height = 1 << bsizev;
-            depth  = 1 << bsizep;
-            mlevel = format.mipmap_levels;
-            maxlod = ctl0.max_lod_clamp;
-            mlevel = MIN(mlevel, maxlod + 1);//FIXME: What about 3D mipmaps?
+            bsizeu     = t->format.base_size_u;
+            bsizev     = t->format.base_size_v;
+            bsizep     = t->format.base_size_p;
+            t->width   = 1 << bsizeu;
+            t->height  = 1 << bsizev;
+            t->depth   = 1 << bsizep;
+            t->mlevels = t->format.mipmap_levels;
+            i          = t->ctl0.max_lod_clamp + 1;
+            t->mlevels = MIN(t->mlevels, i);//FIXME: What about 3D mipmaps?
             if (tf->gl_format) {
                 /* Discard mipmap levels that would be smaller than 1x1.
                  * FIXME: Is this actually needed?
@@ -558,11 +933,12 @@ nv2a_pgraph_texture_bind(register void *p, size_t index) {
                  *    Level 4: 2 x 1
                  *    Level 5: 1 x 1
                  */
-                mlevel = MIN(mlevel, MAX(bsizeu, bsizev) + 1);
+                i          = MAX(bsizeu, bsizev) + 1;
+                t->mlevels = MIN(t->mlevels, i);
             } else {
                 /* OpenGL requires DXT textures to always have a width and
                  * height a multiple of 4. The Xbox and DirectX handles DXT
-                 * textures smaller than 4 by padding the reset of the block.
+                 * textures smaller than 4 by padding the rest of the block.
                  *
                  * See:
                  * https://msdn.microsoft.com/en-us/library/windows/desktop/bb204843(v=vs.85).aspx
@@ -582,89 +958,184 @@ nv2a_pgraph_texture_bind(register void *p, size_t index) {
                  */
                 if (bsizeu < 2 || bsizev < 2) {
                     /* Base level is smaller than 4x4... */
-                    mlevel = 1;
+                    t->mlevels = 1;
                 } else {
-                    mlevel = MIN(mlevel, MIN(bsizeu, bsizev) - 1);
+                    i          = MIN(bsizeu, bsizev) - 1;
+                    t->mlevels = MIN(t->mlevels, i);
                 }
             }
-            if (!mlevel) INT3;
+            VARDUMP_NV2A(DUMP, t->mlevels);
+            if (!t->mlevels) INT3;
         }
-        tpc = tfc = NV2A_REGADDR(p, NV_PRAMIN, BASE);
-        switch (format.context_dma) {
+        t->pctx = t->ctx = NV2A_REGADDR(p, NV_PRAMIN, BASE);
+        switch (t->format.context_dma) {
         case NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_A /* 0 */:
-            tfc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
+            t->ctx += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
             break;
         case NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_B /* 1 */:
-            tfc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
+            t->ctx += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
             break;
         default:
             INT3;
             break;
         }
-        dma  = NV2A_DMA(tfc);
-        addr = NV2A_DMA_ADDRESS(&dma);
-        if (offset > dma.limit) INT3;
-        tfc  = (typeof(tfc))(addr + offset);
-        switch (palette.context_dma) {
+        dma = NV2A_DMA(t->ctx);
+        if (t->offset > dma.limit) INT3;
+        t->ctx = (void *)(NV2A_DMA_ADDRESS(&dma) + t->offset);
+        VARDUMP_NV2A(DUMP, t->ctx);
+        switch (t->palette.context_dma) {
         case NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_A /* 0 */:
-            tpc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
+            t->pctx += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
             break;
         case NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_B /* 1 */:
-            tpc += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
+            t->pctx += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
             break;
         default:
             INT3;
             break;
         }
-        dma    = NV2A_DMA(tpc);
-        addr   = NV2A_DMA_ADDRESS(&dma);
-        offset = palette.offset << 6;
-        if (offset > dma.limit) INT3;
-        tpc    = (typeof(tpc))(addr + offset);
+        dma = NV2A_DMA(t->pctx);
+        if (t->poffset > dma.limit) INT3;
+        t->pctx = (void *)(NV2A_DMA_ADDRESS(&dma) + t->poffset);
+        VARDUMP_NV2A(DUMP, t->pctx);
+        t->length = 0;
         if (tf->linear) {
-            if (format.cubemap_enable) INT3;
-            if (format.dimensionality != 2) INT3;
-            length = height * pitch;
-        } else if (format.dimensionality >= 2) {
+            if (t->format.cubemap) INT3;
+            if (t->format.dimensionality != 2) INT3;
+            t->length = t->height * t->pitch;
+        } else if (t->format.dimensionality >= 2) {
+            w = t->width;
+            h = t->height;
             if (tf->gl_format) {
-                bsize = tf->bytes_per_pixel;
-                for (i = 0; i < format.mipmap_levels; ++i) {
-                    w = MAX(w, 1);
-                    h = MAX(h, 1);
-                    length += w * h * bsize;
-                    w /= 2;
-                    h /= 2;
+                b = tf->bytes_per_pixel;
+                for (i = 0; i < t->mlevels; ++i) {
+                    w          = MAX(w, 1);
+                    h          = MAX(h, 1);
+                    t->length += w * h * b;
+                    w         /= 2;
+                    h         /= 2;
                 }
             } else {
+                /* compressed */
                 switch (tf->gl_internal_format) {
                 case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-                    bsize = 8;
+                    b = 8;
                     break;
                 default:
-                    bsize = 16;
+                    b = 16;
                     break;
                 }
-                for (i = 0; i < format.mipmap_levels; ++i) {
-                    w = MAX(w, 4);
-                    h = MAX(h, 4);
-                    length += (w / 4) * (h / 4) * bsize;
-                    w /= 2;
-                    h /= 2;
+                for (i = 0; i < t->mlevels; ++i) {
+                    w          = MAX(w, 4);
+                    h          = MAX(h, 4);
+                    t->length += (w / 4) * (h / 4) * b;
+                    w         /= 2;
+                    h         /= 2;
                 }
             }
-            if (format.cubemap_enable) {
-                if (format.dimensionality != 2) INT3;
-                length *= 6;
+            if (t->format.cubemap) {
+                if (t->format.dimensionality != 2) INT3;
+                t->length *= 6;
             }
-            if (format.dimensionality >= 3) {
-                length *= depth;
+            if (t->format.dimensionality >= 3) {
+                t->length *= t->depth;
             }
         }
+        VARDUMP_NV2A(DUMP, t->length);
+        switch (t->palette.length) {
+        case NV_097_SET_TEXTURE_PALETTE_LENGTH_256 /* 0 */:
+            t->plength = 256;
+            break;
+        case NV_097_SET_TEXTURE_PALETTE_LENGTH_128 /* 1 */:
+            t->plength = 128;
+            break;
+        case NV_097_SET_TEXTURE_PALETTE_LENGTH_64 /* 2 */:
+            t->plength = 64;
+            break;
+        case NV_097_SET_TEXTURE_PALETTE_LENGTH_32 /* 3 */:
+            t->plength = 32;
+            break;
+        default:
+            INT3;
+            break;
+        }
+        VARDUMP_NV2A(DUMP, t->plength);
 #if 0
-#elif 0
-//XXX dirty page
+        tb = nv2a_pgraph_texture_binding_ret(t);//TODO here; do dirty page track
+        ++tb->ref;
 
+        MEM_DIRTY_CREATE(t->ctx, t->length);
+        MEM_DIRTY_CREATE(t->pctx, t->plength);
+#elif 0
+        TextureShape state = {
+            .cubemap = cubemap,
+            .dimensionality = dimensionality,
+            .color_format = color_format,
+            .levels = levels,
+            .width = width,
+            .height = height,
+            .depth = depth,
+            .min_mipmap_level = min_mipmap_level,
+            .max_mipmap_level = max_mipmap_level,
+            .pitch = pitch,
+        };
+# ifdef USE_TEXTURE_CACHE
+        TextureKey key = {
+            .state = state,
+            .data_hash = fast_hash(t->ctx, t->length, 5003)
+                            ^ fnv_hash(t->pctx, t->palette_length),
+            .texture_data = t->ctx,
+            .palette_data = t->pctx,
+        };
+        gpointer cache_key = g_malloc(sizeof(key));
+        *((typeof(key) *)cache_key) = key;
+        tb = g_lru_cache_get(pg->texture_cache, cache_key);
+        ++tb->ref;
+# else
+        tb = generate_texture(state, t->ctx, t->pctx);
+# endif
 #endif
+        glBindTexture(tb->gl_target, tb->gl_texture);
+        if (tf->linear) {
+            /* FIXME: sometimes games try to set mipmap min filters on linear textures. this could indicate a bug... */
+            switch (t->filter.min) {
+            case NV_097_SET_TEXTURE_FILTER_MIN_BOX_NEARESTLOD /* 3 */:
+            case NV_097_SET_TEXTURE_FILTER_MIN_BOX_TENT_LOD /* 5 */:
+                t->filter.min = NV_097_SET_TEXTURE_FILTER_MIN_BOX_LOD0 /* 1 */;
+                break;
+            case NV_097_SET_TEXTURE_FILTER_MIN_TENT_NEARESTLOD /* 4 */:
+            case NV_097_SET_TEXTURE_FILTER_MIN_TENT_TENT_LOD /* 6 */:
+                t->filter.min = NV_097_SET_TEXTURE_FILTER_MIN_TENT_LOD0 /* 2 */;
+                break;
+            }
+        }
+        if (t->filter.min >= ARRAY_SIZE(nv2a_pgraph_texture_filter_min_map)) INT3;
+        glTexParameteri(tb->gl_target, GL_TEXTURE_MIN_FILTER, nv2a_pgraph_texture_filter_min_map[t->filter.min]);
+        if (t->filter.mag >= ARRAY_SIZE(nv2a_pgraph_texture_filter_mag_map)) INT3;
+        glTexParameteri(tb->gl_target, GL_TEXTURE_MAG_FILTER, nv2a_pgraph_texture_filter_mag_map[t->filter.mag]);
+        /* texture wrapping */
+        if (t->address.u >= ARRAY_SIZE(nv2a_pgraph_texture_wrap_map)) INT3;
+        glTexParameteri(tb->gl_target, GL_TEXTURE_WRAP_S, nv2a_pgraph_texture_wrap_map[t->address.u]);
+        if (t->format.dimensionality > 1) {
+            if (t->address.v >= ARRAY_SIZE(nv2a_pgraph_texture_wrap_map)) INT3;
+            glTexParameteri(tb->gl_target, GL_TEXTURE_WRAP_T, nv2a_pgraph_texture_wrap_map[t->address.v]);
+        }
+        if (t->format.dimensionality > 2) {
+            if (t->address.p >= ARRAY_SIZE(nv2a_pgraph_texture_wrap_map)) INT3;
+            glTexParameteri(tb->gl_target, GL_TEXTURE_WRAP_R, nv2a_pgraph_texture_wrap_map[t->address.p]);
+        }
+        /* FIXME: Only upload if necessary? [s, t or r = GL_CLAMP_TO_BORDER] */
+        if (t->format.border_source == NV_PGRAPH_TEXFMT0_BORDER_SOURCE_COLOR) {
+            /* FIXME: Color channels might be wrong order */
+            gl_border_color[0] = t->bcolor.r / 255.f;
+            gl_border_color[1] = t->bcolor.g / 255.f;
+            gl_border_color[2] = t->bcolor.b / 255.f;
+            gl_border_color[3] = t->bcolor.a / 255.f;
+            glTexParameterfv(tb->gl_target, GL_TEXTURE_BORDER_COLOR, gl_border_color);
+        }
+        nv2a_pgraph_texture_binding_destroy(&t->binding, 0);
+        t->binding = tb;
+        t->dirty   = 0;
     } while (0);
 
     LEAVE_NV2A;
@@ -864,7 +1335,7 @@ INT3;//XXX
         VARDUMP4_NV2A(VAR_IN, c->method, nv2a_097_name);
         pos = c->method;
         if (pos + 4 > NV2A_BLOCK_SIZE(NV_097) || pos % 4) INT3;
-        NV2A_REG32(p + pos, NV_097, NV20_KELVIN_PRIMITIVE) = c->param;
+        t = (NV2A_REG32(p + pos, NV_097, NV20_KELVIN_PRIMITIVE) != c->param);
         switch (c->method) {
         case NV_097_WAIT_FOR_IDLE:
         case NV_097_FLIP_STALL:
@@ -892,31 +1363,25 @@ INT3;//XXX
 //        pg->ltctxa[NV_IGRAPH_XF_LTCTXA_FOG_K][slot] = parameter;//TODO
 //        pg->ltctxa_dirty[NV_IGRAPH_XF_LTCTXA_FOG_K] = true;//TODO
             break;
-        case NV_097_SET_TEXTURE_FORMAT_0:
-        case NV_097_SET_TEXTURE_FORMAT_1:
-        case NV_097_SET_TEXTURE_FORMAT_2:
-        case NV_097_SET_TEXTURE_FORMAT_3:
-//        pg->texture_dirty[slot] = true;//TODO
-            break;
-        case NV_097_SET_TEXTURE_IMAGE_RECT_0:
-        case NV_097_SET_TEXTURE_IMAGE_RECT_1:
-        case NV_097_SET_TEXTURE_IMAGE_RECT_2:
-        case NV_097_SET_TEXTURE_IMAGE_RECT_3:
-//        pg->texture_dirty[slot] = true;//TODO
-            break;
-        case NV_097_SET_TEXTURE_OFFSET_0:
-        case NV_097_SET_TEXTURE_OFFSET_1:
-        case NV_097_SET_TEXTURE_OFFSET_2:
-        case NV_097_SET_TEXTURE_OFFSET_3:
-//        pg->texture_dirty[slot] = true;//TODO
-            break;
-        case NV_097_SET_TEXTURE_PALETTE_0:
-        case NV_097_SET_TEXTURE_PALETTE_1:
-        case NV_097_SET_TEXTURE_PALETTE_2:
-        case NV_097_SET_TEXTURE_PALETTE_3:
-//        pg->texture_dirty[slot] = true;//TODO
-            break;
+#define CASE(x) \
+        case NV_097_SET_TEXTURE_OFFSET_ ## x: \
+        case NV_097_SET_TEXTURE_FORMAT_ ## x: \
+        case NV_097_SET_TEXTURE_ADDRESS_ ## x: \
+        case NV_097_SET_TEXTURE_CONTROL0_ ## x: \
+        case NV_097_SET_TEXTURE_CONTROL1_ ## x: \
+        case NV_097_SET_TEXTURE_FILTER_ ## x: \
+        case NV_097_SET_TEXTURE_IMAGE_RECT_ ## x: \
+        case NV_097_SET_TEXTURE_PALETTE_ ## x: \
+        case NV_097_SET_TEXTURE_BORDER_COLOR_ ## x: \
+            if (t) nv2a_ctx->texture[x].dirty = 1; \
+            break
+        CASE(0);
+        CASE(1);
+        CASE(2);
+        CASE(3);
+#undef CASE
         }
+        NV2A_REG32(p + pos, NV_097, NV20_KELVIN_PRIMITIVE) = c->param;
         switch (c->method) {
 #define CASE(x,y) \
         case NV_097_ ## x: \

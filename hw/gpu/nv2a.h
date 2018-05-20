@@ -290,12 +290,12 @@ enum { /* NV_USER */
 
 typedef struct {
     const char *            name;
-    uint32_t                bytes_per_pixel;
-    int                     linear;
-    GLint                   gl_internal_format;
-    GLenum                  gl_format;
-    GLenum                  gl_type;
-    GLenum                  gl_swizzle_mask[4];
+    const uint32_t          bytes_per_pixel;
+    const int               linear;
+    const GLint             gl_internal_format;
+    const GLint             gl_format;
+    const GLint             gl_type;
+    const GLint             gl_swizzle_mask[4];
 } nv2a_pgraph_texture_format;
 
 static const nv2a_pgraph_texture_format const nv2a_pgraph_texture_formats[] = {
@@ -404,10 +404,10 @@ static const nv2a_pgraph_texture_format const nv2a_pgraph_texture_formats[] = {
 
 typedef struct {
     const char *            name;
-    uint32_t                bytes_per_pixel;
-    GLint                   gl_internal_format;
-    GLenum                  gl_format;
-    GLenum                  gl_type;
+    const uint32_t          bytes_per_pixel;
+    const GLint             gl_internal_format;
+    const GLint             gl_format;
+    const GLint             gl_type;
 } nv2a_pgraph_surface_format;
 
 static const nv2a_pgraph_surface_format const nv2a_pgraph_surface_formats[] = {
@@ -450,6 +450,26 @@ static const nv2a_pgraph_surface_format const nv2a_pgraph_context_surfaces_forma
     /* 11 */ // LE_Y32
 #undef COLOR
 };
+
+/* FIXME: color channels might be wrong order + endianness */
+typedef union {
+    uint32_t     field;
+    struct {
+        uint8_t  b;         /*  0 */
+        uint8_t  g;         /*  8 */
+        uint8_t  r;         /* 16 */
+        uint8_t  a;         /* 24 */
+    } PACKED;
+} PACKED nv2a_color_bgra;
+
+typedef union {
+    uint16_t     field;
+    struct {
+        uint16_t b : 5;     /*  0 */
+        uint16_t g : 5;     /*  5 */
+        uint16_t r : 6;     /* 10 */
+    } PACKED;
+} PACKED nv2a_color_r6g5b5;
 
 #endif
 

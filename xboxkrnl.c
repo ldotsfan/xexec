@@ -36,6 +36,13 @@
 #define REG16(x)            *(uint16_t *)((x))
 #define REG32(x)            *(uint32_t *)((x))
 
+#define CLIP08(x) ({ \
+        register int _x = (x); \
+        (_x < 0) ? 0 : ((_x > 0xff) ? 0xff : _x); })
+#define CLIP16(x) ({ \
+        register int _x = (x); \
+        (_x < 0) ? 0 : ((_x > 0xffff) ? 0xffff : _x); })
+
 #define NAME(x)             [x]   = #x
 #define NAMEB(x,y)          [x]   = #y
 #define NAMER(x)            [x/4] = #x
@@ -48,7 +55,6 @@
         register size_t _x = (typeof(_x))(x) - 1; \
         register size_t _y = (typeof(_y))(y); \
         ((x) ? ((_y & ~_x) + ((_y & _x) ? (x) : 0)) : (typeof(_y))(y)); })
-
 #define RANGE(b,s,a) \
         ((size_t)(a) >= (size_t)(b) && (size_t)(a) < (size_t)((b) + (s)))
 
@@ -92,7 +98,7 @@ static const char *const xboxkrnl_vardump_type_name[] = {
 };
 
 static iconv_t              xboxkrnl_wc_c = (iconv_t)-1;
-static iconv_t              xboxkrnl_c_wc = (iconv_t)-1;
+static iconv_t              xboxkrnl_c_wc = (iconv_t)-1;//TODO when needed
 
 static int
 xboxkrnl_wchar_to_char(const void *in, char **out, size_t *outlen) {
@@ -494,7 +500,7 @@ xboxkrnl_clock_wall(struct timespec *tp) {
 
 void *
 xboxkrnl_entry_thread(void *arg) {
-    if (arg) {
+    if (!xboxkrnl_entry && arg) {
         xboxkrnl_entry = arg;
         xboxkrnl_tsc_off();
         xboxkrnl_entry();
@@ -2379,7 +2385,7 @@ xboxkrnl_init_hw(void) {
     for (i = 0; !ret && i < ARRAY_SIZE(xpci) && xpci[i].name; ++i) {
         if ((p = (typeof(p))xpci[i].memreg_base)) {
             sz = xpci[i].memreg_size;
-            if ((p = MEM_ALLOC_MAP__LOCKED(MEM_EXEC, NULL, sz)) == MAP_FAILED) {
+            if ((p = MEM_ALLOC_EXEC__LOCKED(NULL, sz)) == MAP_FAILED) {
                 PRINT("error: failed to allocate hardware memory: mmap(): size %p (%lu): '%s'", sz, sz, strerror(errno));
                 ret = 1;
                 break;
@@ -2553,7 +2559,7 @@ xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
 
     locked = MEM_TRYLOCK;
 
-    if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= 0x80000000 - 1;
+    if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= host->memreg_size - 1;
 
     MEM_DIRTY_SET3__TRY__LOCKED(addr);
 
@@ -2581,7 +2587,7 @@ xboxkrnl_read(uint32_t addr, void *val, size_t sz) {
     register int phys;
     register int ret = 0;
 
-    if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= 0x80000000 - 1;
+    if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= host->memreg_size - 1;
 
     if (!phys) {
         ret =
@@ -5047,7 +5053,7 @@ xboxkrnl_MmGetPhysicalAddress( /* 173 (0x0ad) */
     ENTER;
     VARDUMP(VAR_IN, BaseAddress);
 
-    if ((ret & 0xf8000000) == 0x80000000) ret &= 0x80000000 - 1;
+    if ((ret & 0xf8000000) == 0x80000000) ret &= host->memreg_size - 1;
 
     VARDUMP(DUMP, ret);
     LEAVE;

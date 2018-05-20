@@ -49,7 +49,7 @@ static const int fb_attribute_list[] = {
     GLX_DEPTH_SIZE,    24,
     GLX_STENCIL_SIZE,  8,
     GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT,
-//    GLX_DOUBLEBUFFER,  True,
+    GLX_DOUBLEBUFFER,  True,
     None
 };
 
