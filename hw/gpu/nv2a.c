@@ -219,7 +219,7 @@ static nv2a_context *       nv2a_ctx = NULL;
 
 typedef struct {
     union {
-        uint32_t            state;
+        uint32_t            field;
         struct {
             uint32_t        method       : 13;      /*  0 */
             uint32_t        subchannel   : 3;       /* 13 */
@@ -229,18 +229,12 @@ typedef struct {
         } PACKED;
     } PACKED;
     uint32_t                param;
-    void *                  next;
-} PACKED nv2a_pfifo_cache;
-
-static nv2a_pfifo_cache *   nv2a_cacheq = NULL;
-static pthread_mutex_t      nv2a_cacheq_mutex = PTHREAD_MUTEX_INITIALIZER;
-#define CACHEQ_LOCK         pthread_mutex_lock(&nv2a_cacheq_mutex)
-#define CACHEQ_UNLOCK       pthread_mutex_unlock(&nv2a_cacheq_mutex)
+} PACKED nv2a_pfifo_command;
 
 typedef struct {
     uint32_t                handle;
     union {
-        uint32_t            context;
+        uint32_t            field;
         struct {
             uint32_t        instance : 16;          /*  0 */
             uint32_t        engine   : 2;           /* 16 */
@@ -280,54 +274,6 @@ static pthread_cond_t       nv2a_flip_stall_cond = PTHREAD_COND_INITIALIZER;
 #define FLIP_STALL_SIGNAL   FLIP_STALL_LOCK, \
                             pthread_cond_broadcast(&nv2a_flip_stall_cond), \
                             FLIP_STALL_UNLOCK
-
-static void
-nv2a_pfifo_cache_enqueue(register const nv2a_pfifo_cache *c, register uint32_t param) {
-    register nv2a_pfifo_cache **q;
-    register size_t i;
-    ENTER_NV2A;
-
-    CACHEQ_LOCK;
-
-    for (q = &nv2a_cacheq, i = 1; *q; q = (typeof(q))&(**q).next, ++i);
-
-    *q = calloc(1, sizeof(*c));
-
-    (**q).state = c->state;
-    (**q).param = param;
-
-//    PRINT_NV2A("%s: CACHEQ: %u command%s in queue", nv2a->name, i, (i != 1) ? "s" : "");
-
-    CACHEQ_UNLOCK;
-
-    LEAVE_NV2A;
-}
-
-static int
-nv2a_pfifo_cache_dequeue(register nv2a_pfifo_cache *c) {
-    register nv2a_pfifo_cache **q;
-    register int ret = 0;
-    ENTER_NV2A;
-
-    CACHEQ_LOCK;
-
-    q = &nv2a_cacheq;
-
-    if (*q) {
-        *c = **q;
-        c->next = NULL;
-        free(*q);
-        *q = (**q).next;
-        ret = 1;
-    } else {
-        PRINT_NV2A("%s: CACHEQ: no commands in queue", nv2a->name);
-    }
-
-    CACHEQ_UNLOCK;
-
-    LEAVE_NV2A;
-    return ret;
-}
 
 static int
 nv2a_offset(register uint32_t *addr) {
@@ -1231,7 +1177,7 @@ nv2a_pgraph_blit(register void *p) {
 }
 
 static void
-nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_cache *c) {
+nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_command *c) {
     register size_t pos;
     register uint32_t *get;
     register uint32_t v;
@@ -2000,51 +1946,42 @@ nv2a_pfifo_ramht_lookup(register void *p, register uint32_t *handle, register nv
     ptr += hash;
 
     *r = *(typeof(r))ptr;
-//PRINT("ramht_lookup: handle:%u | context:0x%.08x | pgraph param:0x%.04x | engine:%u | chid:%u | valid:%u | reg:%p", r->handle,r->context,r->instance << 4,r->engine,r->chid,r->valid,ptr-NV2A_REGADDR(p, NV_PRAMIN, BASE));//XXX
+//PRINT("ramht_lookup: handle:%u | context:0x%.08x | pgraph param:0x%.04x | engine:%u | chid:%u | valid:%u | reg:%p",r->handle,r->context,r->instance << 4,r->engine,r->chid,r->valid,ptr-NV2A_REGADDR(p, NV_PRAMIN, BASE));//XXX
     if (r->valid) *handle = (typeof(*handle))r->instance << 4;
 
     LEAVE_NV2A;
     return r->valid;
 }
 
-void
-nv2a_pfifo_puller(register void *p) {
-    nv2a_pfifo_cache c;
+static void
+nv2a_pfifo_puller(register void *p, register nv2a_pfifo_command *c) {
     nv2a_pfifo_ramht r;
-    int busy = 0;
     ENTER_NV2A;
 
-    if (!p) p = nv2a->memreg;
-
-    for (;;) {
-        if (!NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PULL0, ACCESS_ENABLED) ||
-            !nv2a_pfifo_cache_dequeue(&c)) {
-            busy = 0;
-            EVENT_WAIT;//FIXME
-            continue;
+    do {
+        if (!NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PULL0, ACCESS_ENABLED)) {
+            PRINT_NV2A("%s(): warning: puller access disabled: cannot process command method: 0x%x", __func__, c->method);
+            break;
         }
-        if (!busy) {
-            busy = 1;
-            glo_current(nv2a_ctx->glo, 1);
-        }
-        if (c.method == /* NV_SET_OBJECT */ 0 || (c.method >= 0x180 && c.method <= 0x1a8)) {
-fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c.method,c.param,c.param);//XXX
-            if (!nv2a_pfifo_ramht_lookup(p, &c.param, &r)) continue;
+//glo_current(nv2a_ctx->glo, 1);//TODO
+        if (c->method == /* NV_SET_OBJECT */ 0 || (c->method >= 0x180 && c->method <= 0x1a8)) {
+fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c->method,c->param,c->param);//XXX
+            if (!nv2a_pfifo_ramht_lookup(p, &c->param, &r)) break;
             if (r.chid != NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID)) INT3;
         }
-        if (c.method == /* NV_SET_OBJECT */ 0) {
+        if (c->method == /* NV_SET_OBJECT */ 0) {
             switch (r.engine) {
-            case NV_RAMHT_ENGINE_GRAPHICS:
+            case NV_RAMHT_ENGINE_GRAPHICS /* 1 */:
                 nv2a_pgraph_intr_context_switch(p, r.chid);
-                nv2a_pgraph_fifo(p, &c);
+                nv2a_pgraph_fifo(p, c);
                 break;
-            case NV_RAMHT_ENGINE_SW:
-            case NV_RAMHT_ENGINE_DVD:
+            case NV_RAMHT_ENGINE_SW /* 0 */:
+            case NV_RAMHT_ENGINE_DVD /* 2 */:
             default:
                 INT3;
                 break;
             }
-            switch (c.subchannel) {
+            switch (c->subchannel) {
 #define CASE(x) \
             case x: \
                 NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PFIFO, CACHE1_ENGINE, x, r.engine); \
@@ -2059,8 +1996,8 @@ fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c.method,c.para
             CASE(7);
 #undef CASE
             }
-        } else if (c.method >= 0x100) {
-            switch (c.subchannel) {
+        } else if (c->method >= 0x100) {
+            switch (c->subchannel) {
 #define CASE(x) \
             case x: \
                 r.engine = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_ENGINE, x); \
@@ -2076,31 +2013,33 @@ fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c.method,c.para
 #undef CASE
             }
             switch (r.engine) {
-            case NV_RAMHT_ENGINE_GRAPHICS:
-                nv2a_pgraph_fifo(p, &c);
+            case NV_RAMHT_ENGINE_GRAPHICS /* 1 */:
+                nv2a_pgraph_fifo(p, c);
                 break;
-            case NV_RAMHT_ENGINE_SW:
-            case NV_RAMHT_ENGINE_DVD:
+            case NV_RAMHT_ENGINE_SW /* 0 */:
+            case NV_RAMHT_ENGINE_DVD /* 2 */:
             default:
                 INT3;
                 break;
             }
         }
-    }
+    } while (0);
 
     LEAVE_NV2A;
 }
 
 static void
 nv2a_pfifo_pusher(register void *p) {
-    register uint32_t o;
+    register nv2a_pfifo_command *c;
     register uint32_t *get;
     register uint32_t *put;
-    register nv2a_pfifo_cache *c;
     register uint32_t *d;
+    nv2a_pfifo_command cmd;
     nv2a_dma dma;
     uint32_t addr;
-    uint32_t v;
+    uint32_t rd;
+    register uint32_t chid;
+    register uint32_t word;
     ENTER_NV2A;
 
     if (!NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH0, ACCESS_ENABLED) ||
@@ -2110,11 +2049,11 @@ nv2a_pfifo_pusher(register void *p) {
         return;
     }
 
-    o = NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID);
-//PRINT("    chid:%hu", o);//XXX
+    chid = NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID);
+//PRINT("    chid:%hu",chid);//XXX
     /* TODO: PIO not supported */
-    if (!(NV2A_REG32(p, NV_PFIFO, MODE) & (1 << o))) {
-        PRINT_NV2A("pb error: channel %u is not in DMA mode", o);
+    if (!(NV2A_REG32(p, NV_PFIFO, MODE) & (1 << chid))) {
+        PRINT_NV2A("pb error: channel %u is not in DMA mode", chid);
         INT3;
     }
     if (!NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH1, MODE_DMA)) {
@@ -2122,28 +2061,26 @@ nv2a_pfifo_pusher(register void *p) {
         INT3;
     }
 
-    get   = NV2A_REGADDR(p, NV_PRAMIN, BASE);
+    get    = NV2A_REGADDR(p, NV_PRAMIN, BASE);
 //PRINT("    get:%p", get);//XXX
-    get  += NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS) << 2;
+    get   += NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS) << 2;
 //PRINT("    get + instance:%p | instance:%p", get,((NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS)) << 4));//XXX
-    dma   = NV2A_DMA(get);
-    addr  = NV2A_DMA_ADDRESS(&dma);
+    dma    = NV2A_DMA(get);
+    addr   = NV2A_DMA_ADDRESS(&dma);
 //PRINT("    addr:%p | flags:%p | limit:%p | frame:%p | class:%p | target:%p",addr,dma.flags,dma.limit,dma.frame,dma.class,dma.target);//XXX
 //INT3;//XXX
-    o   <<= 16;
-    get   = NV2A_REGADDR(p + o, NV_USER, DMA_GET);
-    put   = NV2A_REGADDR(p + o, NV_USER, DMA_PUT);
-    c     = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_STATE);
-    d     = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_DCOUNT);
+    chid <<= 16;
+    get    = NV2A_REGADDR(p + chid, NV_USER, DMA_GET);
+    put    = NV2A_REGADDR(p + chid, NV_USER, DMA_PUT);
+    c      = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_STATE);
+    d      = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_DCOUNT);
 
     PRINT_NV2A("pb DMA pusher: begin: "
         "limit: 0x%.08x | "
-        "get: 0x%.08x < put: 0x%.08x | "
-        "method count: %zu",
+        "get: 0x%.08x < put: 0x%.08x",
         dma.limit,
         *get,
-        *put,
-        (*put - *get) / 4);
+        *put);
 
     /* based on the convenient pseudocode in envytools */
     while (*get != *put) {
@@ -2151,32 +2088,34 @@ nv2a_pfifo_pusher(register void *p) {
             c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_PROTECTION;
             break;
         }
-        xboxkrnl_read_dma(addr + *get, &v, 4);
-        o     = v;
+        xboxkrnl_read_dma(addr + *get, &rd, 4);
         *get += 4;
-//PRINT("pfifo_pusher: state/param:0x%.08x | method:0x%.03hx | subchannel:0x%.02hx | method_count:0x%.02hx | non_inc:%hhu | dcount:%u | error:%u",o,c->method,c->subchannel,c->method_count,c->non_inc,*d,c->error);//XXX
+        word  = rd;
+//PRINT("pfifo_pusher: word/param:0x%.08x | method:0x%.03hx | subchannel:0x%.02hx | method_count:0x%.02hx | non_inc:%hhu | dcount:%u | error:%u",word,c->method,c->subchannel,c->method_count,c->non_inc,*d,c->error);//XXX
         if (c->method_count) {
             /* data word of methods command */
-            NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_DATA_SHADOW) = o;
-            nv2a_pfifo_cache_enqueue(c, o);
+            NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_DATA_SHADOW) = word;
+            cmd       = *c;
+            cmd.param = word;
+            nv2a_pfifo_puller(p, &cmd);
             if (!c->non_inc) c->method += 4;
             --c->method_count;
             ++*d;
         } else {
             /* no command active - this is the first word of a new one */
-            NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_RSVD_SHADOW) = o;
+            NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_RSVD_SHADOW) = word;
             /* match all forms */
-            if ((o & 0xe0000003) == 0x20000000) {
+            if ((word & 0xe0000003) == 0x20000000) {
                 /* old jump */
                 NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_GET_JMP_SHADOW) = *get;
-                *get = NV2A_MASK_GET(o, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
+                *get = NV2A_MASK_GET(word, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
                 PRINT_NV2A("pb OLD_JMP 0x%.08x", *get);
-            } else if ((o & 3) == 1) {
+            } else if ((word & 3) == 1) {
                 /* jump */
                 NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_GET_JMP_SHADOW) = *get;
-                *get = NV2A_MASK_GET(o, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
+                *get = NV2A_MASK_GET(word, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
                 PRINT_NV2A("pb JMP 0x%.08x", *get);
-            } else if ((o & 3) == 2) {
+            } else if ((word & 3) == 2) {
                 /* call */
                 if (NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE_ACTIVE)) {
                     c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_CALL;
@@ -2184,9 +2123,9 @@ nv2a_pfifo_pusher(register void *p) {
                 }
                 NV2A_REG32_MASK_SET_VAL(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, RETURN_OFFSET, *get);
                 NV2A_REG32_MASK_SET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE_ACTIVE);
-                *get = NV2A_MASK_GET(o, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
+                *get = NV2A_MASK_GET(word, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
                 PRINT_NV2A("pb CALL 0x%.08x", *get);
-            } else if (o == 0x00020000) {
+            } else if (word == 0x00020000) {
                 /* return */
                 if (!NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE_ACTIVE)) {
                     c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_RETURN;
@@ -2195,20 +2134,20 @@ nv2a_pfifo_pusher(register void *p) {
                 *get = NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, RETURN_OFFSET);
                 NV2A_REG32_MASK_UNSET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE_ACTIVE);
                 PRINT_NV2A("pb RET 0x%.08x", *get);
-            } else if (!(o & 0xe0030003)) {
+            } else if (!(word & 0xe0030003)) {
                 /* increasing methods */
-                c->state   = o;
+                c->field   = word;
                 c->non_inc = 0;
                 c->error   = 0;
                 *d         = 0;
-            } else if ((o & 0xe0030003) == 0x40000000) {
+            } else if ((word & 0xe0030003) == 0x40000000) {
                 /* non-increasing methods */
-                c->state   = o;
+                c->field   = word;
                 c->non_inc = 1;
                 c->error   = 0;
                 *d         = 0;
             } else {
-                PRINT_NV2A("pb RESERVED_CMD 0x%.08x, word 0x%.08x", *get, o);
+                PRINT_NV2A("pb RESERVED_CMD 0x%.08x, word 0x%.08x", *get, word);
                 c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_RESERVED_CMD;
                 break;
             }
@@ -2227,8 +2166,6 @@ nv2a_pfifo_pusher(register void *p) {
         NV2A_REG32_MASK_SET(p, NV_PFIFO, CACHE1_DMA_PUSH, STATUS_SUSPENDED);
         NV2A_REG32_MASK_SET(p, NV_PFIFO, INTR_0, DMA_PUSHER);
         IRQ_NV2A_SIGNAL;
-    } else {
-        EVENT_SIGNAL;
     }
 
     LEAVE_NV2A;
@@ -2369,12 +2306,6 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
         case NV_PFIFO_CACHE1_DMA_GET:
             o = NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID) << 16;
             NV2A_REG32_MASK_SET_VAL(p + o, NV_USER, DMA_GET, OFFSET, v);
-            break;
-        case NV_PFIFO_CACHE1_PULL0:
-            if (!NV2A_MASK_GET(o, NV_PFIFO_CACHE1_PULL0_ACCESS_ENABLED) &&
-                NV2A_MASK_GET(v, NV_PFIFO_CACHE1_PULL0_ACCESS_ENABLED)) {
-                EVENT_SIGNAL;
-            }
             break;
         }
         break;
@@ -2727,10 +2658,6 @@ nv2a_destroy(void) {
     if (!nv2a_ctx) {
         LEAVE_NV2A;
         return;
-    }
-
-    if (nv2a_cacheq) {
-        //TODO
     }
 
     glo_current(nv2a_ctx->glo, 1);

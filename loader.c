@@ -114,7 +114,6 @@ int apu_write(uint32_t addr, const void *val, size_t sz);
 int apu_read(uint32_t addr, void *val, size_t sz);
 int aci_write(uint32_t addr, const void *val, size_t sz);
 int aci_read(uint32_t addr, void *val, size_t sz);
-void nv2a_pfifo_puller(register void *p);
 int nv2a_init(void);
 void nv2a_irq_restore(register int mask);
 int nv2a_irq(void);
