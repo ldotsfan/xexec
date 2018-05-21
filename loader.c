@@ -120,6 +120,7 @@ int nv2a_irq(void);
 void nv2a_framebuffer_set(uint32_t addr);
 int nv2a_write(uint32_t addr, const void *val, size_t sz);
 int nv2a_read(uint32_t addr, void *val, size_t sz);
+void nv2a_pfifo_pusher(register void *p);
 #include "xboxkrnl.c"
 #include "sw/xbe.c"
 #include "sw/gloffscreen.c"

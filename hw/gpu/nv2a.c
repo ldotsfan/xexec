@@ -2028,7 +2028,7 @@ fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c->method,c->pa
     LEAVE_NV2A;
 }
 
-static void
+void
 nv2a_pfifo_pusher(register void *p) {
     register nv2a_pfifo_command *c;
     register uint32_t *get;
@@ -2041,6 +2041,8 @@ nv2a_pfifo_pusher(register void *p) {
     register uint32_t chid;
     register uint32_t word;
     ENTER_NV2A;
+
+    if (!p) p = nv2a->memreg;
 
     if (!NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_PUSH0, ACCESS_ENABLED) ||
         !NV2A_REG32_MASK_GET(p, NV_PFIFO, CACHE1_DMA_PUSH, ACCESS_ENABLED) ||
@@ -2083,7 +2085,7 @@ nv2a_pfifo_pusher(register void *p) {
         *put);
 
     /* based on the convenient pseudocode in envytools */
-    while (*get != *put) {
+    while (*get < *put) {
         if (*get > dma.limit) {
             c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_PROTECTION;
             break;
@@ -2296,7 +2298,7 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
         case NV_PFIFO_CACHE1_DMA_PUSH:
             if (NV2A_MASK_GET(o, NV_PFIFO_CACHE1_DMA_PUSH_STATUS_SUSPENDED) &&
                 !NV2A_MASK_GET(v, NV_PFIFO_CACHE1_DMA_PUSH_STATUS_SUSPENDED)) {
-                nv2a_pfifo_pusher(p);
+                EVENT_SIGNAL;//TODO rename for nv2a_pfifo_pusher()
             }
             break;
         case NV_PFIFO_CACHE1_DMA_PUT:
@@ -2399,7 +2401,7 @@ PRINT("nv_user: chid:%hu", chid);
             if (modes & (1 << chid)) { /* dma */
                 switch (NV_USER_ADDR_REG(r)) {
                 case NV_USER_DMA_PUT:
-                    nv2a_pfifo_pusher(p);
+                    EVENT_SIGNAL;//TODO rename for nv2a_pfifo_pusher()
                     break;
                 }
             } else { /* pio */

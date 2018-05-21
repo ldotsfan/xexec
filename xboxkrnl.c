@@ -2286,7 +2286,7 @@ xboxkrnl_worker(void *arg) {
             pthread_create(xboxkrnl_ ## x ## _thread, NULL, xboxkrnl_worker, (void *)(y)); \
         } while (0)
         THREAD(dpc,      2);
-//        THREAD(event,    3);
+        THREAD(event,    3);
         THREAD(irq_nv2a, 4);
 #undef THREAD
 
@@ -2314,11 +2314,11 @@ xboxkrnl_worker(void *arg) {
 
 //            PRINT("/* waiting for event routines */", 0);
 
-//            EVENT_WAIT;
+            EVENT_WAIT;
 
 //            PRINT("/* signaled for event routines */", 0);
 
-//            nv2a_pfifo_puller(NULL);
+            nv2a_pfifo_pusher(NULL);
 
             EVENT_UNLOCK;
         }
