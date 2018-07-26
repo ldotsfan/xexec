@@ -18,96 +18,84 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "ohci.h"
+#include "nvnet.h"
 
-#define DEBUG_OHCI 2
+#define DEBUG_NVNET 2
 
-#ifdef DEBUG_OHCI
-# if DEBUG_OHCI == 1
-#  define PRINT_OHCI        PRINT
-# elif DEBUG_OHCI == 2
-#  define PRINT_OHCI        PRINT
-#  define VARDUMP_OHCI      VARDUMP
-#  define VARDUMP2_OHCI     VARDUMP2
-#  define VARDUMP3_OHCI     VARDUMP3
-#  define VARDUMP4_OHCI     VARDUMP4
+#ifdef DEBUG_NVNET
+# if DEBUG_NVNET == 1
+#  define PRINT_NVNET       PRINT
+# elif DEBUG_NVNET == 2
+#  define PRINT_NVNET       PRINT
+#  define VARDUMP_NVNET     VARDUMP
+#  define VARDUMP2_NVNET    VARDUMP2
+#  define VARDUMP3_NVNET    VARDUMP3
+#  define VARDUMP4_NVNET    VARDUMP4
 # else
-#  define ENTER_OHCI        ENTER
-#  define LEAVE_OHCI        LEAVE
-#  define PRINT_OHCI        PRINT
-#  define VARDUMP_OHCI      VARDUMP
-#  define VARDUMP2_OHCI     VARDUMP2
-#  define VARDUMP3_OHCI     VARDUMP3
-#  define VARDUMP4_OHCI     VARDUMP4
+#  define ENTER_NVNET       ENTER
+#  define LEAVE_NVNET       LEAVE
+#  define PRINT_NVNET       PRINT
+#  define VARDUMP_NVNET     VARDUMP
+#  define VARDUMP2_NVNET    VARDUMP2
+#  define VARDUMP3_NVNET    VARDUMP3
+#  define VARDUMP4_NVNET    VARDUMP4
 # endif
 #endif
-#ifndef ENTER_OHCI
-# define ENTER_OHCI
+#ifndef ENTER_NVNET
+# define ENTER_NVNET
 #endif
-#ifndef LEAVE_OHCI
-# define LEAVE_OHCI
+#ifndef LEAVE_NVNET
+# define LEAVE_NVNET
 #endif
-#ifndef PRINT_OHCI
-# define PRINT_OHCI(...)
+#ifndef PRINT_NVNET
+# define PRINT_NVNET(...)
 #endif
-#ifndef VARDUMP_OHCI
-# define VARDUMP_OHCI(...)
+#ifndef VARDUMP_NVNET
+# define VARDUMP_NVNET(...)
 #endif
-#ifndef VARDUMP2_OHCI
-# define VARDUMP2_OHCI(...)
+#ifndef VARDUMP2_NVNET
+# define VARDUMP2_NVNET(...)
 #endif
-#ifndef VARDUMP3_OHCI
-# define VARDUMP3_OHCI(...)
+#ifndef VARDUMP3_NVNET
+# define VARDUMP3_NVNET(...)
 #endif
-#ifndef VARDUMP4_OHCI
-# define VARDUMP4_OHCI(...)
+#ifndef VARDUMP4_NVNET
+# define VARDUMP4_NVNET(...)
 #endif
 
 static int
-ohci_offset(register uint32_t *addr, register int *i) {
+nvnet_offset(register uint32_t *addr) {
     register int ret;
 
-    if ((ret = RANGE(usb0->memreg_base, usb0->memreg_size, *addr))) {
-        *addr -= usb0->memreg_base;
-        *i     = 0;
-    } else if ((ret = RANGE(usb1->memreg_base, usb1->memreg_size, *addr))) {
-        *addr -= usb1->memreg_base;
-        *i     = 1;
-    }
+    if ((ret = RANGE(nvnet->memreg_base, nvnet->memreg_size, *addr))) *addr -= nvnet->memreg_base;
 
     return !ret;
 }
 
 static int
-ohci_write(uint32_t addr, const void *val, size_t sz) {
+nvnet_write(uint32_t addr, const void *val, size_t sz) {
     register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
     register uint32_t o;
-    int i;
     register int ret = 0;
-    ENTER_OHCI;
+    ENTER_NVNET;
 
-    if (ohci_offset(&addr, &i)) {
-        LEAVE_OHCI;
+    if (nvnet_offset(&addr)) {
+        LEAVE_NVNET;
         return ret;
     }
 
-    if (!i) {
-        n = usb0->name;
-        p = usb0->memreg;
-    } else {
-        n = usb1->name;
-        p = usb1->memreg;
-    }
+    n = nvnet->name;
+    p = nvnet->memreg;
     r = addr;
 
     switch (sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_OHCI("%s: "
+        PRINT_NVNET("%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "reg: 0x%x",
@@ -123,7 +111,7 @@ ohci_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_OHCI("%s: "
+        PRINT_NVNET("%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "reg: 0x%x",
@@ -139,7 +127,7 @@ ohci_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_OHCI("%s: "
+        PRINT_NVNET("%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "reg: 0x%x",
@@ -153,38 +141,32 @@ ohci_write(uint32_t addr, const void *val, size_t sz) {
         ret = 1;
         break;
     default:
-        LEAVE_OHCI;
+        LEAVE_NVNET;
         return ret;
     }
 
     //TODO do stuff
 
-    LEAVE_OHCI;
+    LEAVE_NVNET;
     return ret;
 }
 
 static int
-ohci_read(uint32_t addr, void *val, size_t sz) {
+nvnet_read(uint32_t addr, void *val, size_t sz) {
     register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
-    int i;
     register int ret = 0;
-    ENTER_OHCI;
+    ENTER_NVNET;
 
-    if (ohci_offset(&addr, &i)) {
-        LEAVE_OHCI;
+    if (nvnet_offset(&addr)) {
+        LEAVE_NVNET;
         return ret;
     }
 
-    if (!i) {
-        n = usb0->name;
-        p = usb0->memreg;
-    } else {
-        n = usb1->name;
-        p = usb1->memreg;
-    }
+    n = nvnet->name;
+    p = nvnet->memreg;
     r = addr;
     v = REG32(p + addr);
 
@@ -193,7 +175,7 @@ ohci_read(uint32_t addr, void *val, size_t sz) {
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_OHCI("%s: "
+        PRINT_NVNET("%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "reg: 0x%x",
@@ -207,7 +189,7 @@ ohci_read(uint32_t addr, void *val, size_t sz) {
         break;
     case 2:
         v &= 0xffff;
-        PRINT_OHCI("%s: "
+        PRINT_NVNET("%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "reg: 0x%x",
@@ -220,7 +202,7 @@ ohci_read(uint32_t addr, void *val, size_t sz) {
         ret = 1;
         break;
     case 4:
-        PRINT_OHCI("%s: "
+        PRINT_NVNET("%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.08x | "
             "reg: 0x%x",
@@ -236,48 +218,48 @@ ohci_read(uint32_t addr, void *val, size_t sz) {
         break;
     }
 
-    LEAVE_OHCI;
+    LEAVE_NVNET;
     return ret;
 }
 
 static void
-ohci_reset(void) {
+nvnet_reset(void) {
     //TODO
 }
 
 static int
-ohci_irq(void) {
+nvnet_irq(void) {
     return 1;//TODO
 }
 
 static void
-ohci_irq_raise(int mask) {
+nvnet_irq_raise(int mask) {
     (void)mask;//TODO
 }
 
 static void
-ohci_irq_restore(int mask) {
+nvnet_irq_restore(int mask) {
     (void)mask;//TODO
 }
 
 static int
-ohci_init(void) {
+nvnet_init(void) {
     return 1;//TODO
 }
 
 static int
-ohci_destroy(void) {
+nvnet_destroy(void) {
     return 1;//TODO
 }
 
-const hw_ops ohci_op = {
-    .init           = ohci_init,
-    .destroy        = ohci_destroy,
-    .reset          = ohci_reset,
-    .irq            = ohci_irq,
-    .irq_raise      = ohci_irq_raise,
-    .irq_restore    = ohci_irq_restore,
-    .write          = ohci_write,
-    .read           = ohci_read,
+const hw_ops nvnet_op = {
+    .init           = nvnet_init,
+    .destroy        = nvnet_destroy,
+    .reset          = nvnet_reset,
+    .irq            = nvnet_irq,
+    .irq_raise      = nvnet_irq_raise,
+    .irq_restore    = nvnet_irq_restore,
+    .write          = nvnet_write,
+    .read           = nvnet_read,
 };
 

@@ -19,6 +19,7 @@
  */
 
 #include <unistd.h>
+#include <fcntl.h>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -26,8 +27,10 @@
 #include <sys/prctl.h>
 #include <execinfo.h>
 #include <iconv.h>
+#include <semaphore.h>
 
 #include "sw/int128.h"
+#include "hw/common.h"
 
 #define MIN(x,y)            ((x) < (y) ? (x) : (y))
 #define MAX(x,y)            ((x) > (y) ? (x) : (y))
@@ -273,9 +276,9 @@ xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix) {
     s = xboxkrnl_stack_indent(*stack);
     debug("%senter%s%s%s: [%p] --> %s()",
         s,
-        (prefix) ?   " (" : "",
-        (prefix) ? prefix : "",
-        (prefix) ?    ")" : "",
+        (prefix && *prefix) ?   " (" : "",
+        (prefix && *prefix) ? prefix : "",
+        (prefix && *prefix) ?    ")" : "",
         (bt) ? bt - 6 : bt,
         func);
     free(s);
@@ -293,9 +296,9 @@ xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix) {
     s = xboxkrnl_stack_indent(*stack);
     debug("%sleave%s%s%s: [%p] <-- %s()",
         s,
-        (prefix) ?   " (" : "",
-        (prefix) ? prefix : "",
-        (prefix) ?    ")" : "",
+        (prefix && *prefix) ?   " (" : "",
+        (prefix && *prefix) ? prefix : "",
+        (prefix && *prefix) ?    ")" : "",
         bt,
         func);
     free(s);
@@ -341,23 +344,6 @@ xboxkrnl_print(int8_t stack, const char *format, ...) {
 #define HEXDUMP(x)          xboxkrnl_hexdump(xboxkrnl_stack, (x), sizeof(x), #x)
 #define HEXDUMPN(x,y)       xboxkrnl_hexdump(xboxkrnl_stack, (x), (y), #x)
 static int8_t               xboxkrnl_stack = 0;
-
-#define ENTER_DPC           xboxkrnl_enter(&xboxkrnl_dpc_stack, __func__, "dpc")
-#define LEAVE_DPC           xboxkrnl_leave(&xboxkrnl_dpc_stack, __func__, "dpc")
-#define PRINT_DPC(x,...)    xboxkrnl_print(xboxkrnl_dpc_stack, (x), __VA_ARGS__)
-#define HEXDUMP_DPC(x)      xboxkrnl_hexdump(xboxkrnl_dpc_stack, (x), sizeof(x), #x)
-#define HEXDUMPN_DPC(x,y)   xboxkrnl_hexdump(xboxkrnl_dpc_stack, (x), (y), #x)
-static int8_t               xboxkrnl_dpc_stack = 0;
-static pthread_t *          xboxkrnl_dpc_thread = NULL;
-static pthread_mutexattr_t *xboxkrnl_dpc_mattr = NULL;
-static pthread_mutex_t *    xboxkrnl_dpc_mutex = NULL;
-static pthread_cond_t *     xboxkrnl_dpc_cond = NULL;
-#define DPC_LOCK            pthread_mutex_lock(xboxkrnl_dpc_mutex)
-#define DPC_UNLOCK          pthread_mutex_unlock(xboxkrnl_dpc_mutex)
-#define DPC_WAIT            pthread_cond_wait(xboxkrnl_dpc_cond, xboxkrnl_dpc_mutex)
-#define DPC_SIGNAL          DPC_LOCK, \
-                            pthread_cond_broadcast(xboxkrnl_dpc_cond), \
-                            DPC_UNLOCK
 
 static void                 (*xboxkrnl_entry)(void) = NULL;
 
@@ -556,40 +542,6 @@ static pthread_mutex_t      xboxkrnl_dpc_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define DPC_LIST_LOCK       pthread_mutex_lock(&xboxkrnl_dpc_list_mutex)
 #define DPC_LIST_UNLOCK     pthread_mutex_unlock(&xboxkrnl_dpc_list_mutex)
 
-#define ENTER_EVENT         xboxkrnl_enter(&xboxkrnl_event_stack, __func__, "event")
-#define LEAVE_EVENT         xboxkrnl_leave(&xboxkrnl_event_stack, __func__, "event")
-#define PRINT_EVENT(x,...)  xboxkrnl_print(xboxkrnl_event_stack, (x), __VA_ARGS__)
-#define HEXDUMP_EVENT(x)    xboxkrnl_hexdump(xboxkrnl_event_stack, (x), sizeof(x), #x)
-#define HEXDUMPN_EVENT(x,y) xboxkrnl_hexdump(xboxkrnl_event_stack, (x), (y), #x)
-static int8_t               xboxkrnl_event_stack = 0;
-static pthread_t *          xboxkrnl_event_thread = NULL;
-static pthread_mutexattr_t *xboxkrnl_event_mattr = NULL;
-static pthread_mutex_t *    xboxkrnl_event_mutex = NULL;
-static pthread_cond_t *     xboxkrnl_event_cond = NULL;
-#define EVENT_LOCK          pthread_mutex_lock(xboxkrnl_event_mutex)
-#define EVENT_UNLOCK        pthread_mutex_unlock(xboxkrnl_event_mutex)
-#define EVENT_WAIT          pthread_cond_wait(xboxkrnl_event_cond, xboxkrnl_event_mutex)
-#define EVENT_SIGNAL        EVENT_LOCK, \
-                            pthread_cond_broadcast(xboxkrnl_event_cond), \
-                            EVENT_UNLOCK
-
-#define ENTER_IRQ_NV2A      xboxkrnl_enter(&xboxkrnl_irq_nv2a_stack, __func__, "irq_nv2a")
-#define LEAVE_IRQ_NV2A      xboxkrnl_leave(&xboxkrnl_irq_nv2a_stack, __func__, "irq_nv2a")
-#define PRINT_IRQ_NV2A(x,...) xboxkrnl_print(xboxkrnl_irq_nv2a_stack, (x), __VA_ARGS__)
-#define HEXDUMP_IRQ_NV2A(x) xboxkrnl_hexdump(xboxkrnl_irq_nv2a_stack, (x), sizeof(x), #x)
-#define HEXDUMPN_IRQ_NV2A(x,y) xboxkrnl_hexdump(xboxkrnl_irq_nv2a_stack, (x), (y), #x)
-static int8_t               xboxkrnl_irq_nv2a_stack = 0;
-static pthread_t *          xboxkrnl_irq_nv2a_thread = NULL;
-static pthread_mutexattr_t *xboxkrnl_irq_nv2a_mattr = NULL;
-static pthread_mutex_t *    xboxkrnl_irq_nv2a_mutex = NULL;
-static pthread_cond_t *     xboxkrnl_irq_nv2a_cond = NULL;
-#define IRQ_NV2A_LOCK       pthread_mutex_lock(xboxkrnl_irq_nv2a_mutex)
-#define IRQ_NV2A_UNLOCK     pthread_mutex_unlock(xboxkrnl_irq_nv2a_mutex)
-#define IRQ_NV2A_WAIT       pthread_cond_wait(xboxkrnl_irq_nv2a_cond, xboxkrnl_irq_nv2a_mutex)
-#define IRQ_NV2A_SIGNAL     IRQ_NV2A_LOCK, \
-                            pthread_cond_broadcast(xboxkrnl_irq_nv2a_cond), \
-                            IRQ_NV2A_UNLOCK
-
 typedef struct {
     uint8_t                 Type;
     uint8_t                 Absolute;
@@ -638,6 +590,8 @@ struct xpci {
     int                     irq_busy;
     void *                  irq_isr_routine;
     void *                  irq_isr_context;
+
+    const hw_ops *const     op;
 };
 
 enum {
@@ -690,6 +644,7 @@ static struct xpci xpci[] = {
         .irq         = 1,
         .memreg_base = 0xfed00000,
         .memreg_size = 0x00001000,
+        .op          = &ohci_op,
     },
     [XPCI_USB1] = {
         .name        = "USB1",
@@ -699,6 +654,7 @@ static struct xpci xpci[] = {
         .irq         = 9,
         .memreg_base = 0xfed08000,
         .memreg_size = 0x00001000,
+        .op          = &ohci_op,
     },
     [XPCI_NIC] = {
         .name        = "NIC",
@@ -710,6 +666,7 @@ static struct xpci xpci[] = {
         .ioreg1_size = 0x0008,
         .memreg_base = 0xfef00000,
         .memreg_size = 0x00000400,
+        .op          = &nvnet_op,
     },
     [XPCI_APU] = {
         .name        = "APU",
@@ -719,6 +676,7 @@ static struct xpci xpci[] = {
         .irq         = 5,
         .memreg_base = 0xfe800000,
         .memreg_size = 0x00080000,
+        .op          = &apu_op,
     },
     [XPCI_ACI] = {
         .name        = "ACI",
@@ -732,6 +690,7 @@ static struct xpci xpci[] = {
         .ioreg1_size = 0x0080,
         .memreg_base = 0xfec00000,
         .memreg_size = 0x00001000,
+        .op          = &aci_op,
     },
     [XPCI_IDE] = {
         .name        = "IDE",
@@ -757,18 +716,20 @@ static struct xpci xpci[] = {
         .irq         = 3,
         .memreg_base = 0xfd000000,
         .memreg_size = 0x01000000,
+        .op          = &nv2a_op,
     },
     [XPCI_INTERNAL] = {
         .irq         = -1,
     },
 };
 
-static struct xpci *const   host = &xpci[XPCI_HOSTBRIDGE];
-static struct xpci *const   usb0 = &xpci[XPCI_USB0];
-static struct xpci *const   usb1 = &xpci[XPCI_USB1];
-static struct xpci *const   apu  = &xpci[XPCI_APU];
-static struct xpci *const   aci  = &xpci[XPCI_ACI];
-static struct xpci *const   nv2a = &xpci[XPCI_GPU];
+static struct xpci *const   host  = &xpci[XPCI_HOSTBRIDGE];
+static struct xpci *const   usb0  = &xpci[XPCI_USB0];
+static struct xpci *const   usb1  = &xpci[XPCI_USB1];
+static struct xpci *const   nvnet = &xpci[XPCI_NIC];
+static struct xpci *const   apu   = &xpci[XPCI_APU];
+static struct xpci *const   aci   = &xpci[XPCI_ACI];
+static struct xpci *const   nv2a  = &xpci[XPCI_GPU];
 
 /* memory */
 static void *               xboxkrnl_gpuinstmem = NULL;//FIXME
@@ -882,7 +843,7 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_TABLE1(x) \
         MEM_TABLE2(x,PAGESIZE)
 #define MEM_TABLE2(x,y) \
-    { .index = MEM_ ## x, .name = #x, .align = (y) }
+    { .index = MEM_##x, .name = #x, .align = (y) }
     MEM_TABLE2(DIRTY, 0),               /* dirty page map */
     MEM_TABLE1(EXEC),                   /* host executable virtual memory map */
     MEM_TABLE2(HEAP, 8),                /* guest virtual memory heap */
@@ -1130,8 +1091,7 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
     if (!locked) MEM_LOCK, MEM_CACHE = NULL;
 
     for (i = t->sz - 1; i >= 0; --i) {
-        m = &t->mem[i];
-        if (m->BaseAddress == addr) {
+        if ((m = &t->mem[i])->BaseAddress == addr) {
             mem = *m;
             ++i;
             if (i < t->sz) memmove(m, m + 1, sizeof(*m) * (t->sz - i));
@@ -1146,8 +1106,7 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
         t->reserve -= ALIGN(t->align, mem.RegionSize);
         if (mem.parent) {
             for (i = t->sz - 1; i >= 0; --i) {
-                m = &t->mem[i];
-                if (m->parent == mem.parent && !m->dirty) break;
+                if ((m = &t->mem[i])->parent == mem.parent && !m->dirty) break;
                 if (!i) {
                     if ((m = MEM_DIRTY_PARENT_RET__LOCKED(mem.parent)) && !m->dirty) {
                         m->dirty = 1;
@@ -1175,8 +1134,7 @@ xboxkrnl_mem_ret__locked(int index, void *addr, void *parent) {
 
     if (parent) {
         for (i = t->sz - 1; i >= 0; --i) {
-            m = &t->mem[i];
-            if (m->parent == parent) {
+            if ((m = &t->mem[i])->parent == parent) {
                 ret = m;
                 break;
             }
@@ -1252,8 +1210,7 @@ xboxkrnl_mem_dirty_set__locked(void *addr, xboxkrnl_mem *m) {
                 m->RegionSize);//TODO loglevel
             if (m->parent) {
                 for (i = t->sz - 1; i >= 0; --i) {
-                    p = &t->mem[i];
-                    if (p != m && p->parent == m->parent && !p->dirty) break;
+                    if ((p = &t->mem[i]) != m && p->parent == m->parent && !p->dirty) break;
                     if (!i) {
                         if ((p = MEM_DIRTY_PARENT_RET__LOCKED(m->parent)) && !p->dirty) {
                             p->dirty = 1;
@@ -1397,6 +1354,7 @@ xboxkrnl_mem_alloc(int index, void *addr, size_t size, int prot, int flags, int 
 
     if (!locked) MEM_LOCK;
 
+    /* retrieve base address */
     switch (index) {
     case MEM_HEAP:
         if (!(ret = MEM_HEAP_BASE)) INT3;
@@ -1446,6 +1404,7 @@ fprintf(stderr,"ret=%p\n",ret);//XXX
         switch (index) {
         case MEM_HEAP:
             if (m) ret += t->align;
+            /* fall through */
         case MEM_MAP:
 fprintf(stderr,"ret=%p ; (ret+size=%p > n=%p) == continue=%i\n",ret,ret+size,(n)?n->BaseAddress:0,(n)?(ret + size > n->BaseAddress):0);//XXX
             if (n && ret + size > n->BaseAddress) continue;
@@ -2260,85 +2219,220 @@ xboxkrnl_dpc_iterate(void) {
     DPC_LIST_UNLOCK;
 }
 
+/* threads */
+#define XBOXKRNL_MAX_THREADS            64
+
+static volatile int                     xboxkrnl_interrupted = 0;
+
+typedef struct {
+    pthread_t               id;
+    pthread_attr_t          attr;
+    sem_t                   sem;
+    int                     raised;
+    int8_t                  stack;
+    int                     detached;
+    void *                  (*routine)(void *);
+    void *                  arg;
+    void *                  context;
+    char                    name[64];
+} xboxkrnl_thread;
+
+static pthread_mutex_t                  xboxkrnl_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
+static xboxkrnl_thread                  xboxkrnl_thread_list[XBOXKRNL_MAX_THREADS] = { };
+static ssize_t                          xboxkrnl_thread_count = 0;
+#define THREAD_LOCK                     (void)pthread_mutex_lock(&xboxkrnl_thread_mutex)
+#define THREAD_UNLOCK                   (void)pthread_mutex_unlock(&xboxkrnl_thread_mutex)
+#define THREAD_PUSH(r,a,n)              xboxkrnl_thread_push(r,(void *)(a),n,NULL,0)
+#define THREAD_PUSH__LOCKED(r,a,n)      xboxkrnl_thread_push(r,(void *)(a),n,NULL,1)
+#define THREAD_PUSH2(r,a,n,c)           xboxkrnl_thread_push(r,(void *)(a),n,(void *)(c),0)
+#define THREAD_PUSH2__LOCKED(r,a,n,c)   xboxkrnl_thread_push(r,(void *)(a),n,(void *)(c),1)
+#define THREAD_POP(i)                   xboxkrnl_thread_pop(i,0)
+#define THREAD_POP__LOCKED(i)           xboxkrnl_thread_pop(i,1)
+#define THREAD_RET(i)                   xboxkrnl_thread_ret(i,NULL,0)
+#define THREAD_RET__LOCKED(i)           xboxkrnl_thread_ret(i,NULL,1)
+#define THREAD_RET2(c)                  xboxkrnl_thread_ret(0,c,0)
+#define THREAD_RET2__LOCKED(c)          xboxkrnl_thread_ret(0,c,1)
+
+#define THREAD_ENTER(t)                 xboxkrnl_enter((*(t)->name) ? &(t)->stack : &xboxkrnl_stack, __func__, (t)->name)
+#define THREAD_LEAVE(t)                 xboxkrnl_leave((*(t)->name) ? &(t)->stack : &xboxkrnl_stack, __func__, (t)->name)
+
+#define THREAD_WAIT(t)                  xboxkrnl_thread_wait(t)
+#define THREAD_POST(t)                  xboxkrnl_thread_post(t)
+
+#define THREAD_SET_SCHED(t,p)           pthread_attr_setschedpolicy(&(t)->attr,p)
+#define THREAD_GET_SCHED(t,p)           pthread_attr_getschedpolicy(&(t)->attr,p)
+
+void
+xboxkrnl_thread_wait(xboxkrnl_thread *t) {
+while (!t->raised) {PRINT("sem: waiting: '%s'",t->name); if (sem_wait(&t->sem) && errno != EINTR) INT3; PRINT("sem: waited: '%s'",t->name);}//XXX debugging
+//    while (!t->raised) if (sem_wait(&t->sem) && errno != EINTR) INT3;
+    t->raised = 0;
+}
+
+void
+xboxkrnl_thread_post(xboxkrnl_thread *t) {
+PRINT("sem: raised: '%s'",t->name);//XXX debugging
+    t->raised = 1;
+    if (sem_post(&t->sem)) INT3;
+}
+
+static xboxkrnl_thread *
+xboxkrnl_thread_push(void *(*routine)(void *), void *arg, const char *name, void *context, int locked) {
+    register xboxkrnl_thread *t;
+    register size_t i;
+    register int err;
+
+    if (!locked) THREAD_LOCK;
+
+    for (t = xboxkrnl_thread_list, i = 0; i <= ARRAY_SIZE(xboxkrnl_thread_list); ++t, ++i) {
+        if (i >= ARRAY_SIZE(xboxkrnl_thread_list)) INT3;
+        if (!t->id) {
+            ++xboxkrnl_thread_count;
+            break;
+        }
+    }
+
+    ZERO(*t);
+    pthread_attr_init(&t->attr);
+    pthread_attr_setinheritsched(&t->attr, PTHREAD_EXPLICIT_SCHED);
+    if (sem_init(&t->sem, 0, 0)) INT3;
+    t->routine = routine;
+    t->arg     = arg;
+    t->context = context;
+
+    if ((err = pthread_create(&t->id, &t->attr, t->routine, t->arg))) {
+        PRINT("%s(): failed to create thread '%s': '%s'", __func__, name, strerror(err));
+        INT3;
+    }
+
+    if (name && *name) strncpy(t->name, name, sizeof(t->name) - 1);
+    else snprintf(t->name, sizeof(t->name) - 1, "%p", (void *)t->id);
+    pthread_setname_np(t->id, t->name);
+
+    PRINT("/* created thread '%s' [%p] */", t->name, t->id);
+
+    if (!locked) THREAD_UNLOCK;
+
+    return t;
+}
+
+static void
+xboxkrnl_thread_pop(pthread_t id, int locked) {
+    register xboxkrnl_thread *t;
+    xboxkrnl_thread thread;
+    register size_t i;
+    register int ret = 0;
+
+    if (!locked) THREAD_LOCK;
+
+    for (t = xboxkrnl_thread_list, i = 0; i < ARRAY_SIZE(xboxkrnl_thread_list); ++t, ++i) {
+        if (t->id == id) {
+            thread = *t;
+            ZERO(*t);
+            --xboxkrnl_thread_count;
+            ret = 1;
+            break;
+        }
+    }
+
+    if (ret) {
+        if ((ret = pthread_cancel(thread.id))) {
+            //TODO
+        }
+        THREAD_POST(&thread);
+        if (sem_destroy(&thread.sem)) INT3;
+        pthread_attr_destroy(&thread.attr);
+    }
+
+    if (!locked) THREAD_UNLOCK;
+}
+
+static xboxkrnl_thread *
+xboxkrnl_thread_ret(pthread_t id, void *context, int locked) {
+    register xboxkrnl_thread *t;
+    register size_t i;
+    register xboxkrnl_thread *ret = NULL;
+
+    if (!locked) THREAD_LOCK;
+
+    if (id) {
+        for (t = xboxkrnl_thread_list, i = 0; i < ARRAY_SIZE(xboxkrnl_thread_list); ++t, ++i) {
+            if (t->id == id) {
+                ret = t;
+                break;
+            }
+        }
+    } else if (context) {
+        for (t = xboxkrnl_thread_list, i = 0; i < ARRAY_SIZE(xboxkrnl_thread_list); ++t, ++i) {
+            if (t->context == context) {
+                ret = t;
+                break;
+            }
+        }
+    }
+
+    if (!locked) THREAD_UNLOCK;
+
+    return ret;
+}
+
+//TODO: to be moved
+static xboxkrnl_thread *    xboxkrnl_thread_dpc = NULL;
+#define DPC_SIGNAL          THREAD_POST(xboxkrnl_thread_dpc)
+static xboxkrnl_thread *    xboxkrnl_thread_event = NULL;
+#define EVENT_SIGNAL        THREAD_POST(xboxkrnl_thread_event)
+static xboxkrnl_thread *    xboxkrnl_thread_irq_nv2a = NULL;
+#define IRQ_NV2A_SIGNAL     THREAD_POST(xboxkrnl_thread_irq_nv2a)
+
 static void *
 xboxkrnl_worker(void *arg) {
+    xboxkrnl_thread *t;
+
     if (!arg) {
         ENTER;
 
-#define THREAD(x,y) do { \
-            xboxkrnl_ ## x ## _thread = calloc(1, sizeof(*xboxkrnl_ ## x ## _thread)); \
-            xboxkrnl_ ## x ## _mattr = calloc(1, sizeof(*xboxkrnl_ ## x ## _mattr)); \
-            xboxkrnl_ ## x ## _mutex = calloc(1, sizeof(*xboxkrnl_ ## x ## _mutex)); \
-            xboxkrnl_ ## x ## _cond = calloc(1, sizeof(*xboxkrnl_ ## x ## _cond)); \
-            \
-            VARDUMP(DUMP, xboxkrnl_ ## x ## _thread); \
-            VARDUMP(DUMP, xboxkrnl_ ## x ## _mattr); \
-            VARDUMP(DUMP, xboxkrnl_ ## x ## _mutex); \
-            VARDUMP(DUMP, xboxkrnl_ ## x ## _cond); \
-            \
-            pthread_mutexattr_init(xboxkrnl_ ## x ## _mattr); \
-            pthread_mutexattr_settype(xboxkrnl_ ## x ## _mattr, PTHREAD_MUTEX_RECURSIVE); \
-            pthread_mutex_init(xboxkrnl_ ## x ## _mutex, xboxkrnl_ ## x ## _mattr); \
-            pthread_cond_init(xboxkrnl_ ## x ## _cond, NULL); \
-            \
-            PRINT("/* starting '%s' thread */", #x); \
-            \
-            pthread_create(xboxkrnl_ ## x ## _thread, NULL, xboxkrnl_worker, (void *)(y)); \
-        } while (0)
-        THREAD(dpc,      2);
-        THREAD(event,    3);
-        THREAD(irq_nv2a, 4);
+#define THREAD(x,y) \
+        t = THREAD_PUSH2(xboxkrnl_worker, x, #y, x); \
+        THREAD_SET_SCHED(t, SCHED_RR); \
+        xboxkrnl_thread_##y = t
+        THREAD(2, dpc);
+        THREAD(3, event);
+        THREAD(4, irq_nv2a);
 #undef THREAD
 
         LEAVE;
-    } else if (arg == (void *)2) {
-        ENTER_DPC;
+        return NULL;
+    }
 
+    if (!(t = THREAD_RET2(arg))) INT3;
+    THREAD_ENTER(t);
+
+    if (arg == (void *)2) {
         for (;;) {
-            DPC_LOCK;
             while (!xboxkrnl_dpc_list_sz) {
                 PRINT("/* waiting for deferred procedure call routines */", 0);
-                DPC_WAIT;
+                THREAD_WAIT(t);
             }
-            DPC_UNLOCK;
             xboxkrnl_dpc_iterate();
         }
-
-        LEAVE_DPC;
-        pthread_exit(NULL);
     } else if (arg == (void *)3) {
-        ENTER_EVENT;
-
         for (;;) {
-            EVENT_LOCK;
-
-//            PRINT("/* waiting for event routines */", 0);
-
-            EVENT_WAIT;
-
-//            PRINT("/* signaled for event routines */", 0);
-
+            PRINT("/* waiting for event routines */", 0);
+            THREAD_WAIT(t);
+            PRINT("/* signaled for event routines */", 0);
             nv2a_pfifo_pusher(NULL);
-
-            EVENT_UNLOCK;
         }
-
-        LEAVE_EVENT;
-        pthread_exit(NULL);
     } else if (arg == (void *)4) {
-        register int ret;
-
-        ENTER_IRQ_NV2A;
-
-        IRQ_NV2A_LOCK;
+        int ret;
 
         for (;;) {
-            while (!nv2a_irq()) {
+            while (!nv2a->op->irq()) {
                 PRINT("/* waiting for '%s' interrupt */", nv2a->name);
-                ret = nv2a->irq_busy;
-                nv2a->irq_busy = 0;
-                nv2a_irq_restore(ret);
-                IRQ_NV2A_WAIT;
+                if ((ret = nv2a->irq_busy)) {
+                    nv2a->irq_busy = 0;
+                    nv2a->op->irq_restore(ret);
+                }
+                THREAD_WAIT(t);
             }
             if (nv2a->irq_kinterrupt && nv2a->irq_connected && nv2a->irq_level && nv2a->irq_isr_routine) {
                 nv2a->irq_busy = /* NV2A_IRQ_BUSY */ 1;
@@ -2351,13 +2445,10 @@ xboxkrnl_worker(void *arg) {
                 nv2a->irq_level = 0;
             }
         }
-
-        IRQ_NV2A_UNLOCK;
-
-        LEAVE_IRQ_NV2A;
-        pthread_exit(NULL);
     }
 
+    THREAD_LEAVE(t);
+    pthread_exit(NULL);
     return NULL;
 }
 
@@ -2400,7 +2491,7 @@ xboxkrnl_init_hw(void) {
     if (!ret) {
         ret = 1;
         do {
-            if (nv2a_init()) break;
+            if (nv2a->op->init()) break;
 MEM_DIRTY_CLEAR(MEM_ALLOC_HEAP(0x1000));//XXX
         } while ((ret = 0));
     }
@@ -2415,19 +2506,10 @@ static int xboxkrnl_init_var(void);
 void
 xboxkrnl_destroy(void/* *x*/) {
     ENTER;
-#if 0
-    if (!xboxkrnl_thread_mutex) {
-        LEAVE;
-        return;
-    }
-#endif
+
+    /* TODO: destroy worker threads */
     xboxkrnl_destroy_var();
-#if 0
-    pthread_mutex_destroy(xboxkrnl_thread_mutex);
-    xboxkrnl_thread_mutex = NULL;
-    pthread_mutexattr_destroy(xboxkrnl_thread_mattr);
-    xboxkrnl_thread_mattr = NULL;
-#endif
+    /* TODO: xboxkrnl_destroy_hw(); */
     if (xboxkrnl_c_wc != (iconv_t)-1) {
         iconv_close(xboxkrnl_c_wc);
         xboxkrnl_c_wc = (iconv_t)-1;
@@ -2444,25 +2526,18 @@ int
 xboxkrnl_init(void/* **x*/) {
     register int ret = 1;
     ENTER;
-#if 0
-    if (xboxkrnl_thread_mutex) {
-        LEAVE;
-        return ret;
-    }
-#endif
-    xboxkrnl_tsc_init();
 
-    xboxkrnl_wc_c = iconv_open("UTF-8", "UTF-16LE");
-    xboxkrnl_c_wc = iconv_open("UTF-16LE", "UTF-8");
-#if 0
-    xboxkrnl_thread_mutex = calloc(1, sizeof(*xboxkrnl_thread_mutex));
-    xboxkrnl_thread_mattr = calloc(1, sizeof(*xboxkrnl_thread_mattr));
-    pthread_mutexattr_init(xboxkrnl_thread_mattr);
-    pthread_mutexattr_settype(xboxkrnl_thread_mattr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(xboxkrnl_thread_mutex, xboxkrnl_thread_mattr);
-#endif
-    if (!(ret = xboxkrnl_init_hw()) &&
-        !(ret = xboxkrnl_init_var())) xboxkrnl_worker(0);
+    do {
+        if ((xboxkrnl_wc_c = iconv_open("UTF-8", "UTF-16LE")) == (iconv_t)-1 ||
+            (xboxkrnl_c_wc = iconv_open("UTF-16LE", "UTF-8")) == (iconv_t)-1) {
+            PRINT("error: failed to allocate descriptor for character set conversion: iconv_open(): '%s'", strerror(errno));
+            break;
+        }
+        xboxkrnl_tsc_init();
+        if (xboxkrnl_init_hw() ||
+            xboxkrnl_init_var()) break;
+        xboxkrnl_worker(0);
+    } while ((ret = 0));
 
     if (ret) xboxkrnl_destroy();
 
@@ -2531,6 +2606,7 @@ xboxkrnl_address_validate_hw(uint32_t addr) {
         ((addr & 0xff000000) == nv2a->memreg_base ||
         RANGE(usb0->memreg_base, usb0->memreg_size, addr) ||
         RANGE(usb1->memreg_base, usb1->memreg_size, addr) ||
+        RANGE(nvnet->memreg_base, nvnet->memreg_size, addr) ||
         RANGE(apu->memreg_base, apu->memreg_size, addr) ||
         RANGE(aci->memreg_base, aci->memreg_size, addr));
 
@@ -2565,10 +2641,11 @@ xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
 
     if (!phys && (!cache || cache->index == MEM_RESERVE)) {
         ret =
-            (nv2a_write(addr, val, sz) ||
-            ohci_write(addr, val, sz) ||
-            apu_write(addr, val, sz) ||
-            aci_write(addr, val, sz));
+            (nv2a->op->write(addr, val, sz) ||
+            usb0->op->write(addr, val, sz) ||
+            nvnet->op->write(addr, val, sz) ||
+            apu->op->write(addr, val, sz) ||
+            aci->op->write(addr, val, sz));
     }
     if (!ret) {
         xboxkrnl_write_dma(addr, val, sz);
@@ -2591,10 +2668,11 @@ xboxkrnl_read(uint32_t addr, void *val, size_t sz) {
 
     if (!phys) {
         ret =
-            (nv2a_read(addr, val, sz) ||
-            ohci_read(addr, val, sz) ||
-            apu_read(addr, val, sz) ||
-            aci_read(addr, val, sz));
+            (nv2a->op->read(addr, val, sz) ||
+            usb0->op->read(addr, val, sz) ||
+            nvnet->op->read(addr, val, sz) ||
+            apu->op->read(addr, val, sz) ||
+            aci->op->read(addr, val, sz));
     }
     if (!ret) {
         xboxkrnl_read_dma(addr, val, sz);
@@ -4524,14 +4602,16 @@ xboxkrnl_KeQueryPerformanceCounter() { /* 126 (0x07e) */
 
     LEAVE;
 }
-static STDCALL void
-xboxkrnl_KeQueryPerformanceFrequency() { /* 127 (0x07f) */
+static STDCALL int64_t
+xboxkrnl_KeQueryPerformanceFrequency(void) { /* 127 (0x07f) */
+    register int64_t ret;
     ENTER;
 
-    INT3;
-    
+    ret = 3375000; /* 3.375 MHz - ACPI timer frequency */
 
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
 static STDCALL void
 xboxkrnl_KeQuerySystemTime() { /* 128 (0x080) */

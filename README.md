@@ -1,5 +1,5 @@
 # xexec - XBE x86 loader & emulator
-`xexec`:
+[`xexec`](https://github.com/haxar/xexec):
 * is an Xbox executable loader & emulator for x86/x64 Linux;
 * handles direct execution of x86 code, executing Xbox game code directly on the CPU, in userspace Linux;
 * may be used in a `binfmt_misc` configuration (not at this time).

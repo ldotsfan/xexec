@@ -72,9 +72,9 @@ apu_offset(register uint32_t *addr) {
     return !ret;
 }
 
-static const apu_block *
+static const hw_block *
 apu_block_lookup(register uint32_t addr, register const char **reg) {
-    register const apu_block *b;
+    register const hw_block *b;
     register size_t i;
     ENTER_APU;
 
@@ -123,9 +123,9 @@ apu_block_lookup(register uint32_t addr, register const char **reg) {
     return b;
 }
 
-int
+static int
 apu_write(uint32_t addr, const void *val, size_t sz) {
-    register const apu_block *b;
+    register const hw_block *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -243,9 +243,9 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     return ret;
 }
 
-int
+static int
 apu_read(uint32_t addr, void *val, size_t sz) {
-    register const apu_block *b;
+    register const hw_block *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -351,4 +351,45 @@ apu_read(uint32_t addr, void *val, size_t sz) {
     LEAVE_APU;
     return ret;
 }
+
+static void
+apu_reset(void) {
+    //TODO
+}
+
+static int
+apu_irq(void) {
+    return 1;//TODO
+}
+
+static void
+apu_irq_raise(int mask) {
+    (void)mask;//TODO
+}
+
+static void
+apu_irq_restore(int mask) {
+    (void)mask;//TODO
+}
+
+static int
+apu_init(void) {
+    return 1;//TODO
+}
+
+static int
+apu_destroy(void) {
+    return 1;//TODO
+}
+
+const hw_ops apu_op = {
+    .init           = apu_init,
+    .destroy        = apu_destroy,
+    .reset          = apu_reset,
+    .irq            = apu_irq,
+    .irq_raise      = apu_irq_raise,
+    .irq_restore    = apu_irq_restore,
+    .write          = apu_write,
+    .read           = apu_read,
+};
 

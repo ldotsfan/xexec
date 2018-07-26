@@ -18,28 +18,34 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef ACI_H
-#define ACI_H
+#ifndef HW_COMMON_H
+#define HW_COMMON_H
 
-//#define DEV_PREFIX aci
-#include "../common.h"
-//#undef DEV_PREFIX
+typedef struct {
+    int                     (*init)(void);
+    int                     (*destroy)(void);
+    void                    (*reset)(void);
+    int                     (*irq)(void);
+    void                    (*irq_raise)(int mask);
+    void                    (*irq_restore)(int mask);
+    int                     (*write)(uint32_t addr, const void *val, size_t sz);
+    int                     (*read)(uint32_t addr, void *val, size_t sz);
+} hw_ops;
 
-enum {
-    ACI_NAM     =   0,      /* native audio mixer */
-    ACI_NABM,   /*  1 */    /* native audio bus master */
-};
+typedef struct {
+    const uint32_t          index;
+    const char *            name;
+    const uint32_t          offset;
+    const uint32_t          size;
+} hw_block;
 
-#define ACI_BLOCK_OFFSET(x) aci_blocks[x].offset
-#define ACI_BLOCK_SIZE(x)   aci_blocks[x].size
-
-static const hw_block aci_blocks[] = {
-    HW_BLOCK(ACI_NAM,  0x0000, 0x0100),     /* 0 */
-    HW_BLOCK(ACI_NABM, 0x0100, 0x0080),     /* 1 */
-};
-
-#include "reg/nam.h"
-#include "reg/nabm.h"
+#define HW_BLOCK(x,y,z) \
+        [x] = { \
+            .index = x, \
+            .name = #x, \
+            .offset = y, \
+            .size = z \
+        }
 
 #endif
 

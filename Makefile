@@ -3,7 +3,9 @@
 
 all:
 	gcc -m32 -g -Wall -Wextra \
-		-Wno-unused-variable -Wno-unused-but-set-variable -Wno-pointer-to-int-cast \
+		-Wno-unused-variable \
+		-Wno-unused-but-set-variable \
+		-Wno-pointer-to-int-cast \
 		loader.c -o xexec \
 		-pthread -lX11 -lGL -lGLEW
 

@@ -108,92 +108,28 @@ fhexdump(FILE *stream, const void *in, size_t inlen) {
 #define PAGESIZE            0x1000
 
 #include "sw/xbe.h"
-int ohci_write(uint32_t addr, const void *val, size_t sz);
-int ohci_read(uint32_t addr, void *val, size_t sz);
-int apu_write(uint32_t addr, const void *val, size_t sz);
-int apu_read(uint32_t addr, void *val, size_t sz);
-int aci_write(uint32_t addr, const void *val, size_t sz);
-int aci_read(uint32_t addr, void *val, size_t sz);
-int nv2a_init(void);
-void nv2a_irq_restore(register int mask);
-int nv2a_irq(void);
+#include "hw/common.h"
+extern const hw_ops nv2a_op;
 void nv2a_framebuffer_set(uint32_t addr);
-int nv2a_write(uint32_t addr, const void *val, size_t sz);
-int nv2a_read(uint32_t addr, void *val, size_t sz);
 void nv2a_pfifo_pusher(register void *p);
+extern const hw_ops ohci_op;
+extern const hw_ops nvnet_op;
+extern const hw_ops apu_op;
+extern const hw_ops aci_op;
 #include "xboxkrnl.c"
 #include "sw/xbe.c"
 #include "sw/gloffscreen.c"
+#include "hw/gpu/nv2a.c"
 #include "hw/usb/ohci.c"
+#include "hw/nic/nvnet.c"
 #include "hw/apu/apu.c"
 #include "hw/aci/aci.c"
-#include "hw/gpu/nv2a.c"
-#include "sw/x86.c"
-
-static const char *const signal_segv_si_code_name[] = {
-    NULL,
-    "SEGV_MAPERR",      /* Address not mapped to object. */
-    "SEGV_ACCERR",      /* Invalid permissions for mapped object. */
-    "SEGV_BNDERR",      /* (since Linux 3.19) Failed address bound checks. */
-    "SEGV_PKUERR",      /* (since Linux 4.6) Access was denied by memory protection keys. */
-};
-
-static void
-signal_segv(int signum, siginfo_t *info, void *ptr) {
-    register ucontext_t *uc = ptr;
-    register void **bp;
-    register void **ip = (void **)&uc->uc_mcontext.gregs[REG_EIP];
-    register uint32_t i = (typeof(i))info->si_addr;
-
-//if (i != 0x8001030) //XXX
-    switch (info->si_code) {
-    case SEGV_MAPERR /* 1 */:
-    case SEGV_ACCERR /* 2 */:
-        if (!xboxkrnl_address_validate(i)) break;
-    case 128:
-        if (x86_iterate(uc, info->si_code)) return;
-        break;
-    }
-
-    ENTER;
-    PRINT("/* Segmentation Fault! */", 0);
-
-    VARDUMPN(DUMP,  "si_signo", signum);
-    VARDUMPN(DUMP,  "si_errno", info->si_errno);
-    if (info->si_errno) STRDUMP(strerror(info->si_errno));
-    VARDUMPN2(DUMP, "si_code",  info->si_code, signal_segv_si_code_name);
-    VARDUMPN(DUMP,  "si_addr",  info->si_addr);
-
-    PRINT("/* x86 register dump */", 0);
-
-    for (i = 0; i < ARRAY_SIZE(x86_greg_name); ++i) {
-        if (i == REG_EFL) VARDUMPN3(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i], x86_eflags_name);
-        else VARDUMPN(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i]);
-    }
-
-    HEXDUMPN(*ip, 16);
-
-    PRINT("/* stack trace */", 0);
-
-    for (ip = (void **)&uc->uc_mcontext.gregs[REG_EIP],
-        bp = (void **)uc->uc_mcontext.gregs[REG_EBP],
-        i = 1;
-        *ip;
-        ip = (void **)&bp[1],
-        bp = (void **)bp[0],
-        ++i) {
-        PRINT("%.02i: bp = %p, ip = %p%s", i, bp, *ip, (i == 1) ? " <- SEGV" : "");
-        if (!bp) break;
-    }
-
-    LEAVE;
-    _exit(-1);
-}
+#include "sw/arch/x86.c"
 
 int
 main(int argc, char **argv) {
     struct sigaction s = {
-        .sa_sigaction   = signal_segv,
+        .sa_sigaction   = x86_signal_segv,
         .sa_flags       = SA_SIGINFO,
     };
     pthread_t entry;
@@ -328,7 +264,7 @@ main(int argc, char **argv) {
 
         if (argc >= 3) INT3;
 
-        pthread_create(&entry, NULL, xboxkrnl_entry_thread, (void *)xbeh->dwEntryAddr);
+        entry = THREAD_PUSH(xboxkrnl_entry_thread, (void *)xbeh->dwEntryAddr, "entry")->id;
         pthread_join(entry, NULL);
 
         /* TODO: do other stuff */

@@ -18,28 +18,12 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef ACI_H
-#define ACI_H
+#ifndef OHCI_H
+#define OHCI_H
 
-//#define DEV_PREFIX aci
+//#define DEV_PREFIX ohci
 #include "../common.h"
 //#undef DEV_PREFIX
-
-enum {
-    ACI_NAM     =   0,      /* native audio mixer */
-    ACI_NABM,   /*  1 */    /* native audio bus master */
-};
-
-#define ACI_BLOCK_OFFSET(x) aci_blocks[x].offset
-#define ACI_BLOCK_SIZE(x)   aci_blocks[x].size
-
-static const hw_block aci_blocks[] = {
-    HW_BLOCK(ACI_NAM,  0x0000, 0x0100),     /* 0 */
-    HW_BLOCK(ACI_NABM, 0x0100, 0x0080),     /* 1 */
-};
-
-#include "reg/nam.h"
-#include "reg/nabm.h"
 
 #endif
 

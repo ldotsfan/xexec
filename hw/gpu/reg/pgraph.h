@@ -1368,7 +1368,7 @@ enum {
 #define NV_PGRAPH_CTX_SWITCH4_USER_INSTANCE_INVALID                             0
         NV_PGRAPH_CTX_SWITCH5                       = 0x0000015c,
 #define NV_PGRAPH_CTX_SWITCH5_TRAP_BITS_DISABLED                                0
-#define NV_PGRAPH_CTX_CACHE__OFFSET(x)                                          ((x) << 2)  /* x = subchannel */
+#define NV_PGRAPH_CTX_CACHE__OFFSET(x)                                          ((x) << 2) /* x = subchannel */
         NV_PGRAPH_CTX_CACHE1                        = 0x00000160,
 #define NV_PGRAPH_CTX_CACHE1_GRCLASS                                            0x000000ff
 #define NV_PGRAPH_CTX_CACHE1_GRCLASS__BITSHIFT                                  0
@@ -1425,7 +1425,7 @@ enum {
 #define NV_PGRAPH_FIFO_ACCESS__BITSHIFT                                         0
 #define NV_PGRAPH_FIFO_ACCESS_DISABLED                                          0
 #define NV_PGRAPH_FIFO_ACCESS_ENABLED                                           1
-#define NV_PGRAPH_FFINTFC_FIFO__OFFSET(x)                                       ((x) << 2)  /* x = subchannel */
+#define NV_PGRAPH_FFINTFC_FIFO__OFFSET(x)                                       ((x) << 2) /* x = subchannel */
         NV_PGRAPH_FFINTFC_FIFO_0                    = 0x000007a0,
 #define NV_PGRAPH_FFINTFC_FIFO_0_MTHD                                           0x00001ffc
 #define NV_PGRAPH_FFINTFC_FIFO_0_MTHD__BITSHIFT                                 0

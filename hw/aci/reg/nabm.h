@@ -6,7 +6,7 @@ enum {
     ACI_NABM_SO_INDEX = 0x70,   /* spdif out */
 };
 
-static const uint32_t const aci_nabm_index[] = {
+static const uint32_t aci_nabm_index[] = {
     ACI_NABM_PI_INDEX,
     ACI_NABM_PO_INDEX,
     ACI_NABM_MC_INDEX,
