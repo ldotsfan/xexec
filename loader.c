@@ -109,13 +109,13 @@ fhexdump(FILE *stream, const void *in, size_t inlen) {
 
 #include "sw/xbe.h"
 #include "hw/common.h"
-extern const hw_ops nv2a_op;
+extern const hw_ops_t nv2a_op;
 void nv2a_framebuffer_set(uint32_t addr);
 void nv2a_pfifo_pusher(register void *p);
-extern const hw_ops ohci_op;
-extern const hw_ops nvnet_op;
-extern const hw_ops apu_op;
-extern const hw_ops aci_op;
+extern const hw_ops_t ohci_op;
+extern const hw_ops_t nvnet_op;
+extern const hw_ops_t apu_op;
+extern const hw_ops_t aci_op;
 #include "xboxkrnl.c"
 #include "sw/xbe.c"
 #include "sw/gloffscreen.c"

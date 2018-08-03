@@ -80,30 +80,30 @@ typedef struct {
     } PACKED;
     uint32_t                limit;
     uint32_t                frame;
-} PACKED nv2a_dma;
+} PACKED nv2a_dma_t;
 
-#define NV2A_DMA(x) *(nv2a_dma *)(x)
+#define NV2A_DMA(x) *(nv2a_dma_t *)(x)
 #define NV2A_DMA_ADDRESS(x) ((((x)->frame & /* NV_DMA_ADDRESS */ 0xfffff000) | ((x)->adjust << 20)) & (host->memreg_size - 1))
 
 typedef struct {
-    GLuint                              gl_texture;
-    GLenum                              gl_target;
-    int                                 ref;
-} nv2a_pgraph_texture_binding;
+    GLuint                      gl_texture;
+    GLenum                      gl_target;
+    int                         ref;
+} nv2a_texture_binding_t;
 
 typedef struct {
-    uint32_t                            index;
-    int                                 dirty;
-    const nv2a_color_format *           cf;
-    nv2a_pgraph_texture_binding *       b;
+    uint32_t                    index;
+    int                         dirty;
+    const nv2a_color_format_t * cf;
+    nv2a_texture_binding_t *    b;
     /* texture data */
-    uint32_t                            toffset;
-    void *                              tdata;
-    size_t                              tlen;
+    uint32_t                    toffset;
+    void *                      tdata;
+    uint32_t                    tlen;
     /* palette data */
-    uint32_t                            poffset;
-    void *                              pdata;
-    size_t                              plen;
+    uint32_t                    poffset;
+    void *                      pdata;
+    uint32_t                    plen;
     /* register state */
     union {
         uint32_t     field;
@@ -118,7 +118,7 @@ typedef struct {
             uint32_t base_size_v         : 4;       /* 24 */
             uint32_t base_size_p         : 4;       /* 28 */
         } PACKED;
-    } PACKED                            format;
+    } PACKED                    format;
     union {
         uint32_t     field;
         struct {
@@ -130,7 +130,7 @@ typedef struct {
             uint32_t cylwrap_p           : 4;       /* 20 */
             uint32_t cylwrap_q           : 8;       /* 24 */
         } PACKED;
-    } PACKED                            address;
+    } PACKED                    address;
     union {
         uint32_t     field;
         struct {
@@ -142,8 +142,8 @@ typedef struct {
             uint32_t min_lod_clamp       : 12;      /* 18 */
             uint32_t enable              : 2;       /* 30 */
         } PACKED;
-    } PACKED                            ctl0;
-    uint32_t                            pitch;
+    } PACKED                    ctl0;
+    uint32_t                    pitch;
     union {
         uint32_t     field;
         struct {
@@ -156,10 +156,10 @@ typedef struct {
             uint32_t gsigned_enabled     : 1;       /* 30 */
             uint32_t bsigned_enabled     : 1;       /* 31 */
         } PACKED;
-    } PACKED                            filter;
-    uint32_t                            width;
-    uint32_t                            height;
-    uint32_t                            depth;
+    } PACKED                    filter;
+    uint32_t                    width;
+    uint32_t                    height;
+    uint32_t                    depth;
     union {
         uint32_t     field;
         struct {
@@ -167,12 +167,12 @@ typedef struct {
             uint32_t length              : 4;       /*  2 */
             uint32_t offset              : 26;      /*  6 */
         } PACKED;
-    } PACKED                            palette;
-    nv2a_color_bgra                     bcolor;
-    uint32_t                            mlevels;
-} nv2a_pgraph_texture;
+    } PACKED                    palette;
+    nv2a_color_bgra_t           bcolor;
+    uint32_t                    mlevels;
+} nv2a_texture_t;
 
-static const GLenum nv2a_pgraph_texture_format_cubemap_map[] = {
+static const GLenum nv2a_texture_format_cubemap_map[] = {
     GL_TEXTURE_CUBE_MAP_POSITIVE_X,
     GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
     GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
@@ -181,7 +181,7 @@ static const GLenum nv2a_pgraph_texture_format_cubemap_map[] = {
     GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
 };
 
-static const GLenum nv2a_pgraph_texture_filter_min_map[] = {
+static const GLenum nv2a_texture_filter_min_map[] = {
     0,
     GL_NEAREST,
     GL_LINEAR,
@@ -192,7 +192,7 @@ static const GLenum nv2a_pgraph_texture_filter_min_map[] = {
     GL_LINEAR, /* TODO: Convolution filter... */
 };
 
-static const GLenum nv2a_pgraph_texture_filter_mag_map[] = {
+static const GLenum nv2a_texture_filter_mag_map[] = {
     0,
     GL_NEAREST,
     GL_LINEAR,
@@ -200,7 +200,7 @@ static const GLenum nv2a_pgraph_texture_filter_mag_map[] = {
     GL_LINEAR, /* TODO: Convolution filter... */
 };
 
-static const GLenum nv2a_pgraph_texture_wrap_map[] = {
+static const GLenum nv2a_texture_wrap_map[] = {
     0,
     GL_REPEAT,
     GL_MIRRORED_REPEAT,
@@ -210,6 +210,14 @@ static const GLenum nv2a_pgraph_texture_wrap_map[] = {
 };
 
 typedef struct {
+    GLuint                  gl_converted_buffer;
+    GLuint                  gl_inline_buffer;
+
+    float                   inline_value[4];
+    float *                 inline_buffer;
+} nv2a_vertex_attrib_t;
+
+typedef struct {
     glo_context *           glo;
 
     GLuint                  gl_framebuffer;
@@ -217,18 +225,27 @@ typedef struct {
     GLuint                  gl_color_buffer;
     GLuint                  gl_zeta_buffer;
 
-    GLuint                  gl_converted_buffer[NV2A_MAX_VERTEX_ATTRIBS];
-    GLuint                  gl_inline_buffer[NV2A_MAX_VERTEX_ATTRIBS];
-    GLuint                  gl_inline_array_buffer;
-    GLuint                  gl_element_buffer;
 //    GLuint                  gl_memory_buffer;
 
     GLuint                  gl_vertex_array;
 
-    nv2a_pgraph_texture     texture[NV2A_MAX_TEXTURES];
-} nv2a_context;
+    nv2a_texture_t          t[NV2A_MAX_TEXTURES];
 
-static nv2a_context *       nv2a_ctx = NULL;
+    nv2a_vertex_attrib_t    va[NV2A_MAX_VERTEX_ATTRIBS];
+    uint32_t                inline_buffer_len;
+    GLuint                  gl_inline_element_buffer;
+    uint32_t                inline_element_len;
+    uint32_t                inline_element[NV2A_MAX_BATCH_LENGTH];
+    GLuint                  gl_inline_array_buffer;
+    uint32_t                inline_array_len;
+    uint32_t                inline_array[NV2A_MAX_BATCH_LENGTH];
+    uint32_t                draw_arrays_len;
+    uint32_t                draw_arrays_max;
+    GLint                   gl_draw_arrays_start[1000]; //FIXME: unknown size, possibly endless, 1000 will do for now
+    GLsizei                 gl_draw_arrays_count[1000];
+} nv2a_context_t;
+
+static nv2a_context_t *     nv2a_ctx = NULL;
 
 typedef struct {
     union {
@@ -242,7 +259,7 @@ typedef struct {
         } PACKED;
     } PACKED;
     uint32_t                param;
-} PACKED nv2a_pfifo_command;
+} PACKED nv2a_pfifo_command_t;
 
 typedef struct {
     uint32_t                handle;
@@ -260,7 +277,7 @@ typedef struct {
             uint32_t        valid    : 1;           /* 31 */
         } PACKED;
     } PACKED;
-} PACKED nv2a_pfifo_ramht;
+} PACKED nv2a_pfifo_ramht_t;
 
 static pthread_mutex_t      nv2a_pgraph_fifo_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t       nv2a_pgraph_fifo_cond = PTHREAD_COND_INITIALIZER;
@@ -297,9 +314,9 @@ nv2a_offset(register uint32_t *addr) {
     return !ret;
 }
 
-static const hw_block *
+static const hw_block_t *
 nv2a_block_lookup(register uint32_t addr, register const char **reg) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register size_t i;
     ENTER_NV2A;
 
@@ -510,8 +527,8 @@ nv2a_color_convert_yuy2_to_rgb(
 }
 
 static uint8_t *
-nv2a_pgraph_texture_convert(
-        nv2a_pgraph_texture *t,
+nv2a_texture_convert(
+        nv2a_texture_t *t,
         const uint8_t *tdata,
         const uint8_t *pdata,
         uint32_t width,
@@ -552,7 +569,7 @@ nv2a_pgraph_texture_convert(
         if (!(ret = malloc(width * height * 3))) INT3;
         for (y = 0; y < height; ++y) {
             for (x = 0; x < width; ++x) {
-                register nv2a_color_r6g5b5 rgb655 = *(typeof(rgb655) *)&tdata[y * pitch + x * 2];
+                register nv2a_color_r6g5b5_t rgb655 = *(typeof(rgb655) *)&tdata[y * pitch + x * 2];
                 register int8_t *p = (void *)&ret[(y * width + x) * 3];
                 /* Maps 5 bit G and B signed value range to 8 bit
                  * signed values. R is probably unsigned.
@@ -571,7 +588,7 @@ nv2a_pgraph_texture_convert(
 }
 
 static void
-nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_texture *t) {
+nv2a_texture_binding_upload(nv2a_texture_binding_t *b, nv2a_texture_t *t) {
     GLenum gl_target;
     register const void *p;
     register void *u;
@@ -579,11 +596,11 @@ nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_t
     register uint32_t w;
     register uint32_t h;
     register uint32_t d;
-    register size_t pitch;
-    register size_t pslice;
-    register size_t length;
-    register size_t i;
-    register size_t j;
+    register uint32_t pitch;
+    register uint32_t pslice;
+    register uint32_t length;
+    register uint32_t i;
+    register uint32_t j;
     ENTER_NV2A;
 
     gl_target = b->gl_target;
@@ -597,7 +614,7 @@ nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_t
         /* cannot handle strides unaligned to pixels */
         if (t->pitch % t->cf->pixel_size) INT3;
         glPixelStorei(GL_UNPACK_ROW_LENGTH, t->pitch / t->cf->pixel_size);
-        c = nv2a_pgraph_texture_convert(t, p, t->pdata, t->width, t->height, 1, t->pitch, 0);
+        c = nv2a_texture_convert(t, p, t->pdata, t->width, t->height, 1, t->pitch, 0);
         glTexImage2D(gl_target, 0, t->cf->gl_internal_format, t->width, t->height, 0, t->cf->gl_format, t->cf->gl_type, (c) ? c : p);
         if (c) free(c);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -605,7 +622,7 @@ nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_t
     case GL_TEXTURE_CUBE_MAP:
         j = 0;
         do {
-            gl_target = nv2a_pgraph_texture_format_cubemap_map[j];
+            gl_target = nv2a_texture_format_cubemap_map[j];
             /* fall through */
     case GL_TEXTURE_2D:
             if (t->cf->gl_format) {
@@ -616,7 +633,7 @@ nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_t
                     length  = h * pitch;
                     if (!(u = malloc(length))) INT3;
                     unswizzle_rect(p, w, h, u, pitch, t->cf->pixel_size);
-                    c       = nv2a_pgraph_texture_convert(t, u, t->pdata, w, h, 1, pitch, 0);
+                    c       = nv2a_texture_convert(t, u, t->pdata, w, h, 1, pitch, 0);
                     glTexImage2D(gl_target, i, t->cf->gl_internal_format, w, h, 0, t->cf->gl_format, t->cf->gl_type, (c) ? c : u);
                     if (c) free(c);
                     free(u);
@@ -636,7 +653,7 @@ nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_t
                     h      /= 2;
                 }
             }
-        } while (b->gl_target == GL_TEXTURE_CUBE_MAP && ++j < ARRAY_SIZE(nv2a_pgraph_texture_format_cubemap_map));
+        } while (b->gl_target == GL_TEXTURE_CUBE_MAP && ++j < ARRAY_SIZE(nv2a_texture_format_cubemap_map));
         break;
     case GL_TEXTURE_3D:
         if (t->cf->gl_format) {
@@ -650,7 +667,7 @@ nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_t
                 length  = d * pslice;
                 if (!(u = malloc(length))) INT3;
                 unswizzle_box(p, w, h, d, u, pitch, pslice, t->cf->pixel_size);
-                c       = nv2a_pgraph_texture_convert(t, u, t->pdata, w, h, d, pitch, pslice);
+                c       = nv2a_texture_convert(t, u, t->pdata, w, h, d, pitch, pslice);
                 glTexImage3D(gl_target, i, t->cf->gl_internal_format, w, h, d, 0, t->cf->gl_format, t->cf->gl_type, (c) ? c : u);
                 if (c) free(c);
                 free(u);
@@ -672,9 +689,9 @@ nv2a_pgraph_texture_binding_upload(nv2a_pgraph_texture_binding *b, nv2a_pgraph_t
     LEAVE_NV2A;
 }
 
-static nv2a_pgraph_texture_binding *
-nv2a_pgraph_texture_binding_create(nv2a_pgraph_texture *t) {
-    register nv2a_pgraph_texture_binding *b;
+static nv2a_texture_binding_t *
+nv2a_texture_binding_create(nv2a_texture_t *t) {
+    register nv2a_texture_binding_t *b;
     ENTER_NV2A;
 
     if (!(b = calloc(1, sizeof(*b)))) INT3;
@@ -725,7 +742,7 @@ nv2a_pgraph_texture_binding_create(nv2a_pgraph_texture *t) {
         (!t->cf->linear) ? " (sz)" : "",
         t->cf->pixel_size * 8);
 
-    nv2a_pgraph_texture_binding_upload(b, t);
+    nv2a_texture_binding_upload(b, t);
 
     /* linear textures do not support mipmapping */
     if (!t->cf->linear) {
@@ -744,7 +761,7 @@ nv2a_pgraph_texture_binding_create(nv2a_pgraph_texture *t) {
 }
 
 static int
-nv2a_pgraph_texture_binding_destroy(nv2a_pgraph_texture_binding **b, int now) {
+nv2a_texture_binding_destroy(nv2a_texture_binding_t **b, int now) {
     register int ret = 0;
     ENTER_NV2A;
 
@@ -763,21 +780,21 @@ nv2a_pgraph_texture_binding_destroy(nv2a_pgraph_texture_binding **b, int now) {
 }
 
 static void
-nv2a_pgraph_texture_bind(register void *p, size_t index) {
-    register nv2a_pgraph_texture *t;
-    nv2a_dma dma;
+nv2a_texture_bind(register void *p, uint32_t index) {
+    register nv2a_texture_t *t;
+    nv2a_dma_t dma;
     uint32_t bsizeu;
     uint32_t bsizev;
     uint32_t bsizep;
     GLfloat gl_border_color[4];
-    register size_t pos;
+    register uint32_t pos;
     register uint32_t w;
     register uint32_t h;
     register uint32_t i;
     ENTER_NV2A;
 
     if (index >= NV2A_MAX_TEXTURES) INT3;
-    t = &nv2a_ctx->texture[index];
+    t = &nv2a_ctx->t[index];
 
     do {
         glActiveTexture(GL_TEXTURE0 + index);
@@ -800,8 +817,8 @@ nv2a_pgraph_texture_bind(register void *p, size_t index) {
         t->bcolor.field   = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_BORDER_COLOR);
         t->poffset        = t->palette.offset << 6;
 
-        if (t->format.color >= ARRAY_SIZE(nv2a_pgraph_texture_color_formats)) INT3;
-        t->cf = &nv2a_pgraph_texture_color_formats[t->format.color];
+        if (t->format.color >= ARRAY_SIZE(nv2a_texture_color_formats)) INT3;
+        t->cf = &nv2a_texture_color_formats[t->format.color];
         if (!t->cf->name) INT3;
 
         PRINT_NV2A("%s(): "
@@ -980,10 +997,10 @@ nv2a_pgraph_texture_bind(register void *p, size_t index) {
         }
         VARDUMP_NV2A(DUMP, t->plen);
 #if 1 // no cache
-        nv2a_pgraph_texture_binding_destroy(&t->b, 0);
-        if (!(t->b = nv2a_pgraph_texture_binding_create(t))) INT3;
+        nv2a_texture_binding_destroy(&t->b, 0);
+        if (!(t->b = nv2a_texture_binding_create(t))) INT3;
 #elif 0 //TODO cache
-        if (!(t->b = nv2a_pgraph_texture_binding_ret(t))) INT3;//TODO here; do dirty page track
+        if (!(t->b = nv2a_texture_binding_ret(t))) INT3;//TODO here; do dirty page track
         ++t->b->ref;
 
 MEM_DIRTY_CREATE(t->tdata, t->tlen);//TODO cache
@@ -1033,20 +1050,20 @@ MEM_DIRTY_CREATE(t->pdata, t->plen);//TODO cache
                 break;
             }
         }
-        if (t->filter.min >= ARRAY_SIZE(nv2a_pgraph_texture_filter_min_map)) INT3;
-        glTexParameteri(t->b->gl_target, GL_TEXTURE_MIN_FILTER, nv2a_pgraph_texture_filter_min_map[t->filter.min]);
-        if (t->filter.mag >= ARRAY_SIZE(nv2a_pgraph_texture_filter_mag_map)) INT3;
-        glTexParameteri(t->b->gl_target, GL_TEXTURE_MAG_FILTER, nv2a_pgraph_texture_filter_mag_map[t->filter.mag]);
+        if (t->filter.min >= ARRAY_SIZE(nv2a_texture_filter_min_map)) INT3;
+        glTexParameteri(t->b->gl_target, GL_TEXTURE_MIN_FILTER, nv2a_texture_filter_min_map[t->filter.min]);
+        if (t->filter.mag >= ARRAY_SIZE(nv2a_texture_filter_mag_map)) INT3;
+        glTexParameteri(t->b->gl_target, GL_TEXTURE_MAG_FILTER, nv2a_texture_filter_mag_map[t->filter.mag]);
         /* texture wrapping */
-        if (t->address.u >= ARRAY_SIZE(nv2a_pgraph_texture_wrap_map)) INT3;
-        glTexParameteri(t->b->gl_target, GL_TEXTURE_WRAP_S, nv2a_pgraph_texture_wrap_map[t->address.u]);
+        if (t->address.u >= ARRAY_SIZE(nv2a_texture_wrap_map)) INT3;
+        glTexParameteri(t->b->gl_target, GL_TEXTURE_WRAP_S, nv2a_texture_wrap_map[t->address.u]);
         if (t->format.dimensionality > 1) {
-            if (t->address.v >= ARRAY_SIZE(nv2a_pgraph_texture_wrap_map)) INT3;
-            glTexParameteri(t->b->gl_target, GL_TEXTURE_WRAP_T, nv2a_pgraph_texture_wrap_map[t->address.v]);
+            if (t->address.v >= ARRAY_SIZE(nv2a_texture_wrap_map)) INT3;
+            glTexParameteri(t->b->gl_target, GL_TEXTURE_WRAP_T, nv2a_texture_wrap_map[t->address.v]);
         }
         if (t->format.dimensionality > 2) {
-            if (t->address.p >= ARRAY_SIZE(nv2a_pgraph_texture_wrap_map)) INT3;
-            glTexParameteri(t->b->gl_target, GL_TEXTURE_WRAP_R, nv2a_pgraph_texture_wrap_map[t->address.p]);
+            if (t->address.p >= ARRAY_SIZE(nv2a_texture_wrap_map)) INT3;
+            glTexParameteri(t->b->gl_target, GL_TEXTURE_WRAP_R, nv2a_texture_wrap_map[t->address.p]);
         }
         /* FIXME: Only upload if necessary? [s, t or r = GL_CLAMP_TO_BORDER] */
         if (t->format.border_source == NV_PGRAPH_TEXFMT0_BORDER_SOURCE_COLOR) {
@@ -1063,19 +1080,19 @@ MEM_DIRTY_CREATE(t->pdata, t->plen);//TODO cache
 }
 
 static void
-nv2a_pgraph_texture_bind_all(register void *p) {
-    register size_t i;
+nv2a_texture_bind_all(register void *p) {
+    register uint32_t i;
     ENTER_NV2A;
 
-    for (i = 0; i < NV2A_MAX_TEXTURES; nv2a_pgraph_texture_bind(p, i), ++i);
+    for (i = 0; i < NV2A_MAX_TEXTURES; nv2a_texture_bind(p, i), ++i);
 
     LEAVE_NV2A;
 }
 #if 0
 static int
 nv2a_pgraph_ctx_lookup(register void *p, uint32_t grclass, nv2a_pgraph_ctx *ctx) {
-    register size_t i;
-    register size_t pos;
+    register uint32_t i;
+    register uint32_t pos;
     nv2a_pgraph_ctx C;
     register int ret = 1;
     ENTER_NV2A;
@@ -1106,8 +1123,8 @@ nv2a_09f_blit(register void *p) {
     register uint8_t *srcr, *destr;
     uint8_t *src, *dest;
     uint32_t srcp, destp, inx, iny, outx, outy, w, h;
-    const nv2a_color_format *cf;
-    nv2a_dma dma;
+    const nv2a_color_format_t *cf;
+    nv2a_dma_t dma;
     ENTER_NV2A;
 
     switch (NV2A_REG32(p, NV_09F, SET_OPERATION)) {
@@ -1157,15 +1174,58 @@ nv2a_09f_blit(register void *p) {
     LEAVE_NV2A;
 }
 
+static nv2a_vertex_attrib_t *
+nv2a_vertex_attrib_inline_buffer_start(uint32_t index) {
+    register nv2a_vertex_attrib_t *a;
+    register uint32_t i;
+    ENTER_NV2A;
+
+    if (index >= NV2A_MAX_VERTEX_ATTRIBS) INT3;
+    a = &nv2a_ctx->va[index];
+
+    if (!a->inline_buffer && nv2a_ctx->inline_buffer_len) {
+        a->inline_buffer = calloc(NV2A_MAX_BATCH_LENGTH, sizeof(a->inline_value));
+        /* upload the previous inline value */
+        for (i = 0; i < nv2a_ctx->inline_buffer_len; ++i) {
+            memcpy(&a->inline_buffer[ARRAY_SIZE(a->inline_value) * i],
+                a->inline_value,
+                sizeof(a->inline_value));
+        }
+    }
+
+    LEAVE_NV2A;
+    return a;
+}
+
 static void
-nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_command *c) {
-    register size_t pos;
+nv2a_vertex_attrib_inline_buffer_finish(void) {
+    register nv2a_vertex_attrib_t *a;
+    register uint32_t i;
+    ENTER_NV2A;
+
+    for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
+        if ((a = &nv2a_ctx->va[i])->inline_buffer) {
+            memcpy(&a->inline_buffer[ARRAY_SIZE(a->inline_value) * nv2a_ctx->inline_buffer_len],
+                a->inline_value,
+                sizeof(a->inline_value));
+        }
+    }
+
+    if (++nv2a_ctx->inline_buffer_len >= NV2A_MAX_BATCH_LENGTH) INT3;
+
+    LEAVE_NV2A;
+}
+
+static void
+nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_command_t *c) {
+    register nv2a_vertex_attrib_t *a;
+    register uint32_t pos;
     register uint32_t *get;
     register uint32_t v;
     register uint32_t t;
     nv2a_pgraph_ctx S;
     nv2a_pgraph_ctx C;
-    nv2a_dma dma;
+    nv2a_dma_t dma;
     ENTER_NV2A;
 
     NV2A_IRQ_WAITN(PGRAPH, FIFO, ACCESS_ENABLED);
@@ -1302,7 +1362,7 @@ INT3;//XXX make sure blit works
         case NV_097_SET_TEXTURE_IMAGE_RECT_##x: \
         case NV_097_SET_TEXTURE_PALETTE_##x: \
         case NV_097_SET_TEXTURE_BORDER_COLOR_##x: \
-            if (t) nv2a_ctx->texture[x].dirty = 1; \
+            if (t) nv2a_ctx->t[x].dirty = 1; \
             break
         CASE(0);
         CASE(1);
@@ -1312,21 +1372,6 @@ INT3;//XXX make sure blit works
         }
         NV2A_REG32(p + pos, NV_097, NV20_KELVIN_PRIMITIVE) = c->param;
         switch (c->method) {
-#define CASE(x,y) \
-        case NV_097_##x: \
-            VARDUMP_NV2A(VAR_IN, c->param); \
-            NV2A_REG32(p, NV_PGRAPH, y) = c->param; \
-            break
-#define CASEV(x,y,z) \
-        case NV_097_##x: \
-            VARDUMP_NV2A(VAR_IN, c->param); \
-            NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PGRAPH, y, z, c->param); \
-            break
-#define CASEN(x) \
-        case NV_097_##x: \
-            INT3; \
-            break
-#if 1
         case NV_097_NO_OPERATION:
             VARDUMP_NV2A(VAR_IN, c->param);
             if (c->param) {
@@ -1343,28 +1388,6 @@ INT3;//XXX make sure blit works
                 NV2A_IRQ_WAIT(PGRAPH, INTR, ERROR);
             }
             break;
-#endif
-        CASEV(SET_FLIP_READ, SURFACE, READ_3D);
-        CASEV(SET_FLIP_WRITE, SURFACE, WRITE_3D);
-        CASEV(SET_FLIP_MODULO, SURFACE, MODULO_3D);
-        case NV_097_FLIP_INCREMENT_WRITE:
-            VARDUMP_NV2A(VAR_IN, c->param);
-            v = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, WRITE_3D) + 1;
-            t = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, MODULO_3D);
-            if (t) v %= t;
-            NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PGRAPH, SURFACE, WRITE_3D, v);
-            if (glFrameTerminatorGREMEDY) glFrameTerminatorGREMEDY(); //TODO check GL_GREMEDY_frame_terminator
-            break;
-#if 0
-        case NV_097_FLIP_STALL:
-            VARDUMP_NV2A(VAR_IN, c->param);
-            FLIP_STALL_LOCK;
-            while (NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, READ_3D) ==
-                NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, WRITE_3D)) FLIP_STALL_WAIT;
-            FLIP_STALL_UNLOCK;
-            break;
-#endif
-#if 1
         case NV_097_BACK_END_WRITE_SEMAPHORE_RELEASE:
             VARDUMP_NV2A(VAR_IN, c->param);
             pos  = NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_SEMAPHORE);
@@ -1375,15 +1398,353 @@ INT3;//XXX make sure blit works
             pos += NV2A_DMA_ADDRESS(&dma);
             xboxkrnl_write(pos, &c->param, 4);
             break;
+        case NV_097_FLIP_INCREMENT_WRITE:
+            VARDUMP_NV2A(VAR_IN, c->param);
+            v = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, WRITE_3D) + 1;
+            t = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, MODULO_3D);
+            if (t) v %= t;
+            NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PGRAPH, SURFACE, WRITE_3D, v);
+            if (glFrameTerminatorGREMEDY) glFrameTerminatorGREMEDY(); //TODO check GL_GREMEDY_frame_terminator
+            break;
+#if 0 //FIXME signal not implemented
+        case NV_097_FLIP_STALL:
+            VARDUMP_NV2A(VAR_IN, c->param);
+            FLIP_STALL_LOCK;
+            while (NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, READ_3D) ==
+                NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, SURFACE, WRITE_3D)) FLIP_STALL_WAIT;
+            FLIP_STALL_UNLOCK;
+            break;
 #endif
-#if 1
-//#elif 0
-        /* parameters are mirrored to PGRAPH */
+        case NV_097_ARRAY_ELEMENT16:
+            VARDUMP_NV2A(VAR_IN, c->param);
+            if (nv2a_ctx->inline_element_len + 2 >= ARRAY_SIZE(nv2a_ctx->inline_element)) INT3;
+            v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_ARRAY_ELEMENT16_VERTEX0);
+            nv2a_ctx->inline_element[nv2a_ctx->inline_element_len++] = v;
+            v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_ARRAY_ELEMENT16_VERTEX1);
+            nv2a_ctx->inline_element[nv2a_ctx->inline_element_len++] = v;
+            break;
+        case NV_097_ARRAY_ELEMENT32:
+            VARDUMP_NV2A(VAR_IN, c->param);
+            if (nv2a_ctx->inline_element_len + 1 >= ARRAY_SIZE(nv2a_ctx->inline_element)) INT3;
+            nv2a_ctx->inline_element[nv2a_ctx->inline_element_len++] = c->param;
+            break;
+        case NV_097_DRAW_ARRAYS:
+            VARDUMP_NV2A(VAR_IN, c->param);
+            if (nv2a_ctx->draw_arrays_len + 1 >= ARRAY_SIZE(nv2a_ctx->gl_draw_arrays_start)) INT3;
+            v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_DRAW_ARRAYS_START_INDEX);
+            t = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_DRAW_ARRAYS_COUNT) + 1;
+            nv2a_ctx->draw_arrays_max = MAX(nv2a_ctx->draw_arrays_max, v + t);
+            /* attempt to connect primitives */
+            if (nv2a_ctx->draw_arrays_len) {
+                register uint32_t last_start = nv2a_ctx->gl_draw_arrays_start[nv2a_ctx->draw_arrays_len - 1];
+                register GLsizei *last_count = &nv2a_ctx->gl_draw_arrays_count[nv2a_ctx->draw_arrays_len - 1];
+                if (v == last_start + *last_count) {
+                    *last_count += t;
+                    break;
+                }
+            }
+            nv2a_ctx->gl_draw_arrays_start[nv2a_ctx->draw_arrays_len] = v;
+            nv2a_ctx->gl_draw_arrays_count[nv2a_ctx->draw_arrays_len] = t;
+            ++nv2a_ctx->draw_arrays_len;
+            break;
+        case NV_097_INLINE_ARRAY:
+            VARDUMP_NV2A(VAR_IN, c->param);
+            if (nv2a_ctx->inline_array_len + 1 >= ARRAY_SIZE(nv2a_ctx->inline_array)) INT3;
+            nv2a_ctx->inline_array[nv2a_ctx->inline_array_len++] = c->param;
+            break;
+        /* parameters are uploaded to the vertex attributes' inline buffer below */
+        /* x = vertex method name, y = vertex attribute index, z = inline value index */
+#define CASES(y,z) \
+            VARDUMP_NV2A(VAR_IN, c->param); \
+            a = nv2a_vertex_attrib_inline_buffer_start(y); \
+            CASEV(z)
+#define CASE(x,y,z) \
+        case NV_097_##x##_##z: \
+            CASES(y,z) \
+            break
+#define CASEM(x,y,z) \
+        case NV_097_##x##_M_##y##_##z: \
+            CASES(y,z) \
+            break
+#define CASE2(x,y,z) \
+        case NV_097_##x##_##z: \
+            CASES(y,z) \
+            CASE2V \
+            break
+#define CASE2M(x,y,z) \
+        case NV_097_##x##_M_##y##_##z: \
+            CASES(y,z) \
+            CASE2V \
+            break
+#define CASEF(x,y,z) \
+        case NV_097_##x##_##z: \
+            CASES(y,z) \
+            nv2a_vertex_attrib_inline_buffer_finish(); \
+            break
+#define CASEFM(x,y,z) \
+        case NV_097_##x##_M_##y##_##z: \
+            CASES(y,z) \
+            nv2a_vertex_attrib_inline_buffer_finish(); \
+            break
+#define CASE2F(x,y,z) \
+        case NV_097_##x##_##z: \
+            CASES(y,z) \
+            CASE2V \
+            nv2a_vertex_attrib_inline_buffer_finish(); \
+            break
+#define CASE2FM(x,y,z) \
+        case NV_097_##x##_M_##y##_##z: \
+            CASES(y,z) \
+            CASE2V \
+            nv2a_vertex_attrib_inline_buffer_finish(); \
+            break
+#define CASEV(z) \
+            a->inline_value[z] = *(float *)&c->param; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[z]); /* TODO: display float */
+#define CASE2V \
+            a->inline_value[3] = 1.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+        CASE2(SET_VERTEX3F,  0, 0);
+        CASE2(SET_VERTEX3F,  0, 1);
+        CASE2F(SET_VERTEX3F, 0, 2);
+#undef CASE2V
+        CASE(SET_VERTEX4F,  0, 0);
+        CASE(SET_VERTEX4F,  0, 1);
+        CASE(SET_VERTEX4F,  0, 2);
+        CASEF(SET_VERTEX4F, 0, 3);
+#define CASE2V \
+            /* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */ \
+            a->inline_value[2] = 0.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[2]); /* TODO: display float */ \
+            a->inline_value[3] = 1.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+        CASE2M(SET_VERTEX_DATA2F,  0, 0);
+        CASE2FM(SET_VERTEX_DATA2F, 0, 1);
+        CASE2M(SET_VERTEX_DATA2F,  1, 0);
+        CASE2M(SET_VERTEX_DATA2F,  1, 1);
+        CASE2M(SET_VERTEX_DATA2F,  2, 0);
+        CASE2M(SET_VERTEX_DATA2F,  2, 1);
+        CASE2M(SET_VERTEX_DATA2F,  3, 0);
+        CASE2M(SET_VERTEX_DATA2F,  3, 1);
+        CASE2M(SET_VERTEX_DATA2F,  4, 0);
+        CASE2M(SET_VERTEX_DATA2F,  4, 1);
+        CASE2M(SET_VERTEX_DATA2F,  5, 0);
+        CASE2M(SET_VERTEX_DATA2F,  5, 1);
+        CASE2M(SET_VERTEX_DATA2F,  6, 0);
+        CASE2M(SET_VERTEX_DATA2F,  6, 1);
+        CASE2M(SET_VERTEX_DATA2F,  7, 0);
+        CASE2M(SET_VERTEX_DATA2F,  7, 1);
+        CASE2M(SET_VERTEX_DATA2F,  8, 0);
+        CASE2M(SET_VERTEX_DATA2F,  8, 1);
+        CASE2M(SET_VERTEX_DATA2F,  9, 0);
+        CASE2M(SET_VERTEX_DATA2F,  9, 1);
+        CASE2M(SET_VERTEX_DATA2F, 10, 0);
+        CASE2M(SET_VERTEX_DATA2F, 10, 1);
+        CASE2M(SET_VERTEX_DATA2F, 11, 0);
+        CASE2M(SET_VERTEX_DATA2F, 11, 1);
+        CASE2M(SET_VERTEX_DATA2F, 12, 0);
+        CASE2M(SET_VERTEX_DATA2F, 12, 1);
+        CASE2M(SET_VERTEX_DATA2F, 13, 0);
+        CASE2M(SET_VERTEX_DATA2F, 13, 1);
+        CASE2M(SET_VERTEX_DATA2F, 14, 0);
+        CASE2M(SET_VERTEX_DATA2F, 14, 1);
+        CASE2M(SET_VERTEX_DATA2F, 15, 0);
+        CASE2M(SET_VERTEX_DATA2F, 15, 1);
+#undef CASE2V
+        CASEM(SET_VERTEX_DATA4F,  0, 0);
+        CASEM(SET_VERTEX_DATA4F,  0, 1);
+        CASEM(SET_VERTEX_DATA4F,  0, 2);
+        CASEFM(SET_VERTEX_DATA4F, 0, 3);
+        CASEM(SET_VERTEX_DATA4F,  1, 0);
+        CASEM(SET_VERTEX_DATA4F,  1, 1);
+        CASEM(SET_VERTEX_DATA4F,  1, 2);
+        CASEM(SET_VERTEX_DATA4F,  1, 3);
+        CASEM(SET_VERTEX_DATA4F,  2, 0);
+        CASEM(SET_VERTEX_DATA4F,  2, 1);
+        CASEM(SET_VERTEX_DATA4F,  2, 2);
+        CASEM(SET_VERTEX_DATA4F,  2, 3);
+        CASEM(SET_VERTEX_DATA4F,  3, 0);
+        CASEM(SET_VERTEX_DATA4F,  3, 1);
+        CASEM(SET_VERTEX_DATA4F,  3, 2);
+        CASEM(SET_VERTEX_DATA4F,  3, 3);
+        CASEM(SET_VERTEX_DATA4F,  4, 0);
+        CASEM(SET_VERTEX_DATA4F,  4, 1);
+        CASEM(SET_VERTEX_DATA4F,  4, 2);
+        CASEM(SET_VERTEX_DATA4F,  4, 3);
+        CASEM(SET_VERTEX_DATA4F,  5, 0);
+        CASEM(SET_VERTEX_DATA4F,  5, 1);
+        CASEM(SET_VERTEX_DATA4F,  5, 2);
+        CASEM(SET_VERTEX_DATA4F,  5, 3);
+        CASEM(SET_VERTEX_DATA4F,  6, 0);
+        CASEM(SET_VERTEX_DATA4F,  6, 1);
+        CASEM(SET_VERTEX_DATA4F,  6, 2);
+        CASEM(SET_VERTEX_DATA4F,  6, 3);
+        CASEM(SET_VERTEX_DATA4F,  7, 0);
+        CASEM(SET_VERTEX_DATA4F,  7, 1);
+        CASEM(SET_VERTEX_DATA4F,  7, 2);
+        CASEM(SET_VERTEX_DATA4F,  7, 3);
+        CASEM(SET_VERTEX_DATA4F,  8, 0);
+        CASEM(SET_VERTEX_DATA4F,  8, 1);
+        CASEM(SET_VERTEX_DATA4F,  8, 2);
+        CASEM(SET_VERTEX_DATA4F,  8, 3);
+        CASEM(SET_VERTEX_DATA4F,  9, 0);
+        CASEM(SET_VERTEX_DATA4F,  9, 1);
+        CASEM(SET_VERTEX_DATA4F,  9, 2);
+        CASEM(SET_VERTEX_DATA4F,  9, 3);
+        CASEM(SET_VERTEX_DATA4F, 10, 0);
+        CASEM(SET_VERTEX_DATA4F, 10, 1);
+        CASEM(SET_VERTEX_DATA4F, 10, 2);
+        CASEM(SET_VERTEX_DATA4F, 10, 3);
+        CASEM(SET_VERTEX_DATA4F, 11, 0);
+        CASEM(SET_VERTEX_DATA4F, 11, 1);
+        CASEM(SET_VERTEX_DATA4F, 11, 2);
+        CASEM(SET_VERTEX_DATA4F, 11, 3);
+        CASEM(SET_VERTEX_DATA4F, 12, 0);
+        CASEM(SET_VERTEX_DATA4F, 12, 1);
+        CASEM(SET_VERTEX_DATA4F, 12, 2);
+        CASEM(SET_VERTEX_DATA4F, 12, 3);
+        CASEM(SET_VERTEX_DATA4F, 13, 0);
+        CASEM(SET_VERTEX_DATA4F, 13, 1);
+        CASEM(SET_VERTEX_DATA4F, 13, 2);
+        CASEM(SET_VERTEX_DATA4F, 13, 3);
+        CASEM(SET_VERTEX_DATA4F, 14, 0);
+        CASEM(SET_VERTEX_DATA4F, 14, 1);
+        CASEM(SET_VERTEX_DATA4F, 14, 2);
+        CASEM(SET_VERTEX_DATA4F, 14, 3);
+        CASEM(SET_VERTEX_DATA4F, 15, 0);
+        CASEM(SET_VERTEX_DATA4F, 15, 1);
+        CASEM(SET_VERTEX_DATA4F, 15, 2);
+        CASEM(SET_VERTEX_DATA4F, 15, 3);
+#undef CASEV
+        /* z = used as y here */
+#define CASEV(z) \
+            INT3; /* FIXME: Untested! */ \
+            /* FIXME: Is mapping to [-1,+1] correct? */ \
+            a->inline_value[0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[0]); /* TODO: display float */ \
+            a->inline_value[1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[1]); /* TODO: display float */
+#define CASE2V \
+            /* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */ \
+            a->inline_value[2] = 0.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[2]); /* TODO: display float */ \
+            a->inline_value[3] = 1.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+        CASE2F(SET_VERTEX_DATA2S, 0,  0);
+        CASE2(SET_VERTEX_DATA2S,  1,  1);
+        CASE2(SET_VERTEX_DATA2S,  2,  2);
+        CASE2(SET_VERTEX_DATA2S,  3,  3);
+        CASE2(SET_VERTEX_DATA2S,  4,  4);
+        CASE2(SET_VERTEX_DATA2S,  5,  5);
+        CASE2(SET_VERTEX_DATA2S,  6,  6);
+        CASE2(SET_VERTEX_DATA2S,  7,  7);
+        CASE2(SET_VERTEX_DATA2S,  8,  8);
+        CASE2(SET_VERTEX_DATA2S,  9,  9);
+        CASE2(SET_VERTEX_DATA2S, 10, 10);
+        CASE2(SET_VERTEX_DATA2S, 11, 11);
+        CASE2(SET_VERTEX_DATA2S, 12, 12);
+        CASE2(SET_VERTEX_DATA2S, 13, 13);
+        CASE2(SET_VERTEX_DATA2S, 14, 14);
+        CASE2(SET_VERTEX_DATA2S, 15, 15);
+#undef CASE2V
+#undef CASEV
+        /* z = used as y here */
+#define CASEV(z) \
+            a->inline_value[0] = ((c->param >>  0) & 0xff) / 255.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[0]); /* TODO: display float */ \
+            a->inline_value[1] = ((c->param >>  8) & 0xff) / 255.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[1]); /* TODO: display float */ \
+            a->inline_value[2] = ((c->param >> 16) & 0xff) / 255.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[2]); /* TODO: display float */ \
+            a->inline_value[3] = ((c->param >> 24) & 0xff) / 255.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+        CASEF(SET_VERTEX_DATA4UB, 0,  0);
+        CASE(SET_VERTEX_DATA4UB,  1,  1);
+        CASE(SET_VERTEX_DATA4UB,  2,  2);
+        CASE(SET_VERTEX_DATA4UB,  3,  3);
+        CASE(SET_VERTEX_DATA4UB,  4,  4);
+        CASE(SET_VERTEX_DATA4UB,  5,  5);
+        CASE(SET_VERTEX_DATA4UB,  6,  6);
+        CASE(SET_VERTEX_DATA4UB,  7,  7);
+        CASE(SET_VERTEX_DATA4UB,  8,  8);
+        CASE(SET_VERTEX_DATA4UB,  9,  9);
+        CASE(SET_VERTEX_DATA4UB, 10, 10);
+        CASE(SET_VERTEX_DATA4UB, 11, 11);
+        CASE(SET_VERTEX_DATA4UB, 12, 12);
+        CASE(SET_VERTEX_DATA4UB, 13, 13);
+        CASE(SET_VERTEX_DATA4UB, 14, 14);
+        CASE(SET_VERTEX_DATA4UB, 15, 15);
+#undef CASEV
+#define CASEV(z) \
+            INT3; /* FIXME: Untested! */ \
+            /* FIXME: Is mapping to [-1,+1] correct? */ \
+            a->inline_value[z * 2 + 0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[z * 2 + 0]); /* TODO: display float */ \
+            a->inline_value[z * 2 + 1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
+            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[z * 2 + 1]); /* TODO: display float */
+        CASEM(SET_VERTEX_DATA4S,  0, 0);
+        CASEFM(SET_VERTEX_DATA4S, 0, 1);
+        CASEM(SET_VERTEX_DATA4S,  1, 0);
+        CASEM(SET_VERTEX_DATA4S,  1, 1);
+        CASEM(SET_VERTEX_DATA4S,  2, 0);
+        CASEM(SET_VERTEX_DATA4S,  2, 1);
+        CASEM(SET_VERTEX_DATA4S,  3, 0);
+        CASEM(SET_VERTEX_DATA4S,  3, 1);
+        CASEM(SET_VERTEX_DATA4S,  4, 0);
+        CASEM(SET_VERTEX_DATA4S,  4, 1);
+        CASEM(SET_VERTEX_DATA4S,  5, 0);
+        CASEM(SET_VERTEX_DATA4S,  5, 1);
+        CASEM(SET_VERTEX_DATA4S,  6, 0);
+        CASEM(SET_VERTEX_DATA4S,  6, 1);
+        CASEM(SET_VERTEX_DATA4S,  7, 0);
+        CASEM(SET_VERTEX_DATA4S,  7, 1);
+        CASEM(SET_VERTEX_DATA4S,  8, 0);
+        CASEM(SET_VERTEX_DATA4S,  8, 1);
+        CASEM(SET_VERTEX_DATA4S,  9, 0);
+        CASEM(SET_VERTEX_DATA4S,  9, 1);
+        CASEM(SET_VERTEX_DATA4S, 10, 0);
+        CASEM(SET_VERTEX_DATA4S, 10, 1);
+        CASEM(SET_VERTEX_DATA4S, 11, 0);
+        CASEM(SET_VERTEX_DATA4S, 11, 1);
+        CASEM(SET_VERTEX_DATA4S, 12, 0);
+        CASEM(SET_VERTEX_DATA4S, 12, 1);
+        CASEM(SET_VERTEX_DATA4S, 13, 0);
+        CASEM(SET_VERTEX_DATA4S, 13, 1);
+        CASEM(SET_VERTEX_DATA4S, 14, 0);
+        CASEM(SET_VERTEX_DATA4S, 14, 1);
+        CASEM(SET_VERTEX_DATA4S, 15, 0);
+        CASEM(SET_VERTEX_DATA4S, 15, 1);
+#undef CASEV
+#undef CASE2FM
+#undef CASE2F
+#undef CASEFM
+#undef CASEF
+#undef CASE2M
+#undef CASE2
+#undef CASEM
+#undef CASE
+#undef CASES
+        /* parameters are uploaded to PGRAPH below */
+        /* x = PGRAPH method name, y = PGRAPH register name, z = PGRAPH register mask name */
+#define CASE(x,y) \
+        case NV_097_##x: \
+            VARDUMP_NV2A(VAR_IN, c->param); \
+            NV2A_REG32(p, NV_PGRAPH, y) = c->param; \
+            break
+#define CASEV(x,y,z) \
+        case NV_097_##x: \
+            VARDUMP_NV2A(VAR_IN, c->param); \
+            NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PGRAPH, y, z, c->param); \
+            break
+#define CASEN(x) \
+        case NV_097_##x: \
+            INT3; \
+            break
 #define CASE2(x,y,z) \
         case NV_097_##x: \
             VARDUMP_NV2A(VAR_IN, c->param); \
             switch (c->param) { \
-            CASE2M(x,y,z); \
+            CASE2M(x,y,z) \
             default: \
                 INT3; \
                 break; \
@@ -1393,7 +1754,7 @@ INT3;//XXX make sure blit works
         case NV_097_##x##_##i: \
             VARDUMP_NV2A(VAR_IN, c->param); \
             switch (c->param) { \
-            CASE2M(x,y,z); \
+            CASE2M(x,y,z) \
             default: \
                 INT3; \
                 break; \
@@ -1406,12 +1767,12 @@ INT3;//XXX make sure blit works
 #define CASE3(x,y) \
         case NV_097_##x: \
             VARDUMP_NV2A(VAR_IN, c->param); \
-            CASE3M(x,y); \
+            CASE3M(x,y) \
             break
 #define CASE3I(x,i,y) \
         case NV_097_##x##_##i: \
             VARDUMP_NV2A(VAR_IN, c->param); \
-            CASE3M(x,y); \
+            CASE3M(x,y) \
             break
 #define CASE3V(x,y,z) \
             v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_##x##_##z); \
@@ -1419,6 +1780,9 @@ INT3;//XXX make sure blit works
 #define CASE3V2(x,y,m,z) \
             v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_##x##_##m); \
             NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PGRAPH, y, z, v)
+        CASEV(SET_FLIP_READ, SURFACE, READ_3D);
+        CASEV(SET_FLIP_WRITE, SURFACE, WRITE_3D);
+        CASEV(SET_FLIP_MODULO, SURFACE, MODULO_3D);
         CASE(SET_ANTI_ALIASING_CONTROL, ANTIALIASING);
         CASEV(SET_BLEND_ENABLE, BLEND, EN);
 #define CASE2M(x,y,z) \
@@ -1436,7 +1800,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,CONSTANT_COLOR); \
             CASE2V(x,y,z,ONE_MINUS_CONSTANT_COLOR); \
             CASE2V(x,y,z,CONSTANT_ALPHA); \
-            CASE2V(x,y,z,ONE_MINUS_CONSTANT_ALPHA)
+            CASE2V(x,y,z,ONE_MINUS_CONSTANT_ALPHA);
         CASE2(SET_BLEND_FUNC_SFACTOR, BLEND, SFACTOR);
         CASE2(SET_BLEND_FUNC_DFACTOR, BLEND, DFACTOR);
 #undef CASE2M
@@ -1457,7 +1821,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,COPY_INVERTED); \
             CASE2V(x,y,z,OR_INVERTED); \
             CASE2V(x,y,z,NAND); \
-            CASE2V(x,y,z,SET)
+            CASE2V(x,y,z,SET);
         CASE2(SET_LOGIC_OP, BLEND, LOGICOP);
 #undef CASE2M
 #define CASE2M(x,y,z) \
@@ -1467,7 +1831,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,MIN); \
             CASE2V(x,y,z,MAX); \
             CASE2V(x,y,z,FUNC_REVERSE_SUBTRACT_SIGNED); \
-            CASE2V(x,y,z,FUNC_ADD_SIGNED)
+            CASE2V(x,y,z,FUNC_ADD_SIGNED);
         CASE2(SET_BLEND_EQUATION, BLEND, EQN);
 #undef CASE2M
         CASE(SET_BLEND_COLOR, BLENDCOLOR);
@@ -1567,7 +1931,7 @@ INT3;//XXX make sure blit works
             CASE3V2(x,y,COLOR_SPACE_CONVERT,CSCONVERT); \
             CASE3V2(x,CONTROL_3,PREMULTIPLIEDALPHA,PREMULTALPHA); \
             CASE3V(x,CONTROL_3,TEXTUREPERSPECTIVE); \
-            CASE3V(x,SETUPRASTER,Z_FORMAT)
+            CASE3V(x,SETUPRASTER,Z_FORMAT);
         CASE3(SET_CONTROL0, CONTROL_0);
 #undef CASE3M
         CASEV(SET_ALPHA_TEST_ENABLE, CONTROL_0, ALPHATESTENABLE);
@@ -1581,7 +1945,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,GREATER); \
             CASE2V(x,y,z,NOTEQUAL); \
             CASE2V(x,y,z,GEQUAL); \
-            CASE2V(x,y,z,ALWAYS)
+            CASE2V(x,y,z,ALWAYS);
         CASE2(SET_ALPHA_FUNC, CONTROL_0, ALPHAFUNC);
         CASEV(SET_ALPHA_REF, CONTROL_0, ALPHAREF);
         CASE2(SET_DEPTH_FUNC, CONTROL_0, ZFUNC);
@@ -1589,7 +1953,7 @@ INT3;//XXX make sure blit works
             CASE3V(x,y,ALPHA_WRITE_ENABLE); \
             CASE3V(x,y,RED_WRITE_ENABLE); \
             CASE3V(x,y,GREEN_WRITE_ENABLE); \
-            CASE3V(x,y,BLUE_WRITE_ENABLE)
+            CASE3V(x,y,BLUE_WRITE_ENABLE);
         CASE3(SET_COLOR_MASK, CONTROL_0);
 #undef CASE3M
         CASEV(SET_DEPTH_MASK, CONTROL_0, ZWRITEENABLE);
@@ -1607,7 +1971,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,DECRSAT); \
             CASE2V(x,y,z,INVERT); \
             CASE2V(x,y,z,INCR); \
-            CASE2V(x,y,z,DECR)
+            CASE2V(x,y,z,DECR);
         CASE2(SET_STENCIL_OP_FAIL, CONTROL_2, STENCIL_OP_FAIL);
         CASE2(SET_STENCIL_OP_ZFAIL, CONTROL_2, STENCIL_OP_ZFAIL);
         CASE2(SET_STENCIL_OP_ZPASS, CONTROL_2, STENCIL_OP_ZPASS);
@@ -1618,7 +1982,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,EXP2); \
             CASE2V(x,y,z,EXP_ABS); \
             CASE2V(x,y,z,EXP2_ABS); \
-            CASE2V(x,y,z,LINEAR_ABS)
+            CASE2V(x,y,z,LINEAR_ABS);
         CASE2(SET_FOG_MODE, CONTROL_3, FOG_MODE);
 #undef CASE2M
 #define CASE2M(x,y,z) \
@@ -1626,7 +1990,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,RADIAL); \
             CASE2V(x,y,z,PLANAR); \
             CASE2V(x,y,z,ABS_PLANAR); \
-            CASE2V(x,y,z,FOG_X)
+            CASE2V(x,y,z,FOG_X);
         CASE2(SET_FOG_GEN_MODE, CSV0_D, FOGGENMODE);
 #undef CASE2M
         case NV_097_SET_FOG_ENABLE:
@@ -1641,7 +2005,7 @@ INT3;//XXX make sure blit works
             break;
 #define CASE2M(x,y,z) \
             CASE2V(x,y,z,FLAT); \
-            CASE2V(x,y,z,SMOOTH)
+            CASE2V(x,y,z,SMOOTH);
         CASE2(SET_SHADE_MODE, CONTROL_3, SHADEMODE);
 #undef CASE2M
         case NV_097_SET_SPECULAR_ENABLE:
@@ -1656,7 +2020,7 @@ INT3;//XXX make sure blit works
         CASEV(SET_TEXGEN_VIEW_MODEL, CSV0_D, TEXGEN_REF);
 #define CASE3M(x,y) \
             CASE3V(x,y,MODE); \
-            CASE3V(x,y,RANGE_MODE)
+            CASE3V(x,y,RANGE_MODE);
         CASE3(SET_TRANSFORM_EXECUTION_MODE, CSV0_D);
 #undef CASE3M
         CASEV(SET_TRANSFORM_PROGRAM_CXT_WRITE_EN, CSV0_D, CHEOPS_STALL);
@@ -1664,7 +2028,7 @@ INT3;//XXX make sure blit works
             CASE3V(x,y,RED); \
             CASE3V(x,y,GREEN); \
             CASE3V(x,y,BLUE); \
-            CASE3V(x,y,ALPHA)
+            CASE3V(x,y,ALPHA);
         CASE3(SET_FOG_COLOR, FOGCOLOR);
 #undef CASE3M
         CASE(SET_FOG_PARAMS_0, FOGPARAM0);
@@ -1683,19 +2047,19 @@ INT3;//XXX make sure blit works
 #define CASE2M(x,y,z) \
             CASE2V(x,y,z,POINT); \
             CASE2V(x,y,z,LINE); \
-            CASE2V(x,y,z,FILL)
+            CASE2V(x,y,z,FILL);
         CASE2(SET_FRONT_POLYGON_MODE, SETUPRASTER, FRONTFACEMODE);
         CASE2(SET_BACK_POLYGON_MODE, SETUPRASTER, BACKFACEMODE);
 #undef CASE2M
 #define CASE2M(x,y,z) \
             CASE2V(x,y,z,FRONT); \
             CASE2V(x,y,z,BACK); \
-            CASE2V(x,y,z,FRONT_AND_BACK)
+            CASE2V(x,y,z,FRONT_AND_BACK);
         CASE2(SET_CULL_FACE, SETUPRASTER, CULLCTRL);
 #undef CASE2M
 #define CASE2M(x,y,z) \
             CASE2V(x,y,z,CW); \
-            CASE2V(x,y,z,CCW)
+            CASE2V(x,y,z,CCW);
         CASE2(SET_FRONT_FACE, SETUPRASTER, FRONTFACE);
 #undef CASE2M
 #define CASE2M(x,y,z) \
@@ -1704,26 +2068,26 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,32); \
             CASE2V(x,y,z,64); \
             CASE2V(x,y,z,128); \
-            CASE2V(x,y,z,OFF)
+            CASE2V(x,y,z,OFF);
         CASE2(SET_SWATH_WIDTH, SETUPRASTER, SWATHWIDTH);
 #undef CASE2M
 #define CASE3M(x,y) \
             CASE3V(x,y,CULL_NEAR_FAR_EN); \
             CASE3V(x,ZCOMPRESSOCCLUDE,ZCLAMP_EN); \
-            CASE3V2(x,y,CULL_IGNORE_W,IGNORE_WSIGN)
+            CASE3V2(x,y,CULL_IGNORE_W,IGNORE_WSIGN);
         CASE3(SET_ZMIN_MAX_CONTROL, SETUPRASTER);
 #undef CASE3M
         CASE(SET_SHADER_CLIP_PLANE_MODE, SHADERCLIPMODE);
 #define CASE3M(x,y) \
             CASE3V2(x,y,STAGE1,MAP1); \
             CASE3V2(x,y,STAGE2,MAP2); \
-            CASE3V2(x,y,STAGE3,MAP3)
+            CASE3V2(x,y,STAGE3,MAP3);
         CASE3(SET_DOT_RGBMAPPING, SHADERCTL);
 #undef CASE3M
 #define CASE3M(x,y) \
             CASE3V2(x,y,STAGE1,OUT1); \
             CASE3V2(x,y,STAGE2,OUT2); \
-            CASE3V2(x,y,STAGE3,OUT3)
+            CASE3V2(x,y,STAGE3,OUT3);
         CASE3(SET_SHADER_OTHER_STAGE_INPUT, SHADERCTL);
 #undef CASE3M
         CASE(SET_SHADER_STAGE_PROGRAM, SHADERPROG);
@@ -1758,7 +2122,7 @@ INT3;//XXX make sure blit works
             CASE3V(x,y,MIPMAP_LEVELS); \
             CASE3V(x,y,BASE_SIZE_U); \
             CASE3V(x,y,BASE_SIZE_V); \
-            CASE3V(x,y,BASE_SIZE_P)
+            CASE3V(x,y,BASE_SIZE_P);
         CASE3I(SET_TEXTURE_FORMAT, 0, TEXFMT0);
         CASE3I(SET_TEXTURE_FORMAT, 1, TEXFMT1);
         CASE3I(SET_TEXTURE_FORMAT, 2, TEXFMT2);
@@ -1795,7 +2159,7 @@ INT3;//XXX make sure blit works
         CASEV(SET_COMPRESS_ZBUFFER_EN, ZCOMPRESSOCCLUDE, COMPRESS_ZEN);
 #define CASE3M(x,y) \
             CASE3V(x,y,OCCLUDE_ZEN); \
-            CASE3V(x,y,OCCLUDE_STENCIL_EN)
+            CASE3V(x,y,OCCLUDE_STENCIL_EN);
         CASE3(SET_OCCLUDE_ZSTENCIL_EN, ZCOMPRESSOCCLUDE);
 #undef CASE3M
         CASE(SET_ZSTENCIL_CLEAR_VALUE, ZSTENCILCLEARVALUE);
@@ -1848,7 +2212,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,REFLECTION_MAP); \
             CASE2V(x,y,z,EYE_LINEAR); \
             CASE2V(x,y,z,OBJECT_LINEAR); \
-            CASE2V(x,y,z,SPHERE_MAP)
+            CASE2V(x,y,z,SPHERE_MAP);
         CASE2I(SET_TEXGEN_S, 0, CSV1_A, T0_S);
         CASE2I(SET_TEXGEN_S, 1, CSV1_A, T1_S);
         CASE2I(SET_TEXGEN_S, 2, CSV1_B, T2_S);
@@ -1863,7 +2227,7 @@ INT3;//XXX make sure blit works
             CASE2V(x,y,z,NORMAL_MAP); \
             CASE2V(x,y,z,REFLECTION_MAP); \
             CASE2V(x,y,z,EYE_LINEAR); \
-            CASE2V(x,y,z,OBJECT_LINEAR)
+            CASE2V(x,y,z,OBJECT_LINEAR);
         CASE2I(SET_TEXGEN_R, 0, CSV1_A, T0_R);
         CASE2I(SET_TEXGEN_R, 1, CSV1_A, T1_R);
         CASE2I(SET_TEXGEN_R, 2, CSV1_B, T2_R);
@@ -1872,7 +2236,7 @@ INT3;//XXX make sure blit works
 #define CASE2M(x,y,z) \
             CASE2V(x,y,z,DISABLE); \
             CASE2V(x,y,z,EYE_LINEAR); \
-            CASE2V(x,y,z,OBJECT_LINEAR)
+            CASE2V(x,y,z,OBJECT_LINEAR);
         CASE2I(SET_TEXGEN_Q, 0, CSV1_A, T0_Q);
         CASE2I(SET_TEXGEN_Q, 1, CSV1_A, T1_Q);
         CASE2I(SET_TEXGEN_Q, 2, CSV1_B, T2_Q);
@@ -1882,9 +2246,6 @@ INT3;//XXX make sure blit works
         CASEV(SET_TEXTURE_MATRIX_ENABLE_1, CSV1_A, T1_ENABLE);
         CASEV(SET_TEXTURE_MATRIX_ENABLE_2, CSV1_B, T2_ENABLE);
         CASEV(SET_TEXTURE_MATRIX_ENABLE_3, CSV1_B, T3_ENABLE);
-#if 0 //XXX
-
-#endif
 #undef CASE3V2
 #undef CASE3V
 #undef CASE3I
@@ -1895,7 +2256,6 @@ INT3;//XXX make sure blit works
 #undef CASEN
 #undef CASEV
 #undef CASE
-#endif
         default:
             VARDUMP_NV2A(VAR_IN, c->param);
             break;
@@ -1911,7 +2271,7 @@ INT3;//XXX make sure blit works
 }
 
 static int
-nv2a_pfifo_ramht_lookup(register void *p, register uint32_t *handle, register nv2a_pfifo_ramht *r) {
+nv2a_pfifo_ramht_lookup(register void *p, register uint32_t *handle, register nv2a_pfifo_ramht_t *r) {
     register uint32_t bits;
     register uint32_t size;
     register uint32_t hash;
@@ -1944,8 +2304,8 @@ nv2a_pfifo_ramht_lookup(register void *p, register uint32_t *handle, register nv
 }
 
 static void
-nv2a_pfifo_puller(register void *p, register nv2a_pfifo_command *c) {
-    nv2a_pfifo_ramht r;
+nv2a_pfifo_puller(register void *p, register nv2a_pfifo_command_t *c) {
+    nv2a_pfifo_ramht_t r;
     ENTER_NV2A;
 
     do {
@@ -2020,12 +2380,12 @@ fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c->method,c->pa
 
 void
 nv2a_pfifo_pusher(register void *p) {
-    register nv2a_pfifo_command *c;
+    register nv2a_pfifo_command_t *c;
     register uint32_t *get;
     register uint32_t *put;
     register uint32_t *d;
-    nv2a_pfifo_command cmd;
-    nv2a_dma dma;
+    nv2a_pfifo_command_t cmd;
+    nv2a_dma_t dma;
     uint32_t addr;
     uint32_t v;
     register uint32_t word;
@@ -2177,7 +2537,7 @@ nv2a_framebuffer_set(uint32_t addr) {
 
 static int
 nv2a_write(uint32_t addr, const void *val, size_t sz) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -2415,7 +2775,7 @@ INT3;//XXX make sure this works
 
 static int
 nv2a_read(uint32_t addr, void *val, size_t sz) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -2672,6 +3032,7 @@ static uint64_t ptimer_get_clock(NV2AState *d)
 
 static int
 nv2a_destroy(void) {
+    register uint32_t i;
     ENTER_NV2A;
 
     if (!nv2a_ctx) {
@@ -2682,10 +3043,12 @@ nv2a_destroy(void) {
     glo_current(nv2a_ctx->glo, 1);
     glDeleteVertexArrays(1, &nv2a_ctx->gl_vertex_array);
 //    glDeleteBuffers(1, &nv2a_ctx->gl_memory_buffer);
-    glDeleteBuffers(1, &nv2a_ctx->gl_element_buffer);
     glDeleteBuffers(1, &nv2a_ctx->gl_inline_array_buffer);
-    glDeleteBuffers(NV2A_MAX_VERTEX_ATTRIBS, nv2a_ctx->gl_inline_buffer);
-    glDeleteBuffers(NV2A_MAX_VERTEX_ATTRIBS, nv2a_ctx->gl_converted_buffer);
+    glDeleteBuffers(1, &nv2a_ctx->gl_inline_element_buffer);
+    for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
+        glDeleteBuffers(1, &nv2a_ctx->va[i].gl_inline_buffer);
+        glDeleteBuffers(1, &nv2a_ctx->va[i].gl_converted_buffer);
+    }
     glDeleteTextures(1, &nv2a_ctx->gl_zeta_buffer);
     glDeleteTextures(1, &nv2a_ctx->gl_color_buffer);
     glDeleteFramebuffers(1, &nv2a_ctx->gl_framebuffer);
@@ -2701,6 +3064,7 @@ nv2a_destroy(void) {
 static int
 nv2a_init(void) {
     GLint tmp;
+    register uint32_t i;
     register int ret = 1;
     ENTER_NV2A;
 
@@ -2725,10 +3089,12 @@ nv2a_init(void) {
             fprintf(stderr, "error: %s(): GL framebuffer operation did not complete: error %i\n", __func__, tmp);
             break;
         }
-        glGenBuffers(NV2A_MAX_VERTEX_ATTRIBS, nv2a_ctx->gl_converted_buffer);
-        glGenBuffers(NV2A_MAX_VERTEX_ATTRIBS, nv2a_ctx->gl_inline_buffer);
+        for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
+            glGenBuffers(1, &nv2a_ctx->va[i].gl_converted_buffer);
+            glGenBuffers(1, &nv2a_ctx->va[i].gl_inline_buffer);
+        }
+        glGenBuffers(1, &nv2a_ctx->gl_inline_element_buffer);
         glGenBuffers(1, &nv2a_ctx->gl_inline_array_buffer);
-        glGenBuffers(1, &nv2a_ctx->gl_element_buffer);
 //        glGenBuffers(1, &nv2a_ctx->gl_memory_buffer);
 //        glBindBuffer(GL_ARRAY_BUFFER, nv2a_ctx->gl_memory_buffer);
 //        glBufferData(GL_ARRAY_BUFFER, 0x08000000, NULL, GL_DYNAMIC_DRAW);
@@ -2752,7 +3118,7 @@ nv2a_reset(void) {
     //TODO
 }
 
-const hw_ops nv2a_op = {
+const hw_ops_t nv2a_op = {
     .init           = nv2a_init,
     .destroy        = nv2a_destroy,
     .reset          = nv2a_reset,

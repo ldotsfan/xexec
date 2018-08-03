@@ -252,7 +252,7 @@ nvnet_destroy(void) {
     return 1;//TODO
 }
 
-const hw_ops nvnet_op = {
+const hw_ops_t nvnet_op = {
     .init           = nvnet_init,
     .destroy        = nvnet_destroy,
     .reset          = nvnet_reset,

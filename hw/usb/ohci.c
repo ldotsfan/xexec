@@ -270,7 +270,7 @@ ohci_destroy(void) {
     return 1;//TODO
 }
 
-const hw_ops ohci_op = {
+const hw_ops_t ohci_op = {
     .init           = ohci_init,
     .destroy        = ohci_destroy,
     .reset          = ohci_reset,

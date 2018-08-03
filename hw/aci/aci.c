@@ -73,9 +73,9 @@ aci_offset(register uint32_t *addr) {
     return !ret;
 }
 
-static const hw_block *
+static const hw_block_t *
 aci_block_lookup(register uint32_t addr, register const char **reg) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register size_t i;
     ENTER_ACI;
 
@@ -107,7 +107,7 @@ aci_block_lookup(register uint32_t addr, register const char **reg) {
 static void
 aci_nam_volume_set(uint32_t r, uint16_t v) {
     register void *p;
-    register const hw_block *b;
+    register const hw_block_t *b;
     register aci_nam *nam;
     ENTER_ACI;
 
@@ -139,7 +139,7 @@ aci_nam_volume_set(uint32_t r, uint16_t v) {
 static void
 aci_nam_record_select_set(uint16_t v) {
     register void *p;
-    register const hw_block *b;
+    register const hw_block_t *b;
     register aci_nam *nam;
     ENTER_ACI;
 
@@ -155,7 +155,7 @@ aci_nam_record_select_set(uint16_t v) {
 static void
 aci_nam_reset(void) {
     register void *p;
-    register const hw_block *b;
+    register const hw_block_t *b;
     register aci_nam *nam;
     ENTER_ACI;
 
@@ -227,7 +227,7 @@ aci_nabm_voice_active_set(uint32_t index, int on) {
 static void
 aci_nabm_reset(const uint32_t *index) {
     register void *p;
-    register const hw_block *b;
+    register const hw_block_t *b;
     register aci_nabm *nabm;
     register size_t i;
     ENTER_ACI;
@@ -255,7 +255,7 @@ aci_nabm_reset(const uint32_t *index) {
 
 static int
 aci_write(uint32_t addr, const void *val, size_t sz) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -514,7 +514,7 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
 
 static int
 aci_read(uint32_t addr, void *val, size_t sz) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -672,7 +672,7 @@ aci_destroy(void) {
     return 1;//TODO
 }
 
-const hw_ops aci_op = {
+const hw_ops_t aci_op = {
     .init           = aci_init,
     .destroy        = aci_destroy,
     .reset          = aci_reset,

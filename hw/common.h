@@ -30,14 +30,14 @@ typedef struct {
     void                    (*irq_restore)(int mask);
     int                     (*write)(uint32_t addr, const void *val, size_t sz);
     int                     (*read)(uint32_t addr, void *val, size_t sz);
-} hw_ops;
+} hw_ops_t;
 
 typedef struct {
     const uint32_t          index;
     const char *            name;
     const uint32_t          offset;
     const uint32_t          size;
-} hw_block;
+} hw_block_t;
 
 #define HW_BLOCK(x,y,z) \
         [x] = { \

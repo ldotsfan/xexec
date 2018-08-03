@@ -48,7 +48,7 @@ enum {
 
 #define APU_BLOCK_SIZE(x) apu_blocks[x].size
 
-static const hw_block apu_blocks[] = {
+static const hw_block_t apu_blocks[] = {
     HW_BLOCK(NV_PAVS,          0x00000, 0x00080),   /*  0 */
     HW_BLOCK(NV_PAHRTFC,       0x00300, 0x00080),   /*  1 */
     HW_BLOCK(NV_PAHRTFT,       0x00380, 0x00040),   /*  2 */

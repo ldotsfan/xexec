@@ -110,7 +110,7 @@ static const char *const x86_eflags_name[] = {
 #if 0
 typedef struct {
     //TODO
-} x86_ctx;
+} x86_context;
 
 void
 x86_push_call(ucontext_t *uc) {

@@ -75,10 +75,49 @@
 #define NV2A_REG32_MASK_BITSHIFT_TEST(x,y,z,m,v) \
         ((NV2A_REG32_MASK_GET(x,y,z,m) >> y##_##z##_##m##__BITSHIFT) == y##_##z##_##m##_##v)
 
+#define NV2A_MAX_BATCH_LENGTH   0x0001ffff
 #define NV2A_MAX_CHANNELS       32
 #define NV2A_MAX_SUBCHANNELS    8
-#define NV2A_MAX_VERTEX_ATTRIBS 16
 #define NV2A_MAX_TEXTURES       4
+#define NV2A_MAX_VERTEX_ATTRIBS 16
+
+enum {
+    NV2A_VERTEX_ATTRIB_POSITION         =   0,
+    NV2A_VERTEX_ATTRIB_WEIGHT,          /*  1 */
+    NV2A_VERTEX_ATTRIB_NORMAL,          /*  2 */
+    NV2A_VERTEX_ATTRIB_DIFFUSE,         /*  3 */
+    NV2A_VERTEX_ATTRIB_SPECULAR,        /*  4 */
+    NV2A_VERTEX_ATTRIB_FOG,             /*  5 */
+    NV2A_VERTEX_ATTRIB_POINT_SIZE,      /*  6 */
+    NV2A_VERTEX_ATTRIB_BACK_DIFFUSE,    /*  7 */
+    NV2A_VERTEX_ATTRIB_BACK_SPECULAR,   /*  8 */
+    NV2A_VERTEX_ATTRIB_TEXTURE0,        /*  9 */
+    NV2A_VERTEX_ATTRIB_TEXTURE1,        /* 10 */
+    NV2A_VERTEX_ATTRIB_TEXTURE2,        /* 11 */
+    NV2A_VERTEX_ATTRIB_TEXTURE3,        /* 12 */
+    NV2A_VERTEX_ATTRIB_RESERVED1,       /* 13 */
+    NV2A_VERTEX_ATTRIB_RESERVED2,       /* 14 */
+    NV2A_VERTEX_ATTRIB_RESERVED3,       /* 15 */
+};
+
+static const char *const nv2a_vertex_attrib_name[] = {
+    NAME(NV2A_VERTEX_ATTRIB_POSITION),
+    NAME(NV2A_VERTEX_ATTRIB_WEIGHT),
+    NAME(NV2A_VERTEX_ATTRIB_NORMAL),
+    NAME(NV2A_VERTEX_ATTRIB_DIFFUSE),
+    NAME(NV2A_VERTEX_ATTRIB_SPECULAR),
+    NAME(NV2A_VERTEX_ATTRIB_FOG),
+    NAME(NV2A_VERTEX_ATTRIB_POINT_SIZE),
+    NAME(NV2A_VERTEX_ATTRIB_BACK_DIFFUSE),
+    NAME(NV2A_VERTEX_ATTRIB_BACK_SPECULAR),
+    NAME(NV2A_VERTEX_ATTRIB_TEXTURE0),
+    NAME(NV2A_VERTEX_ATTRIB_TEXTURE1),
+    NAME(NV2A_VERTEX_ATTRIB_TEXTURE2),
+    NAME(NV2A_VERTEX_ATTRIB_TEXTURE3),
+    NAME(NV2A_VERTEX_ATTRIB_RESERVED1),
+    NAME(NV2A_VERTEX_ATTRIB_RESERVED2),
+    NAME(NV2A_VERTEX_ATTRIB_RESERVED3),
+};
 
 enum {
     NV_PMC          =   0,      /* card master control */
@@ -109,7 +148,7 @@ enum {
 
 #define NV2A_BLOCK_SIZE(x) nv2a_blocks[x].size
 
-static const hw_block nv2a_blocks[] = {
+static const hw_block_t nv2a_blocks[] = {
     HW_BLOCK(NV_PMC,         0x000000, 0x001000),   /*  0 */
     HW_BLOCK(NV_PBUS,        0x001000, 0x001000),   /*  1 */
     HW_BLOCK(NV_PFIFO,       0x002000, 0x002000),   /*  2 */
@@ -160,9 +199,9 @@ typedef struct {
     const GLint             gl_format;
     const GLint             gl_type;
     const GLint             gl_swizzle_mask[4];
-} nv2a_color_format;
+} nv2a_color_format_t;
 
-static const nv2a_color_format nv2a_pgraph_texture_color_formats[] = {
+static const nv2a_color_format_t nv2a_texture_color_formats[] = {
 #define COLOR1(a,b,c,d,e,f,g) \
         COLOR2(a,b,c,d,e,f,g,0,0,0,0)
 #define COLOR2(a,b,c,d,e,f,g,h,i,j,k) \
@@ -266,7 +305,7 @@ static const nv2a_color_format nv2a_pgraph_texture_color_formats[] = {
 #undef COLOR1
 };
 
-static const nv2a_color_format nv2a_pgraph_surface_color_formats[] = {
+static const nv2a_color_format_t nv2a_pgraph_surface_color_formats[] = {
 #define COLOR(a,b,c,d,e) \
         [NV_097_SET_SURFACE_FORMAT_COLOR_ ## a] = { #a, b, 0, 0, c, d, e, { 0, 0, 0, 0 } }
     /*  1 */ COLOR(LE_X1R5G5B5_Z1R5G5B5,
@@ -286,7 +325,7 @@ static const nv2a_color_format nv2a_pgraph_surface_color_formats[] = {
 #undef COLOR
 };
 
-static const nv2a_color_format nv2a_062_color_formats[] = {
+static const nv2a_color_format_t nv2a_062_color_formats[] = {
 #define COLOR(a,b,c,d,e) \
         [NV_062_COLOR_FORMAT_ ## a] = { #a, b, 0, 0, c, d, e, { 0, 0, 0, 0 } }
     /*  1 */ // LE_Y8
@@ -316,7 +355,7 @@ typedef union {
         uint8_t  r;         /* 16 */
         uint8_t  a;         /* 24 */
     } PACKED;
-} PACKED nv2a_color_bgra;
+} PACKED nv2a_color_bgra_t;
 
 typedef union {
     uint16_t     field;
@@ -325,7 +364,7 @@ typedef union {
         uint16_t g : 5;     /*  5 */
         uint16_t r : 6;     /* 10 */
     } PACKED;
-} PACKED nv2a_color_r6g5b5;
+} PACKED nv2a_color_r6g5b5_t;
 
 #endif
 

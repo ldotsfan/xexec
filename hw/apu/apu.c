@@ -72,9 +72,9 @@ apu_offset(register uint32_t *addr) {
     return !ret;
 }
 
-static const hw_block *
+static const hw_block_t *
 apu_block_lookup(register uint32_t addr, register const char **reg) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register size_t i;
     ENTER_APU;
 
@@ -125,7 +125,7 @@ apu_block_lookup(register uint32_t addr, register const char **reg) {
 
 static int
 apu_write(uint32_t addr, const void *val, size_t sz) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -245,7 +245,7 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
 
 static int
 apu_read(uint32_t addr, void *val, size_t sz) {
-    register const hw_block *b;
+    register const hw_block_t *b;
     register const char *n;
     register void *p;
     register uint32_t r;
@@ -382,7 +382,7 @@ apu_destroy(void) {
     return 1;//TODO
 }
 
-const hw_ops apu_op = {
+const hw_ops_t apu_op = {
     .init           = apu_init,
     .destroy        = apu_destroy,
     .reset          = apu_reset,

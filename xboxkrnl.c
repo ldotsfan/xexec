@@ -591,7 +591,7 @@ struct xpci {
     void *                  irq_isr_routine;
     void *                  irq_isr_context;
 
-    const hw_ops *const     op;
+    const hw_ops_t *const   op;
 };
 
 enum {

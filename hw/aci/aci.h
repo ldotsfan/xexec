@@ -33,7 +33,7 @@ enum {
 #define ACI_BLOCK_OFFSET(x) aci_blocks[x].offset
 #define ACI_BLOCK_SIZE(x)   aci_blocks[x].size
 
-static const hw_block aci_blocks[] = {
+static const hw_block_t aci_blocks[] = {
     HW_BLOCK(ACI_NAM,  0x0000, 0x0100),     /* 0 */
     HW_BLOCK(ACI_NABM, 0x0100, 0x0080),     /* 1 */
 };
