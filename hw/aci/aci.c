@@ -2,7 +2,8 @@
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
  *  Copyright (c) 2006 InnoTek Systemberatung GmbH
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -81,9 +82,9 @@ aci_block_lookup(register uint32_t addr, register const char **reg) {
 
     if (reg) *reg = NULL;
 
-    for (i = 0; i <= ARRAY_SIZE(aci_blocks); ++i) {
-        if (i >= ARRAY_SIZE(aci_blocks)) INT3;
-        b = &aci_blocks[i];
+    for (i = 0; i <= ARRAY_SIZE(aci_block); ++i) {
+        if (i >= ARRAY_SIZE(aci_block)) INT3;
+        b = &aci_block[i];
         if (RANGE(b->offset, b->size, addr)) {
             if (reg) {
                 i = addr - b->offset;
@@ -112,7 +113,7 @@ aci_nam_volume_set(uint32_t r, uint16_t v) {
     ENTER_ACI;
 
     p   = aci->memreg;
-    b   = &aci_blocks[ACI_NAM];
+    b   = &aci_block[ACI_NAM];
     nam = p + b->offset;
 
     switch (r) {
@@ -144,7 +145,7 @@ aci_nam_record_select_set(uint16_t v) {
     ENTER_ACI;
 
     p   = aci->memreg;
-    b   = &aci_blocks[ACI_NAM];
+    b   = &aci_block[ACI_NAM];
     nam = p + b->offset;
 
     nam->Record_Select = v & 0x0707;
@@ -160,7 +161,7 @@ aci_nam_reset(void) {
     ENTER_ACI;
 
     p   = aci->memreg;
-    b   = &aci_blocks[ACI_NAM];
+    b   = &aci_block[ACI_NAM];
     nam = p + b->offset;
 
     memset(nam, 0, b->size);
@@ -233,7 +234,7 @@ aci_nabm_reset(const uint32_t *index) {
     ENTER_ACI;
 
     p = aci->memreg;
-    b = &aci_blocks[ACI_NABM];
+    b = &aci_block[ACI_NABM];
 
     for (i = 0; i < ARRAY_SIZE(aci_nabm_index); ++i) {
         if (index && *index != aci_nabm_index[i]) continue;
@@ -287,7 +288,9 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_ACI("%s: "
+        PRINT_ACI(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "block: '%s' | "
@@ -308,7 +311,9 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_ACI("%s: "
+        PRINT_ACI(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "block: '%s' | "
@@ -329,7 +334,9 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_ACI("%s: "
+        PRINT_ACI(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "block: '%s' | "
@@ -575,7 +582,9 @@ aci_read(uint32_t addr, void *val, size_t sz) {
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_ACI("%s: "
+        PRINT_ACI(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "block: '%s' | "
@@ -594,7 +603,9 @@ aci_read(uint32_t addr, void *val, size_t sz) {
         break;
     case 2:
         v &= 0xffff;
-        PRINT_ACI("%s: "
+        PRINT_ACI(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "block: '%s' | "
@@ -612,7 +623,9 @@ aci_read(uint32_t addr, void *val, size_t sz) {
         ret = 1;
         break;
     case 4:
-        PRINT_ACI("%s: "
+        PRINT_ACI(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.08x | "
             "block: '%s' | "

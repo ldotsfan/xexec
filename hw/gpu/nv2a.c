@@ -3,7 +3,8 @@
  *
  *  Copyright (c) 2012 espes
  *  Copyright (c) 2015 Jannik Vogel
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -69,17 +70,17 @@
 
 typedef struct {
     union {
-        uint32_t            flags;
+        uint32_t                flags;
         struct {
-            uint32_t        class  : 12;            /*  0 */
-            uint32_t        pad1   : 4;             /* 12 */
-            uint32_t        target : 2;             /* 16 */
-            uint32_t        pad2   : 2;             /* 18 */
-            uint32_t        adjust : 12;            /* 20 */
+            uint32_t class  : 12;   /*  0 */
+            uint32_t pad1   : 4;    /* 12 */
+            uint32_t target : 2;    /* 16 */
+            uint32_t pad2   : 2;    /* 18 */
+            uint32_t adjust : 12;   /* 20 */
         } PACKED;
     } PACKED;
-    uint32_t                limit;
-    uint32_t                frame;
+    uint32_t                    limit;
+    uint32_t                    frame;
 } PACKED nv2a_dma_t;
 
 #define NV2A_DMA(x) *(nv2a_dma_t *)(x)
@@ -108,53 +109,53 @@ typedef struct {
     union {
         uint32_t     field;
         struct {
-            uint32_t context_dma         : 2;       /*  0 */
-            uint32_t cubemap             : 1;       /*  2 */
-            uint32_t border_source       : 1;       /*  3 */
-            uint32_t dimensionality      : 4;       /*  4 */
-            uint32_t color               : 8;       /*  8 */
-            uint32_t mipmap_levels       : 4;       /* 16 */
-            uint32_t base_size_u         : 4;       /* 20 */
-            uint32_t base_size_v         : 4;       /* 24 */
-            uint32_t base_size_p         : 4;       /* 28 */
+            uint32_t context_dma         : 2;   /*  0 */
+            uint32_t cubemap             : 1;   /*  2 */
+            uint32_t border_source       : 1;   /*  3 */
+            uint32_t dimensionality      : 4;   /*  4 */
+            uint32_t color               : 8;   /*  8 */
+            uint32_t mipmap_levels       : 4;   /* 16 */
+            uint32_t base_size_u         : 4;   /* 20 */
+            uint32_t base_size_v         : 4;   /* 24 */
+            uint32_t base_size_p         : 4;   /* 28 */
         } PACKED;
     } PACKED                    format;
     union {
         uint32_t     field;
         struct {
-            uint32_t u                   : 4;       /*  0 */
-            uint32_t cylwrap_u           : 4;       /*  4 */
-            uint32_t v                   : 4;       /*  8 */
-            uint32_t cylwrap_v           : 4;       /* 12 */
-            uint32_t p                   : 4;       /* 16 */
-            uint32_t cylwrap_p           : 4;       /* 20 */
-            uint32_t cylwrap_q           : 8;       /* 24 */
+            uint32_t u                   : 4;   /*  0 */
+            uint32_t cylwrap_u           : 4;   /*  4 */
+            uint32_t v                   : 4;   /*  8 */
+            uint32_t cylwrap_v           : 4;   /* 12 */
+            uint32_t p                   : 4;   /* 16 */
+            uint32_t cylwrap_p           : 4;   /* 20 */
+            uint32_t cylwrap_q           : 8;   /* 24 */
         } PACKED;
     } PACKED                    address;
     union {
         uint32_t     field;
         struct {
-            uint32_t color_key_operation : 2;       /*  0 */
-            uint32_t alpha_kill_enable   : 1;       /*  2 */
-            uint32_t image_field_enable  : 1;       /*  3 */
-            uint32_t log_max_aniso       : 2;       /*  4 */
-            uint32_t max_lod_clamp       : 12;      /*  6 */
-            uint32_t min_lod_clamp       : 12;      /* 18 */
-            uint32_t enable              : 2;       /* 30 */
+            uint32_t color_key_operation : 2;   /*  0 */
+            uint32_t alpha_kill_enable   : 1;   /*  2 */
+            uint32_t image_field_enable  : 1;   /*  3 */
+            uint32_t log_max_aniso       : 2;   /*  4 */
+            uint32_t max_lod_clamp       : 12;  /*  6 */
+            uint32_t min_lod_clamp       : 12;  /* 18 */
+            uint32_t enable              : 2;   /* 30 */
         } PACKED;
     } PACKED                    ctl0;
     uint32_t                    pitch;
     union {
         uint32_t     field;
         struct {
-            uint32_t mipmap_lod_bias     : 13;      /*  0 */
-            uint32_t convolution_kernel  : 3;       /* 13 */
-            uint32_t min                 : 8;       /* 16 */
-            uint32_t mag                 : 4;       /* 24 */
-            uint32_t asigned_enabled     : 1;       /* 28 */
-            uint32_t rsigned_enabled     : 1;       /* 29 */
-            uint32_t gsigned_enabled     : 1;       /* 30 */
-            uint32_t bsigned_enabled     : 1;       /* 31 */
+            uint32_t mipmap_lod_bias     : 13;  /*  0 */
+            uint32_t convolution_kernel  : 3;   /* 13 */
+            uint32_t min                 : 8;   /* 16 */
+            uint32_t mag                 : 4;   /* 24 */
+            uint32_t asigned_enabled     : 1;   /* 28 */
+            uint32_t rsigned_enabled     : 1;   /* 29 */
+            uint32_t gsigned_enabled     : 1;   /* 30 */
+            uint32_t bsigned_enabled     : 1;   /* 31 */
         } PACKED;
     } PACKED                    filter;
     uint32_t                    width;
@@ -163,9 +164,9 @@ typedef struct {
     union {
         uint32_t     field;
         struct {
-            uint32_t context_dma         : 2;       /*  0 */
-            uint32_t length              : 4;       /*  2 */
-            uint32_t offset              : 26;      /*  6 */
+            uint32_t context_dma         : 2;   /*  0 */
+            uint32_t length              : 4;   /*  2 */
+            uint32_t offset              : 26;  /*  6 */
         } PACKED;
     } PACKED                    palette;
     nv2a_color_bgra_t           bcolor;
@@ -210,100 +211,154 @@ static const GLenum nv2a_texture_wrap_map[] = {
 };
 
 typedef struct {
-    GLuint                  gl_converted_buffer;
-    GLuint                  gl_inline_buffer;
+#if 0 // rewrite
+//    bool dma_select;
+//    hwaddr offset;
 
-    float                   inline_value[4];
-    float *                 inline_buffer;
+    /* inline arrays are packed in order?
+     * Need to pass the offset to converted attributes */
+    unsigned int inline_array_offset;
+
+//    float inline_value[4];
+
+//    unsigned int format;//XXX type
+//    unsigned int size; /* size of the data type */
+    unsigned int count; /* number of components *///XXX size
+//    uint32_t stride;
+
+//    bool needs_conversion;
+    uint8_t *converted_buffer;
+    unsigned int converted_elements;
+    unsigned int converted_size;
+    unsigned int converted_count;
+
+//    float *inline_buffer;
+
+    GLint gl_count;
+//    GLenum gl_type;
+//    GLboolean gl_normalize;
+
+//    GLuint gl_converted_buffer;
+//    GLuint gl_inline_buffer;
+#endif
+    uint32_t                    index;
+    int                         dirty;
+    const nv2a_inline_array_format_t *f;
+    uint32_t                    inline_array_offset;
+    /* converted inline array data */
+    GLuint                      gl_converted_buffer;
+    /* inline array data */
+//    uint32_t                    voffset;
+    void *                      vdata;
+    uint32_t                    vstride;
+    float                       inline_value[4];
+    float *                     inline_buffer;
+    GLuint                      gl_inline_buffer;
+    /* register state */
+    union {
+        uint32_t     field;
+        struct {
+            uint32_t offset      : 31;  /*  0 */
+            uint32_t context_dma : 1;   /* 31 */
+        } PACKED;
+    } PACKED                    vertex;
+    union {
+        uint32_t     field;
+        struct {
+            uint32_t type        : 4;   /*  0 */
+            uint32_t size        : 4;   /*  4 */
+            uint32_t stride      : 24;  /*  8 */
+        } PACKED;
+    } PACKED                    format;
 } nv2a_vertex_attrib_t;
 
 typedef struct {
-    glo_context *           glo;
+    glo_context *               glo;
 
-    GLuint                  gl_framebuffer;
+    GLuint                      gl_framebuffer;
 
-    GLuint                  gl_color_buffer;
-    GLuint                  gl_zeta_buffer;
+    GLuint                      gl_color_buffer;
+    GLuint                      gl_zeta_buffer;
 
-//    GLuint                  gl_memory_buffer;
+//    GLuint                      gl_memory_buffer;
 
-    GLuint                  gl_vertex_array;
+    GLuint                      gl_vertex_array;
 
-    nv2a_texture_t          t[NV2A_MAX_TEXTURES];
+    nv2a_texture_t              t[NV2A_MAX_TEXTURES];
 
-    nv2a_vertex_attrib_t    va[NV2A_MAX_VERTEX_ATTRIBS];
-    uint32_t                inline_buffer_len;
-    GLuint                  gl_inline_element_buffer;
-    uint32_t                inline_element_len;
-    uint32_t                inline_element[NV2A_MAX_BATCH_LENGTH];
-    GLuint                  gl_inline_array_buffer;
-    uint32_t                inline_array_len;
-    uint32_t                inline_array[NV2A_MAX_BATCH_LENGTH];
-    uint32_t                draw_arrays_len;
-    uint32_t                draw_arrays_max;
-    GLint                   gl_draw_arrays_start[1000]; //FIXME: unknown size, possibly endless, 1000 will do for now
-    GLsizei                 gl_draw_arrays_count[1000];
+    nv2a_vertex_attrib_t        va[NV2A_MAX_VERTEX_ATTRIBS];
+    uint32_t                    inline_buffer_len;
+    uint32_t                    inline_element_len;
+    uint32_t                    inline_element[NV2A_MAX_BATCH_LENGTH];
+    GLuint                      gl_inline_element_buffer;
+    uint32_t                    inline_array_len;
+    uint32_t                    inline_array[NV2A_MAX_BATCH_LENGTH];
+    GLuint                      gl_inline_array_buffer;
+    uint32_t                    draw_arrays_max;
+    uint32_t                    draw_arrays_len;
+    GLint                       gl_draw_arrays_start[1000]; //FIXME: unknown size, possibly endless, 1000 will do for now
+    GLsizei                     gl_draw_arrays_count[1000]; //FIXME: unknown size, possibly endless, 1000 will do for now
 } nv2a_context_t;
 
-static nv2a_context_t *     nv2a_ctx = NULL;
+static nv2a_context_t *         nv2a_ctx = NULL;
 
 typedef struct {
     union {
-        uint32_t            field;
+        uint32_t     field;
         struct {
-            uint32_t        method       : 13;      /*  0 */
-            uint32_t        subchannel   : 3;       /* 13 */
-            uint32_t        non_inc      : 2;       /* 16 */
-            uint32_t        method_count : 11;      /* 18 */
-            uint32_t        error        : 3;       /* 29 */
+            uint32_t method       : 13; /*  0 */
+            uint32_t subchannel   : 3;  /* 13 */
+            uint32_t non_inc      : 2;  /* 16 */
+            uint32_t method_count : 11; /* 18 */
+            uint32_t error        : 3;  /* 29 */
         } PACKED;
     } PACKED;
-    uint32_t                param;
+    uint32_t                    param;
 } PACKED nv2a_pfifo_command_t;
 
 typedef struct {
-    uint32_t                handle;
+    uint32_t                    handle;
     union {
-        uint32_t            field;
+        uint32_t     field;
         struct {
-            uint32_t        instance : 16;          /*  0 */
-            uint32_t        engine   : 2;           /* 16 */
+            uint32_t instance : 16; /*  0 */
+            uint32_t engine   : 2;  /* 16 */
 #define NV_RAMHT_ENGINE_SW       0
 #define NV_RAMHT_ENGINE_GRAPHICS 1
 #define NV_RAMHT_ENGINE_DVD      2
-            uint32_t        pad1     : 6;           /* 18 */
-            uint32_t        chid     : 5;           /* 24 */
-            uint32_t        pad2     : 2;           /* 29 */
-            uint32_t        valid    : 1;           /* 31 */
+            uint32_t pad1     : 6;  /* 18 */
+            uint32_t chid     : 5;  /* 24 */
+            uint32_t pad2     : 2;  /* 29 */
+            uint32_t valid    : 1;  /* 31 */
         } PACKED;
     } PACKED;
 } PACKED nv2a_pfifo_ramht_t;
 
-static pthread_mutex_t      nv2a_pgraph_fifo_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t       nv2a_pgraph_fifo_cond = PTHREAD_COND_INITIALIZER;
-#define PGRAPH_FIFO_LOCK    pthread_mutex_lock(&nv2a_pgraph_fifo_mutex)
-#define PGRAPH_FIFO_UNLOCK  pthread_mutex_unlock(&nv2a_pgraph_fifo_mutex)
-#define PGRAPH_FIFO_WAIT    pthread_cond_wait(&nv2a_pgraph_fifo_cond, &nv2a_pgraph_fifo_mutex)
-#define PGRAPH_FIFO_SIGNAL  PGRAPH_FIFO_LOCK, \
-                            pthread_cond_broadcast(&nv2a_pgraph_fifo_cond), \
-                            PGRAPH_FIFO_UNLOCK
-static pthread_mutex_t      nv2a_pgraph_intr_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t       nv2a_pgraph_intr_cond = PTHREAD_COND_INITIALIZER;
-#define PGRAPH_INTR_LOCK    pthread_mutex_lock(&nv2a_pgraph_intr_mutex)
-#define PGRAPH_INTR_UNLOCK  pthread_mutex_unlock(&nv2a_pgraph_intr_mutex)
-#define PGRAPH_INTR_WAIT    pthread_cond_wait(&nv2a_pgraph_intr_cond, &nv2a_pgraph_intr_mutex)
-#define PGRAPH_INTR_SIGNAL  PGRAPH_INTR_LOCK, \
-                            pthread_cond_broadcast(&nv2a_pgraph_intr_cond), \
-                            PGRAPH_INTR_UNLOCK
+static pthread_mutex_t          nv2a_pgraph_fifo_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t           nv2a_pgraph_fifo_cond = PTHREAD_COND_INITIALIZER;
+#define PGRAPH_FIFO_LOCK        pthread_mutex_lock(&nv2a_pgraph_fifo_mutex)
+#define PGRAPH_FIFO_UNLOCK      pthread_mutex_unlock(&nv2a_pgraph_fifo_mutex)
+#define PGRAPH_FIFO_WAIT        pthread_cond_wait(&nv2a_pgraph_fifo_cond, &nv2a_pgraph_fifo_mutex)
+#define PGRAPH_FIFO_SIGNAL      PGRAPH_FIFO_LOCK, \
+                                pthread_cond_broadcast(&nv2a_pgraph_fifo_cond), \
+                                PGRAPH_FIFO_UNLOCK
+static pthread_mutex_t          nv2a_pgraph_intr_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t           nv2a_pgraph_intr_cond = PTHREAD_COND_INITIALIZER;
+#define PGRAPH_INTR_LOCK        pthread_mutex_lock(&nv2a_pgraph_intr_mutex)
+#define PGRAPH_INTR_UNLOCK      pthread_mutex_unlock(&nv2a_pgraph_intr_mutex)
+#define PGRAPH_INTR_WAIT        pthread_cond_wait(&nv2a_pgraph_intr_cond, &nv2a_pgraph_intr_mutex)
+#define PGRAPH_INTR_SIGNAL      PGRAPH_INTR_LOCK, \
+                                pthread_cond_broadcast(&nv2a_pgraph_intr_cond), \
+                                PGRAPH_INTR_UNLOCK
 
-static pthread_mutex_t      nv2a_flip_stall_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t       nv2a_flip_stall_cond = PTHREAD_COND_INITIALIZER;
-#define FLIP_STALL_LOCK     pthread_mutex_lock(&nv2a_flip_stall_mutex)
-#define FLIP_STALL_UNLOCK   pthread_mutex_unlock(&nv2a_flip_stall_mutex)
-#define FLIP_STALL_WAIT     pthread_cond_wait(&nv2a_flip_stall_cond, &nv2a_flip_stall_mutex)
-#define FLIP_STALL_SIGNAL   FLIP_STALL_LOCK, \
-                            pthread_cond_broadcast(&nv2a_flip_stall_cond), \
-                            FLIP_STALL_UNLOCK
+static pthread_mutex_t          nv2a_flip_stall_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t           nv2a_flip_stall_cond = PTHREAD_COND_INITIALIZER;
+#define FLIP_STALL_LOCK         pthread_mutex_lock(&nv2a_flip_stall_mutex)
+#define FLIP_STALL_UNLOCK       pthread_mutex_unlock(&nv2a_flip_stall_mutex)
+#define FLIP_STALL_WAIT         pthread_cond_wait(&nv2a_flip_stall_cond, &nv2a_flip_stall_mutex)
+#define FLIP_STALL_SIGNAL       FLIP_STALL_LOCK, \
+                                pthread_cond_broadcast(&nv2a_flip_stall_cond), \
+                                FLIP_STALL_UNLOCK
 
 static int
 nv2a_offset(register uint32_t *addr) {
@@ -322,9 +377,9 @@ nv2a_block_lookup(register uint32_t addr, register const char **reg) {
 
     if (reg) *reg = NULL;
 
-    for (i = 0; i <= ARRAY_SIZE(nv2a_blocks); ++i) {
-        if (i >= ARRAY_SIZE(nv2a_blocks)) INT3;
-        b = &nv2a_blocks[i];
+    for (i = 0; i <= ARRAY_SIZE(nv2a_block); ++i) {
+        if (i >= ARRAY_SIZE(nv2a_block)) INT3;
+        b = &nv2a_block[i];
         if (RANGE(b->offset, b->size, addr)) {
             if (reg) {
                 i = (addr - b->offset) / 4;
@@ -393,7 +448,7 @@ static void
 nv2a_irq_restore(register int mask) {
     if (!mask || !(mask & ~NV2A_IRQ_BUSY)) return;
     if (mask & NV2A_IRQ_PGRAPH) PGRAPH_INTR_SIGNAL;
-    if (mask & NV2A_IRQ_FIFO) PGRAPH_FIFO_SIGNAL;
+    if (mask & NV2A_IRQ_FIFO)   PGRAPH_FIFO_SIGNAL;
 }
 
 static void
@@ -401,7 +456,7 @@ nv2a_irq_raise(register int mask) {
     if (!mask) return;
     if (nv2a->irq_busy) {
         if (mask & NV2A_IRQ_PGRAPH) nv2a->irq_busy |= NV2A_IRQ_PGRAPH;
-        if (mask & NV2A_IRQ_FIFO) nv2a->irq_busy |= NV2A_IRQ_FIFO;
+        if (mask & NV2A_IRQ_FIFO)   nv2a->irq_busy |= NV2A_IRQ_FIFO;
     } else {
         nv2a_irq_restore(mask);
     }
@@ -431,46 +486,46 @@ nv2a_irq(void) {
     /* PFIFO */
     enabled = NV2A_REG32(p, NV_PFIFO, INTR_EN_0);
     pending = NV2A_REG32(p, NV_PFIFO, INTR_0);
-    PRINT_NV2A("%s: IRQ: PFIFO: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
+    PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PFIFO: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
     VARDUMP3_NV2A(DUMP, enabled, nv2a_pfifo_intr_name);
     VARDUMP3_NV2A(DUMP, pending, nv2a_pfifo_intr_name);
     if (pending & enabled) {
-        PRINT_NV2A("%s: IRQ: PFIFO pending", n);
+        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PFIFO pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PFIFO, PENDING);
     } else {
-        PRINT_NV2A("%s: IRQ: PFIFO not pending", n);
+        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PFIFO not pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PFIFO, NOT_PENDING);
     }
     /* PCRTC */
     enabled = NV2A_REG32(p, NV_PCRTC, INTR_EN_0);
     pending = NV2A_REG32(p, NV_PCRTC, INTR_0);
-    PRINT_NV2A("%s: IRQ: PCRTC: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
+    PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PCRTC: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
     VARDUMP3_NV2A(DUMP, enabled, nv2a_pcrtc_intr_name);
     VARDUMP3_NV2A(DUMP, pending, nv2a_pcrtc_intr_name);
     if (pending & enabled) {
-        PRINT_NV2A("%s: IRQ: PCRTC pending", n);
+        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PCRTC pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PCRTC, PENDING);
     } else {
-        PRINT_NV2A("%s: IRQ: PCRTC not pending", n);
+        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PCRTC not pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PCRTC, NOT_PENDING);
     }
     /* PGRAPH */
     enabled = NV2A_REG32(p, NV_PGRAPH, INTR_EN);
     pending = NV2A_REG32(p, NV_PGRAPH, INTR);
-    PRINT_NV2A("%s: IRQ: PGRAPH: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
+    PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PGRAPH: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
     VARDUMP3_NV2A(DUMP, enabled, nv2a_pgraph_intr_name);
     VARDUMP3_NV2A(DUMP, pending, nv2a_pgraph_intr_name);
     if (pending & enabled) {
-        PRINT_NV2A("%s: IRQ: PGRAPH pending", n);
+        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PGRAPH pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PGRAPH, PENDING);
     } else {
-        PRINT_NV2A("%s: IRQ: PGRAPH not pending", n);
+        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PGRAPH not pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PGRAPH, NOT_PENDING);
     }
 
     if (NV2A_REG32(p, NV_PMC, INTR_0) &&
         NV2A_REG32(p, NV_PMC, INTR_EN_0)) {
-        PRINT_NV2A("%s: IRQ: raised!", n);
+        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: raised!", n);
         nv2a->irq_level = 1;
         ret = 1;
     }
@@ -725,7 +780,9 @@ nv2a_texture_binding_create(nv2a_texture_t *t) {
 
     glBindTexture(b->gl_target, b->gl_texture);
 
-    PRINT_NV2A("%s(): "
+    PRINT_NV2A(
+        XEXEC_DBG_VARDUMP,
+        "%s(): "
         "texture: index %zu, "
         "%u dimensions%s, "
         "w=%u x h=%u x d=%u | "
@@ -817,11 +874,13 @@ nv2a_texture_bind(register void *p, uint32_t index) {
         t->bcolor.field   = NV2A_REG32(p + pos, NV_097, SET_TEXTURE_BORDER_COLOR);
         t->poffset        = t->palette.offset << 6;
 
-        if (t->format.color >= ARRAY_SIZE(nv2a_texture_color_formats)) INT3;
-        t->cf = &nv2a_texture_color_formats[t->format.color];
+        if (t->format.color >= ARRAY_SIZE(nv2a_texture_color_format)) INT3;
+        t->cf = &nv2a_texture_color_format[t->format.color];
         if (!t->cf->name) INT3;
 
-        PRINT_NV2A("%s(): "
+        PRINT_NV2A(
+            XEXEC_DBG_VARDUMP,
+            "%s(): "
             "texture: index %zu, "
             "%u dimensions%s, "
             "pitch=%u, "
@@ -917,10 +976,10 @@ nv2a_texture_bind(register void *p, uint32_t index) {
         t->pdata = t->tdata = NV2A_REGADDR(p, NV_PRAMIN, BASE);
         switch (t->format.context_dma) {
         case NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_A /* 0 */:
-            t->tdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
+            t->tdata += NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, CONTEXTDMAA, V);
             break;
         case NV_097_SET_TEXTURE_FORMAT_CONTEXT_DMA_B /* 1 */:
-            t->tdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
+            t->tdata += NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, CONTEXTDMAB, V);
             break;
         default:
             INT3;
@@ -932,10 +991,10 @@ nv2a_texture_bind(register void *p, uint32_t index) {
         VARDUMP_NV2A(DUMP, t->tdata);
         switch (t->palette.context_dma) {
         case NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_A /* 0 */:
-            t->pdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_A);
+            t->pdata += NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, CONTEXTDMAA, V);
             break;
         case NV_097_SET_TEXTURE_PALETTE_CONTEXT_DMA_B /* 1 */:
-            t->pdata += NV2A_REG32(p, NV_097, SET_CONTEXT_DMA_B);
+            t->pdata += NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, CONTEXTDMAB, V);
             break;
         default:
             INT3;
@@ -1132,8 +1191,8 @@ nv2a_09f_blit(register void *p) {
 //        if (nv2a_pgraph_ctx_lookup(p, NV10_CONTEXT_SURFACES_2D, &C)) INT3;
 
         i = NV2A_REG32(p, NV_062, COLOR_FORMAT);
-        if (i >= ARRAY_SIZE(nv2a_062_color_formats)) INT3;
-        cf = &nv2a_062_color_formats[i];
+        if (i >= ARRAY_SIZE(nv2a_062_color_format)) INT3;
+        cf = &nv2a_062_color_format[i];
         if (!cf->name) INT3;
 
         src = dest = NV2A_REGADDR(p, NV_PRAMIN, BASE);
@@ -1161,7 +1220,7 @@ nv2a_09f_blit(register void *p) {
         h     = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_09F, SIZE, HEIGHT);
 
         for (i = 0; i < h; ++i) {
-            srcr  = src + (iny + i) * srcp + inx * cf->pixel_size;
+            srcr  = src  + (iny  + i) * srcp  + inx  * cf->pixel_size;
             destr = dest + (outy + i) * destp + outx * cf->pixel_size;
             memmove(destr, srcr, w * cf->pixel_size);
         }
@@ -1215,7 +1274,312 @@ nv2a_vertex_attrib_inline_buffer_finish(void) {
 
     LEAVE_NV2A;
 }
+#if 0
+//#elif 0
+static void pgraph_bind_vertex_attributes(NV2AState *d,
+                                          unsigned int num_elements,
+                                          bool use_inline_array,
+                                          unsigned int inline_array_stride)
+{
+    int i, j;
+    PGRAPHState *pg = &d->pgraph;
 
+    if (use_inline_array) {
+        NV2A_GL_DGROUP_BEGIN("%s (num_elements: %d inline stride: %d)",
+                             __func__, num_elements, inline_array_stride);
+    } else {
+        NV2A_GL_DGROUP_BEGIN("%s (num_elements: %d)", __func__, num_elements);
+    }
+
+//    for (i=0; i<NV2A_VERTEXSHADER_ATTRIBUTES; i++) {
+//        VertexAttribute *attribute = &pg->vertex_attributes[i];
+//        if (attribute->count) {
+//            uint8_t *data;
+//            unsigned int in_stride;
+//            if (use_inline_array && attribute->needs_conversion) {
+//                data = (uint8_t*)pg->inline_array
+//                        + attribute->inline_array_offset;
+//                in_stride = inline_array_stride;
+//            } else {
+//                hwaddr dma_len;
+//                if (attribute->dma_select) {
+//                    data = nv_dma_map(d, pg->dma_vertex_b, &dma_len);
+//                } else {
+//                    data = nv_dma_map(d, pg->dma_vertex_a, &dma_len);
+//                }
+
+//                assert(attribute->offset < dma_len);
+//                data += attribute->offset;
+
+//                in_stride = attribute->stride;
+//            }
+
+            if (attribute->needs_conversion) {
+                NV2A_DPRINTF("converted %d\n", i);
+
+                unsigned int out_stride = attribute->converted_size
+                                        * attribute->converted_count;
+
+                if (num_elements > attribute->converted_elements) {
+                    attribute->converted_buffer = g_realloc(
+                        attribute->converted_buffer,
+                        num_elements * out_stride);
+                }
+
+                for (j=attribute->converted_elements; j<num_elements; j++) {
+                    uint8_t *in = data + j * in_stride;
+                    uint8_t *out = attribute->converted_buffer + j * out_stride;
+
+                    switch (attribute->format) {
+                    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP: {
+                        uint32_t p = ldl_le_p((uint32_t*)in);
+                        float *xyz = (float*)out;
+                        xyz[0] = ((int32_t)(((p >>  0) & 0x7FF) << 21) >> 21)
+                                                                      / 1023.0f;
+                        xyz[1] = ((int32_t)(((p >> 11) & 0x7FF) << 21) >> 21)
+                                                                      / 1023.0f;
+                        xyz[2] = ((int32_t)(((p >> 22) & 0x3FF) << 22) >> 22)
+                                                                       / 511.0f;
+                        break;
+                    }
+                    default:
+                        assert(false);
+                        break;
+                    }
+                }
+
+
+                glBindBuffer(GL_ARRAY_BUFFER, attribute->gl_converted_buffer);
+                if (num_elements != attribute->converted_elements) {
+                    glBufferData(GL_ARRAY_BUFFER,
+                                 num_elements * out_stride,
+                                 attribute->converted_buffer,
+                                 GL_DYNAMIC_DRAW);
+                    attribute->converted_elements = num_elements;
+                }
+
+
+                glVertexAttribPointer(i,
+                    attribute->converted_count,
+                    attribute->gl_type,
+                    attribute->gl_normalize,
+                    out_stride,
+                    0);
+            } else if (use_inline_array) {
+                glBindBuffer(GL_ARRAY_BUFFER, pg->gl_inline_array_buffer);
+                glVertexAttribPointer(i,
+                                      attribute->gl_count,
+                                      attribute->gl_type,
+                                      attribute->gl_normalize,
+                                      inline_array_stride,
+                                      (void*)(uintptr_t)attribute->inline_array_offset);
+            } else {
+                hwaddr addr = data - d->vram_ptr;
+                pgraph_update_memory_buffer(d, addr,
+                                            num_elements * attribute->stride,
+                                            false);
+                glVertexAttribPointer(i,
+                    attribute->gl_count,
+                    attribute->gl_type,
+                    attribute->gl_normalize,
+                    attribute->stride,
+                    (void*)addr);
+            }
+            glEnableVertexAttribArray(i);
+        } else {
+            glDisableVertexAttribArray(i);
+
+            glVertexAttrib4fv(i, attribute->inline_value);
+        }
+    }
+    NV2A_GL_DGROUP_END();
+}
+#elif 0
+static void
+nv2a_vertex_attrib_bind(uint32_t count, int use_inline_array, uint32_t inline_array_stride) {
+    register nv2a_vertex_attrib_t *a;
+    register uint32_t i;
+//    void *vdata;
+    uint32_t stride;
+    nv2a_dma_t dma;
+    ENTER_NV2A;
+
+    for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
+        if ((a = &nv2a_ctx->va[i])->format.size) {
+            if (use_inline_array && a->f->convert) {
+                a->vdata    = nv2a_ctx->inline_array;
+                a->vdata   += a->inline_array_offset;
+                a->vstride  = inline_array_stride;
+            } else {
+                a->vdata = NV2A_REGADDR(p, NV_PRAMIN, BASE);
+                switch (a->vertex.context_dma) {
+                case NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_CONTEXT_DMA_VERTEX_A /* 0 */:
+                    a->vdata += NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, CONTEXTVTXA, V);
+                    break;
+                case NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_CONTEXT_DMA_VERTEX_B /* 1 */:
+                    a->vdata += NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PGRAPH, CONTEXTVTXB, V);
+                    break;
+                default:
+                    INT3;
+                    break;
+                }
+                dma = NV2A_DMA(a->vdata);
+                if (a->vertex.offset > dma.limit) INT3;
+                a->vdata   = (void *)(NV2A_DMA_ADDRESS(&dma) + a->vertex.offset);
+                a->vstride = a->format.stride;
+            }
+            VARDUMP_NV2A(DUMP, a->vdata);
+            VARDUMP_NV2A(DUMP, a->vstride);
+            if (a->f->convert) {
+#if 0
+                unsigned int out_stride = attribute->converted_size
+                                        * attribute->converted_count;
+
+                if (num_elements > attribute->converted_elements) {
+                    attribute->converted_buffer = g_realloc(
+                        attribute->converted_buffer,
+                        num_elements * out_stride);
+                }
+
+                for (j=attribute->converted_elements; j<num_elements; j++) {
+                    uint8_t *in = data + j * in_stride;
+                    uint8_t *out = attribute->converted_buffer + j * out_stride;
+
+                    switch (attribute->format) {
+                    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP: {
+                        uint32_t p = ldl_le_p((uint32_t*)in);
+                        float *xyz = (float*)out;
+                        xyz[0] = ((int32_t)(((p >>  0) & 0x7FF) << 21) >> 21)
+                                                                      / 1023.0f;
+                        xyz[1] = ((int32_t)(((p >> 11) & 0x7FF) << 21) >> 21)
+                                                                      / 1023.0f;
+                        xyz[2] = ((int32_t)(((p >> 22) & 0x3FF) << 22) >> 22)
+                                                                       / 511.0f;
+                        break;
+                    }
+                    default:
+                        assert(false);
+                        break;
+                    }
+                }
+                glBindBuffer(GL_ARRAY_BUFFER, attribute->gl_converted_buffer);
+                if (num_elements != attribute->converted_elements) {
+                    glBufferData(GL_ARRAY_BUFFER,
+                                 num_elements * out_stride,
+                                 attribute->converted_buffer,
+                                 GL_DYNAMIC_DRAW);
+                    attribute->converted_elements = num_elements;
+                }
+
+
+                glVertexAttribPointer(i,
+                    attribute->converted_count,
+                    attribute->gl_type,
+                    attribute->gl_normalize,
+                    out_stride,
+                    0);
+#elif 0
+
+#endif
+            } else if (use_inline_array) {
+#if 0
+                glBindBuffer(GL_ARRAY_BUFFER, pg->gl_inline_array_buffer);
+                glVertexAttribPointer(i,
+                                      attribute->gl_count,
+                                      attribute->gl_type,
+                                      attribute->gl_normalize,
+                                      inline_array_stride,
+                                      (void*)(uintptr_t)attribute->inline_array_offset);
+#endif
+            } else {
+#if 0
+                hwaddr addr = data - d->vram_ptr;
+                pgraph_update_memory_buffer(d, addr,
+                                            num_elements * attribute->stride,
+                                            false);
+                glVertexAttribPointer(i,
+                    attribute->gl_count,
+                    attribute->gl_type,
+                    attribute->gl_normalize,
+                    attribute->stride,
+                    (void*)addr);
+#endif
+            }
+            glEnableVertexAttribArray(i);
+        } else {
+            glDisableVertexAttribArray(i);
+            glVertexAttrib4fv(i, a->inline_value);
+        }
+    }
+
+    LEAVE_NV2A;
+}
+#endif
+#if 0
+static unsigned int pgraph_bind_inline_array(NV2AState *d)
+{
+//    int i;
+
+//    PGRAPHState *pg = &d->pgraph;
+
+//    unsigned int offset = 0;
+//    for (i=0; i<NV2A_VERTEXSHADER_ATTRIBUTES; i++) {
+//        VertexAttribute *attribute = &pg->vertex_attributes[i];
+//        if (attribute->count) {
+//            attribute->inline_array_offset = offset;
+
+            NV2A_DPRINTF("bind inline attribute %d size=%d, count=%d\n",
+                i, attribute->size, attribute->count);
+//            offset += attribute->size * attribute->count;
+//            assert(offset % 4 == 0);
+//        }
+//    }
+
+//    unsigned int vertex_size = offset;
+
+
+//    unsigned int index_count = pg->inline_array_length*4 / vertex_size;
+
+    NV2A_DPRINTF("draw inline array %d, %d\n", vertex_size, index_count);
+
+//    glBindBuffer(GL_ARRAY_BUFFER, pg->gl_inline_array_buffer);
+//    glBufferData(GL_ARRAY_BUFFER, pg->inline_array_length*4, pg->inline_array,
+//                 GL_DYNAMIC_DRAW);
+
+//    pgraph_bind_vertex_attributes(d, index_count, true, vertex_size);
+
+//    return index_count;
+}
+#elif 0
+static uint32_t
+nv2a_inline_array_bind(void) {
+    register nv2a_vertex_attrib_t *a;
+    register uint32_t i;
+    uint32_t offset;
+    uint32_t size;
+    uint32_t count;
+    ENTER_NV2A;
+
+    for (offset = 0, i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
+        if ((a = &nv2a_ctx->va[i])->format.size) {
+            a->inline_array_offset  = offset;
+            offset                 += a->format.size * a->f->size;
+            if (offset % 4) INT3;
+        }
+    }
+
+    size  = nv2a_ctx->inline_array_len * sizeof(*nv2a_ctx->inline_array);
+    count = size / offset;
+
+    glBindBuffer(GL_ARRAY_BUFFER, nv2a_ctx->gl_inline_array_buffer);
+    glBufferData(GL_ARRAY_BUFFER, size, nv2a_ctx->inline_array, GL_DYNAMIC_DRAW);
+
+    nv2a_vertex_attrib_bind(count, 1, offset);
+
+    LEAVE_NV2A;
+    return count;
+}
+#endif
 static void
 nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_command_t *c) {
     register nv2a_vertex_attrib_t *a;
@@ -1223,70 +1587,60 @@ nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_command_t *c) {
     register uint32_t *get;
     register uint32_t v;
     register uint32_t t;
-    nv2a_pgraph_ctx S;
-    nv2a_pgraph_ctx C;
+    nv2a_pgraph_ctx1_t *ctx1;
+    nv2a_pgraph_ctx2_t *ctx2;
+    nv2a_pgraph_ctx3_t *ctx3;
+    nv2a_pgraph_ctx4_t *ctx4;
+    nv2a_pgraph_ctx5_t *ctx5;
     nv2a_dma_t dma;
     ENTER_NV2A;
 
     NV2A_IRQ_WAITN(PGRAPH, FIFO, ACCESS_ENABLED);
-
 //    if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PGRAPH, CTX_CONTROL, CHID, INVALID)) INT3;//FIXME will be invalid
 
     VARDUMP_NV2A(VAR_IN, c->subchannel);
 
-    S.ctx1 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH1);
-    S.ctx2 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH2);
-    S.ctx3 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH3);
-    S.ctx4 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH4);
-    S.ctx5 = NV2A_REGADDR(p, NV_PGRAPH, CTX_SWITCH5);
-    pos    = NV_PGRAPH_CTX_CACHE__OFFSET(c->subchannel);
-    C.ctx1 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE1);
-    C.ctx2 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE2);
-    C.ctx3 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE3);
-    C.ctx4 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE4);
-    C.ctx5 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE5);
-
-//fprintf(stderr,"pgraph: method:0x%x | subchannel:%u | param:0x%x | grclass:0x%x\n",c->method,c->subchannel,c->param,cache1->grclass);//XXX
-
+    pos  = NV_PGRAPH_CTX_CACHE__OFFSET(c->subchannel);
+    ctx1 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE1);
+    ctx2 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE2);
+    ctx3 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE3);
+    ctx4 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE4);
+    ctx5 = NV2A_REGADDR(p + pos, NV_PGRAPH, CTX_CACHE5);
+//fprintf(stderr,"pgraph: method:0x%x | subchannel:%u | param:0x%x | grclass:0x%x\n",c->method,c->subchannel,c->param,ctx1->grclass);//XXX
     if (c->method == /* NV_SET_OBJECT */ 0) {
         VARDUMP_NV2A(VAR_IN, c->method);
         VARDUMP_NV2A(VAR_IN, c->param);
         pos = c->param;
         if (pos + 20 > NV2A_BLOCK_SIZE(NV_PRAMIN) || pos % 4) INT3;
         get = NV2A_REGADDR(p + pos, NV_PRAMIN, BASE);
-        C.ctx1->field = *get++;
-        C.ctx2->field = *get++;
-        C.ctx3->field = *get++;
-        C.ctx4->field = *get++;
-        C.ctx5->field = *get++;
-        *S.ctx1 = *C.ctx1;
-        *S.ctx2 = *C.ctx2;
-        *S.ctx3 = *C.ctx3;
-        *S.ctx4 = *C.ctx4;
-        *S.ctx5 = *C.ctx5;
-        VARDUMP3_NV2A(DUMP, C.ctx1->field, nv2a_pgraph_ctx1_name);
-        VARDUMP2_NV2A(DUMP, C.ctx1->grclass, nv2a_pgraph_ctx1_grclass_name);
-        VARDUMP2_NV2A(DUMP, C.ctx1->patch_config, nv2a_pgraph_ctx1_patch_config_name);
-        VARDUMP2_NV2A(DUMP, C.ctx1->dither_mode, nv2a_pgraph_ctx1_dither_mode_name);
-        VARDUMP2_NV2A(DUMP, C.ctx1->class_type, nv2a_pgraph_ctx1_class_type_name);
-        VARDUMP_NV2A(DUMP,  C.ctx2->field);
-        VARDUMP2_NV2A(DUMP, C.ctx2->mono_format, nv2a_pgraph_ctx2_mono_format_name);
-        VARDUMP2_NV2A(DUMP, C.ctx2->color_format, nv2a_pgraph_ctx2_color_format_name);
-        VARDUMP_NV2A(DUMP,  C.ctx2->notify_instance);
-        VARDUMP_NV2A(DUMP,  C.ctx3->field);
-        VARDUMP_NV2A(DUMP,  C.ctx3->dma_instance0);
-        VARDUMP_NV2A(DUMP,  C.ctx3->dma_instance1);
-        VARDUMP_NV2A(DUMP,  C.ctx4->field);
-        VARDUMP_NV2A(DUMP,  C.ctx4->user_instance);
-        VARDUMP_NV2A(DUMP,  C.ctx5->field);
-        VARDUMP_NV2A(DUMP,  C.ctx5->trap_bits);
+        NV2A_REG32(p, NV_PGRAPH, CTX_SWITCH1) = ctx1->field = *get++;
+        NV2A_REG32(p, NV_PGRAPH, CTX_SWITCH2) = ctx2->field = *get++;
+        NV2A_REG32(p, NV_PGRAPH, CTX_SWITCH3) = ctx3->field = *get++;
+        NV2A_REG32(p, NV_PGRAPH, CTX_SWITCH4) = ctx4->field = *get++;
+        NV2A_REG32(p, NV_PGRAPH, CTX_SWITCH5) = ctx5->field = *get;
+        VARDUMP3_NV2A(DUMP, ctx1->field,        nv2a_pgraph_ctx1_name);
+        VARDUMP2_NV2A(DUMP, ctx1->grclass,      nv2a_pgraph_ctx1_grclass_name);
+        VARDUMP2_NV2A(DUMP, ctx1->patch_config, nv2a_pgraph_ctx1_patch_config_name);
+        VARDUMP2_NV2A(DUMP, ctx1->dither_mode,  nv2a_pgraph_ctx1_dither_mode_name);
+        VARDUMP2_NV2A(DUMP, ctx1->class_type,   nv2a_pgraph_ctx1_class_type_name);
+        VARDUMP_NV2A(DUMP,  ctx2->field);
+        VARDUMP2_NV2A(DUMP, ctx2->mono_format,  nv2a_pgraph_ctx2_mono_format_name);
+        VARDUMP2_NV2A(DUMP, ctx2->color_format, nv2a_pgraph_ctx2_color_format_name);
+        VARDUMP_NV2A(DUMP,  ctx2->notify_instance);
+        VARDUMP_NV2A(DUMP,  ctx3->field);
+        VARDUMP_NV2A(DUMP,  ctx3->dma_instance0);
+        VARDUMP_NV2A(DUMP,  ctx3->dma_instance1);
+        VARDUMP_NV2A(DUMP,  ctx4->field);
+        VARDUMP_NV2A(DUMP,  ctx4->user_instance);
+        VARDUMP_NV2A(DUMP,  ctx5->field);
+        VARDUMP_NV2A(DUMP,  ctx5->trap_bits);
         LEAVE_NV2A;
         return;
     }
 
-    VARDUMP2_NV2A(DUMP, C.ctx1->grclass, nv2a_pgraph_ctx1_grclass_name);
+    VARDUMP2_NV2A(DUMP, ctx1->grclass, nv2a_pgraph_ctx1_grclass_name);
 
-    switch (C.ctx1->grclass) {
+    switch (ctx1->grclass) {
     case NV10_CONTEXT_SURFACES_2D /* 0x62 */:
         VARDUMP4_NV2A(VAR_IN, c->method, nv2a_062_name);
         pos = c->method;
@@ -1415,9 +1769,14 @@ INT3;//XXX make sure blit works
             FLIP_STALL_UNLOCK;
             break;
 #endif
+#if 0 //TODO
+        case NV_097_SET_BEGIN_END:
+            
+            break;
+#endif
         case NV_097_ARRAY_ELEMENT16:
             VARDUMP_NV2A(VAR_IN, c->param);
-            if (nv2a_ctx->inline_element_len + 2 >= ARRAY_SIZE(nv2a_ctx->inline_element)) INT3;
+            if (nv2a_ctx->inline_element_len + 2 > ARRAY_SIZE(nv2a_ctx->inline_element)) INT3;
             v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_ARRAY_ELEMENT16_VERTEX0);
             nv2a_ctx->inline_element[nv2a_ctx->inline_element_len++] = v;
             v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_ARRAY_ELEMENT16_VERTEX1);
@@ -1425,17 +1784,17 @@ INT3;//XXX make sure blit works
             break;
         case NV_097_ARRAY_ELEMENT32:
             VARDUMP_NV2A(VAR_IN, c->param);
-            if (nv2a_ctx->inline_element_len + 1 >= ARRAY_SIZE(nv2a_ctx->inline_element)) INT3;
+            if (nv2a_ctx->inline_element_len + 1 > ARRAY_SIZE(nv2a_ctx->inline_element)) INT3;
             nv2a_ctx->inline_element[nv2a_ctx->inline_element_len++] = c->param;
             break;
         case NV_097_DRAW_ARRAYS:
             VARDUMP_NV2A(VAR_IN, c->param);
-            if (nv2a_ctx->draw_arrays_len + 1 >= ARRAY_SIZE(nv2a_ctx->gl_draw_arrays_start)) INT3;
+            if (nv2a_ctx->draw_arrays_len + 1 > ARRAY_SIZE(nv2a_ctx->gl_draw_arrays_start)) INT3;
             v = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_DRAW_ARRAYS_START_INDEX);
             t = NV2A_MASK_BITSHIFT_GET(c->param, NV_097_DRAW_ARRAYS_COUNT) + 1;
             nv2a_ctx->draw_arrays_max = MAX(nv2a_ctx->draw_arrays_max, v + t);
-            /* attempt to connect primitives */
             if (nv2a_ctx->draw_arrays_len) {
+                /* attempt to connect primitives */
                 register uint32_t last_start = nv2a_ctx->gl_draw_arrays_start[nv2a_ctx->draw_arrays_len - 1];
                 register GLsizei *last_count = &nv2a_ctx->gl_draw_arrays_count[nv2a_ctx->draw_arrays_len - 1];
                 if (v == last_start + *last_count) {
@@ -1449,9 +1808,121 @@ INT3;//XXX make sure blit works
             break;
         case NV_097_INLINE_ARRAY:
             VARDUMP_NV2A(VAR_IN, c->param);
-            if (nv2a_ctx->inline_array_len + 1 >= ARRAY_SIZE(nv2a_ctx->inline_array)) INT3;
+            if (nv2a_ctx->inline_array_len + 1 > ARRAY_SIZE(nv2a_ctx->inline_array)) INT3;
             nv2a_ctx->inline_array[nv2a_ctx->inline_array_len++] = c->param;
             break;
+#if 0
+case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
+        NV097_SET_VERTEX_DATA_ARRAY_FORMAT + 0x3c: {
+
+//    slot = (method - NV097_SET_VERTEX_DATA_ARRAY_FORMAT) / 4;
+//    VertexAttribute *vertex_attribute = &pg->vertex_attributes[slot];
+
+//    vertex_attribute->format =
+//        GET_MASK(parameter, NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE);
+//    vertex_attribute->count =
+//        GET_MASK(parameter, NV097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE);
+//    vertex_attribute->stride =
+//        GET_MASK(parameter, NV097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE);
+
+    NV2A_DPRINTF("vertex data array format=%d, count=%d, stride=%d\n",
+        vertex_attribute->format,
+        vertex_attribute->count,
+        vertex_attribute->stride);
+
+//    vertex_attribute->gl_count = vertex_attribute->count;
+
+//
+
+//    if (vertex_attribute->needs_conversion) {
+//        vertex_attribute->converted_elements = 0;
+//    } else {
+//        if (vertex_attribute->converted_buffer) {
+//            g_free(vertex_attribute->converted_buffer);
+//            vertex_attribute->converted_buffer = NULL;
+//        }
+//    }
+
+    break;
+}
+
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE                      0xffffff00
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE__BITSHIFT            8
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE                        0x000000f0
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE__BITSHIFT              4
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_DISABLED               0
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_1                      1
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_2                      2
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_3                      3
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_4                      4
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_3W                     7
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE                        0x0000000f
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE__BITSHIFT              0
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_D3D                 0
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S1                     1
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_F                      2
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_OGL                 4
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S32K                   5
+#define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP                    6
+#elif 1
+#define CASE(x) \
+        case NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_##x: \
+            VARDUMP_NV2A(VAR_IN, c->param); \
+            a = &nv2a_ctx->va[x]; \
+            a->vertex.field = c->param; \
+            /*a->converted_elements = 0;FIXME*/ \
+            break
+        CASE(0);
+        CASE(1);
+        CASE(2);
+        CASE(3);
+        CASE(4);
+        CASE(5);
+        CASE(6);
+        CASE(7);
+        CASE(8);
+        CASE(9);
+        CASE(10);
+        CASE(11);
+        CASE(12);
+        CASE(13);
+        CASE(14);
+        CASE(15);
+#undef CASE
+#define CASE(x) \
+        case NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_##x: \
+            VARDUMP_NV2A(VAR_IN, c->param); \
+            a = &nv2a_ctx->va[x]; \
+            a->format.field = c->param; \
+            /*a->gl_size = a->format.size;FIXME*/ \
+            if (a->format.type >= ARRAY_SIZE(nv2a_inline_array_format)) INT3; \
+            a->f = &nv2a_inline_array_format[a->format.type]; \
+            if (!a->f->name) INT3; \
+            if (a->f->convert) { \
+                /*a->converted_elements = 0;FIXME*/ \
+            }/* else if (a->converted_buffer) {FIXME*/ \
+            /*    free(a->converted_buffer);FIXME*/ \
+            /*    a->converted_buffer = NULL;FIXME*/ \
+            /*}FIXME*/ \
+            break
+        CASE(0);
+        CASE(1);
+        CASE(2);
+        CASE(3);
+        CASE(4);
+        CASE(5);
+        CASE(6);
+        CASE(7);
+        CASE(8);
+        CASE(9);
+        CASE(10);
+        CASE(11);
+        CASE(12);
+        CASE(13);
+        CASE(14);
+        CASE(15);
+#undef CASE
+#endif
         /* parameters are uploaded to the vertex attributes' inline buffer below */
         /* x = vertex method name, y = vertex attribute index, z = inline value index */
 #define CASES(y,z) \
@@ -1500,10 +1971,10 @@ INT3;//XXX make sure blit works
             break
 #define CASEV(z) \
             a->inline_value[z] = *(float *)&c->param; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[z]); /* TODO: display float */
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[z]));
 #define CASE2V \
             a->inline_value[3] = 1.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[3]));
         CASE2(SET_VERTEX3F,  0, 0);
         CASE2(SET_VERTEX3F,  0, 1);
         CASE2F(SET_VERTEX3F, 0, 2);
@@ -1515,9 +1986,9 @@ INT3;//XXX make sure blit works
 #define CASE2V \
             /* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */ \
             a->inline_value[2] = 0.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[2]); /* TODO: display float */ \
             a->inline_value[3] = 1.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[2])); \
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[3]));
         CASE2M(SET_VERTEX_DATA2F,  0, 0);
         CASE2FM(SET_VERTEX_DATA2F, 0, 1);
         CASE2M(SET_VERTEX_DATA2F,  1, 0);
@@ -1621,15 +2092,15 @@ INT3;//XXX make sure blit works
             INT3; /* FIXME: Untested! */ \
             /* FIXME: Is mapping to [-1,+1] correct? */ \
             a->inline_value[0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[0]); /* TODO: display float */ \
             a->inline_value[1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[1]); /* TODO: display float */
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[0])); \
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[1]));
 #define CASE2V \
             /* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */ \
             a->inline_value[2] = 0.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[2]); /* TODO: display float */ \
             a->inline_value[3] = 1.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[2])); \
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[3]));
         CASE2F(SET_VERTEX_DATA2S, 0,  0);
         CASE2(SET_VERTEX_DATA2S,  1,  1);
         CASE2(SET_VERTEX_DATA2S,  2,  2);
@@ -1651,13 +2122,13 @@ INT3;//XXX make sure blit works
         /* z = used as y here */
 #define CASEV(z) \
             a->inline_value[0] = ((c->param >>  0) & 0xff) / 255.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[0]); /* TODO: display float */ \
             a->inline_value[1] = ((c->param >>  8) & 0xff) / 255.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[1]); /* TODO: display float */ \
             a->inline_value[2] = ((c->param >> 16) & 0xff) / 255.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[2]); /* TODO: display float */ \
             a->inline_value[3] = ((c->param >> 24) & 0xff) / 255.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[3]); /* TODO: display float */
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[0])); \
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[1])); \
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[2])); \
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[3]));
         CASEF(SET_VERTEX_DATA4UB, 0,  0);
         CASE(SET_VERTEX_DATA4UB,  1,  1);
         CASE(SET_VERTEX_DATA4UB,  2,  2);
@@ -1679,9 +2150,9 @@ INT3;//XXX make sure blit works
             INT3; /* FIXME: Untested! */ \
             /* FIXME: Is mapping to [-1,+1] correct? */ \
             a->inline_value[z * 2 + 0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[z * 2 + 0]); /* TODO: display float */ \
             a->inline_value[z * 2 + 1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
-            VARDUMP_NV2A(DUMP, *(uint32_t *)&a->inline_value[z * 2 + 1]); /* TODO: display float */
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[z * 2 + 0])); \
+            VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[z * 2 + 1]));
         CASEM(SET_VERTEX_DATA4S,  0, 0);
         CASEFM(SET_VERTEX_DATA4S, 0, 1);
         CASEM(SET_VERTEX_DATA4S,  1, 0);
@@ -2296,7 +2767,7 @@ nv2a_pfifo_ramht_lookup(register void *p, register uint32_t *handle, register nv
     ptr += hash;
 
     *r = *(typeof(r))ptr;
-//PRINT("ramht_lookup: handle:%u | context:0x%.08x | pgraph param:0x%.04x | engine:%u | chid:%u | valid:%u | reg:%p",r->handle,r->context,r->instance << 4,r->engine,r->chid,r->valid,ptr-NV2A_REGADDR(p, NV_PRAMIN, BASE));//XXX
+//PRINT(XEXEC_DBG_ALL,"ramht_lookup: handle:%u | context:0x%.08x | pgraph param:0x%.04x | engine:%u | chid:%u | valid:%u | reg:%p",r->handle,r->context,r->instance << 4,r->engine,r->chid,r->valid,ptr-NV2A_REGADDR(p, NV_PRAMIN, BASE));//XXX
     if (r->valid) *handle = (typeof(*handle))r->instance << 4;
 
     LEAVE_NV2A;
@@ -2310,7 +2781,7 @@ nv2a_pfifo_puller(register void *p, register nv2a_pfifo_command_t *c) {
 
     do {
         if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_PULL0, ACCESS, DISABLED)) {
-            PRINT_NV2A("%s(): warning: puller access disabled: cannot process command method: 0x%x", __func__, c->method);
+            PRINT_NV2A(XEXEC_DBG_ERROR, "%s(): warning: puller access disabled; cannot process command method: 0x%x", __func__, c->method);
             break;
         }
 //glo_current(nv2a_ctx->glo, 1);//TODO
@@ -2406,28 +2877,31 @@ nv2a_pfifo_pusher(register void *p) {
     v = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID);
     /* TODO: PIO not supported */
     if (!(NV2A_REG32(p, NV_PFIFO, MODE) & (1 << v))) {
-        PRINT_NV2A("pb error: channel %u is not in DMA mode", v);
+        PRINT_NV2A(XEXEC_DBG_ERROR, "pb error: channel %u is not in DMA mode", v);
         INT3;
     }
     if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_PUSH1, MODE, PIO)) {
-        PRINT_NV2A("pb error: PIO not supported", 0);
+        PRINT_NV2A(XEXEC_DBG_ERROR, "pb error: PIO not supported", 0);
         INT3;
     }
 
     get    = NV2A_REGADDR(p, NV_PRAMIN, BASE);
-//PRINT("    get:%p",get);//XXX
+//PRINT(XEXEC_DBG_ALL,"    get:%p",get);//XXX
     get   += NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS) << 2;
-//PRINT("    get + instance:%p | instance:%p",get,((NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS)) << 4));//XXX
+//PRINT(XEXEC_DBG_ALL,"    get + instance:%p | instance:%p",get,((NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_DMA_INSTANCE, ADDRESS)) << 4));//XXX
     dma    = NV2A_DMA(get);
     addr   = NV2A_DMA_ADDRESS(&dma);
-//PRINT("    addr:%p | flags:%p | limit:%p | frame:%p | class:%p | target:%p",addr,dma.flags,dma.limit,dma.frame,dma.class,dma.target);//XXX
+//PRINT(XEXEC_DBG_ALL,"    addr:%p | flags:%p | limit:%p | frame:%p | class:%p | target:%p",addr,dma.flags,dma.limit,dma.frame,dma.class,dma.target);//XXX
 //INT3;//XXX
     get    = NV2A_REGADDR(p + NV_USER_OBJECT__OFFSET(v, 0), NV_USER, DMA_GET);
     put    = NV2A_REGADDR(p + NV_USER_OBJECT__OFFSET(v, 0), NV_USER, DMA_PUT);
     c      = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_STATE);
     d      = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_DCOUNT);
 
-    PRINT_NV2A("pb DMA pusher: begin: "
+    PRINT_NV2A(
+        XEXEC_DBG_VARDUMP,
+        "pb DMA pusher: "
+        "begin: "
         "limit: 0x%.08x | "
         "get: 0x%.08x < put: 0x%.08x",
         dma.limit,
@@ -2443,7 +2917,7 @@ nv2a_pfifo_pusher(register void *p) {
         xboxkrnl_read_dma(addr + *get, &v, 4);
         *get += 4;
         word  = v;
-//PRINT("pfifo_pusher: word/param:0x%.08x | method:0x%.03hx | subchannel:0x%.02hx | method_count:0x%.02hx | non_inc:%hhu | dcount:%u | error:%u",word,c->method,c->subchannel,c->method_count,c->non_inc,*d,c->error);//XXX
+//PRINT(XEXEC_DBG_ALL,"pfifo_pusher: word/param:0x%.08x | method:0x%.03hx | subchannel:0x%.02hx | method_count:0x%.02hx | non_inc:%hhu | dcount:%u | error:%u",word,c->method,c->subchannel,c->method_count,c->non_inc,*d,c->error);//XXX
         if (c->method_count) {
             /* data word of methods command */
             NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_DATA_SHADOW) = word;
@@ -2461,12 +2935,12 @@ nv2a_pfifo_pusher(register void *p) {
                 /* old jump */
                 NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PFIFO, CACHE1_DMA_GET_JMP_SHADOW, OFFSET, *get);
                 *get = NV2A_MASK_GET(word, 0x1ffffffc);
-                PRINT_NV2A("pb OLD_JMP 0x%.08x", *get);
+                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb OLD_JMP 0x%.08x", *get);
             } else if ((word & 3) == 1) {
                 /* jump */
                 NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PFIFO, CACHE1_DMA_GET_JMP_SHADOW, OFFSET, *get);
                 *get = NV2A_MASK_BITSHIFT_GET(word, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
-                PRINT_NV2A("pb JMP 0x%.08x", *get);
+                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb JMP 0x%.08x", *get);
             } else if ((word & 3) == 2) {
                 /* call */
                 if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, ACTIVE)) {
@@ -2476,7 +2950,7 @@ nv2a_pfifo_pusher(register void *p) {
                 NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, RETURN_OFFSET, *get);
                 NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, ACTIVE);
                 *get = NV2A_MASK_BITSHIFT_GET(word, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
-                PRINT_NV2A("pb CALL 0x%.08x", *get);
+                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb CALL 0x%.08x", *get);
             } else if (word == 0x00020000) {
                 /* return */
                 if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, INACTIVE)) {
@@ -2485,7 +2959,7 @@ nv2a_pfifo_pusher(register void *p) {
                 }
                 *get = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, RETURN_OFFSET);
                 NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, INACTIVE);
-                PRINT_NV2A("pb RET 0x%.08x", *get);
+                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb RET 0x%.08x", *get);
             } else if (!(word & 0xe0030003)) {
                 /* increasing methods */
                 c->field   = word;
@@ -2499,14 +2973,17 @@ nv2a_pfifo_pusher(register void *p) {
                 c->error   = 0;
                 *d         = 0;
             } else {
-                PRINT_NV2A("pb RESERVED_CMD 0x%.08x, word 0x%.08x", *get, word);
+                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb RESERVED_CMD 0x%.08x, word 0x%.08x", *get, word);
                 c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_RESERVED_CMD;
                 break;
             }
         }
     }
 
-    PRINT_NV2A("pb DMA pusher:   end: "
+    PRINT_NV2A(
+        XEXEC_DBG_VARDUMP,
+        "pb DMA pusher: "
+        "  end: "
         "limit: 0x%.08x | "
         "get: 0x%.08x < put: 0x%.08x",
         dma.limit,
@@ -2516,7 +2993,7 @@ nv2a_pfifo_pusher(register void *p) {
     NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_PUSH, STATE, IDLE);
 
     if (c->error) {
-        PRINT_NV2A("pb error: 0x%.08x", c->error);
+        VARDUMP2_NV2A(DUMP, c->error, nv2a_pfifo_cache1_dma_state_error_name);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_PUSH, STATUS, SUSPENDED);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, INTR_0, DMA_PUSHER, PENDING);
         IRQ_NV2A_SIGNAL;
@@ -2561,7 +3038,9 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_NV2A("%s: "
+        PRINT_NV2A(
+            (b->index == NV_PRAMIN) ? XEXEC_DBG_DMA : XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "block: '%s' | "
@@ -2582,7 +3061,9 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_NV2A("%s: "
+        PRINT_NV2A(
+            (b->index == NV_PRAMIN) ? XEXEC_DBG_DMA : XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "block: '%s' | "
@@ -2603,7 +3084,9 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_NV2A("%s: "
+        PRINT_NV2A(
+            (b->index == NV_PRAMIN) ? XEXEC_DBG_DMA : XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "block: '%s' | "
@@ -2730,7 +3213,7 @@ static void pvideo_vga_invalidate(NV2AState *d)
                 o = NV2A_REG32(p, NV_PGRAPH, CHANNEL_CTX_POINTER) << 4;
                 v = NV2A_REG32(p + o, NV_PRAMIN, BASE);
                 NV2A_REG32(p, NV_PGRAPH, CTX_USER) = v;
-PRINT("ctx_user: 0x%.08x",v);//XXX make sure this works
+PRINT(XEXEC_DBG_ALL,"ctx_user: 0x%.08x",v);//XXX make sure this works
 INT3;//XXX make sure this works
             }
             if (NV2A_MASK_BITSHIFT_TEST(v, NV_PGRAPH_CHANNEL_CTX_TRIGGER_WRITE_OUT, ACTIVATE)) {
@@ -2753,7 +3236,7 @@ INT3;//XXX make sure this works
         }
         break;
     case NV_USER:
-//PRINT("nv_user: (mode:0x%.08x & (1 << chid:%u)) == %s",NV2A_REG32(p,NV_PFIFO,MODE),NV2A_MASK_BITSHIFT_GET(r,NV_USER_CHID),(NV2A_REG32(p,NV_PFIFO,MODE) & (1 << NV2A_MASK_BITSHIFT_GET(r,NV_USER_CHID)))?"true":"false");//XXX
+//PRINT(XEXEC_DBG_ALL,"nv_user: (mode:0x%.08x & (1 << chid:%u)) == %s",NV2A_REG32(p,NV_PFIFO,MODE),NV2A_MASK_BITSHIFT_GET(r,NV_USER_CHID),(NV2A_REG32(p,NV_PFIFO,MODE) & (1 << NV2A_MASK_BITSHIFT_GET(r,NV_USER_CHID)))?"true":"false");//XXX
         if (NV2A_REG32(p, NV_PFIFO, MODE) & (1 << NV2A_MASK_BITSHIFT_GET(r, NV_USER_CHID))) {
             /* dma */
             switch (NV2A_MASK_BITSHIFT_GET(r, NV_USER_REG)) {
@@ -2968,7 +3451,9 @@ static uint64_t ptimer_get_clock(NV2AState *d)
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_NV2A("%s: "
+        PRINT_NV2A(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "block: '%s' | "
@@ -2987,7 +3472,9 @@ static uint64_t ptimer_get_clock(NV2AState *d)
         break;
     case 2:
         v &= 0xffff;
-        PRINT_NV2A("%s: "
+        PRINT_NV2A(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "block: '%s' | "
@@ -3005,7 +3492,9 @@ static uint64_t ptimer_get_clock(NV2AState *d)
         ret = 1;
         break;
     case 4:
-        PRINT_NV2A("%s: "
+        PRINT_NV2A(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.08x | "
             "block: '%s' | "

@@ -1,7 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -80,9 +81,9 @@ apu_block_lookup(register uint32_t addr, register const char **reg) {
 
     if (reg) *reg = NULL;
 
-    for (i = 0; i <= ARRAY_SIZE(apu_blocks); ++i) {
-        if (i >= ARRAY_SIZE(apu_blocks)) INT3;
-        b = &apu_blocks[i];
+    for (i = 0; i <= ARRAY_SIZE(apu_block); ++i) {
+        if (i >= ARRAY_SIZE(apu_block)) INT3;
+        b = &apu_block[i];
         if (RANGE(b->offset, b->size, addr)) {
             if (reg) {
                 i = (addr - b->offset) / 4;
@@ -149,7 +150,9 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_APU("%s: "
+        PRINT_APU(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "block: '%s' | "
@@ -170,7 +173,9 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_APU("%s: "
+        PRINT_APU(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "block: '%s' | "
@@ -191,7 +196,9 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_APU("%s: "
+        PRINT_APU(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "block: '%s' | "
@@ -290,7 +297,9 @@ apu_read(uint32_t addr, void *val, size_t sz) {
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_APU("%s: "
+        PRINT_APU(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "block: '%s' | "
@@ -309,7 +318,9 @@ apu_read(uint32_t addr, void *val, size_t sz) {
         break;
     case 2:
         v &= 0xffff;
-        PRINT_APU("%s: "
+        PRINT_APU(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "block: '%s' | "
@@ -327,7 +338,9 @@ apu_read(uint32_t addr, void *val, size_t sz) {
         ret = 1;
         break;
     case 4:
-        PRINT_APU("%s: "
+        PRINT_APU(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.08x | "
             "block: '%s' | "

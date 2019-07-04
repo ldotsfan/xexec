@@ -1,7 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -35,9 +36,9 @@
 #define MIN(x,y)            ((x) < (y) ? (x) : (y))
 #define MAX(x,y)            ((x) > (y) ? (x) : (y))
 
-#define REG08(x)            *(uint8_t  *)((x))
-#define REG16(x)            *(uint16_t *)((x))
-#define REG32(x)            *(uint32_t *)((x))
+#define REG08(x)            *(uint8_t  *)(x)
+#define REG16(x)            *(uint16_t *)(x)
+#define REG32(x)            *(uint32_t *)(x)
 
 #define CLIP08(x) ({ \
         register int _x = (x); \
@@ -85,6 +86,7 @@ enum XBOXKRNL_VARDUMP_TYPE {
     VAR_OUT,
     STUB,
     DUMP,
+    FLOAT,
     STRING,
     WSTRING,
     HEX,
@@ -95,6 +97,7 @@ static const char *const xboxkrnl_vardump_type_name[] = {
     [VAR_OUT]   = " out",
     [STUB]      = "stub",
     [DUMP]      = "dump",
+    [FLOAT]     = " flt",
     [STRING]    = " str",
     [WSTRING]   = "wstr",
     [HEX]       = " hex",
@@ -116,10 +119,10 @@ xboxkrnl_wchar_to_char(const void *in, char **out, size_t *outlen) {
 
     for (inlen = 0, w = in; *w; ++inlen, ++w);
     if (inlen && (b = malloc(inlen + 1))) {
-        b[inlen] = 0;
-        buf      = b;
-        len      = inlen;
-        inlen   *= sizeof(*w);
+        b[inlen]  = 0;
+        buf       = b;
+        len       = inlen;
+        inlen    *= sizeof(*w);
         if (iconv(xboxkrnl_wc_c, (char **)&in, &inlen, &buf, &len) != (typeof(len))-1) {
             *out = b;
             if (outlen) *outlen = buf - b;
@@ -128,19 +131,6 @@ xboxkrnl_wchar_to_char(const void *in, char **out, size_t *outlen) {
             free(b);
         }
     }
-
-    return ret;
-}
-
-static char *
-xboxkrnl_stack_indent(int8_t stack) {
-    register size_t sz;
-    register char *ret;
-
-    sz  = (stack > 0) ? stack * 4 : 0;
-    ret = (sz) ? malloc(sz + 1) : NULL;
-    if (ret) memset(ret, ' ', sz), ret[sz] = 0;
-    else ret = strdup("");
 
     return ret;
 }
@@ -155,11 +145,11 @@ xboxkrnl_vardump(
         size_t nsz,
         int mask,
         size_t sz) {
+    static const int level = XEXEC_DBG_VARDUMP;
     register char *c = NULL;
-    register char *s;
     char *a;
 
-    if (!dbg) return;
+    if (!(xexec_debug & level)) return;
 
     if (v >> 32 == ~0UL) v &= ~0UL; /* unwanted sign extension from 32-bit to 64-bit */
     a = *(char **)&v;
@@ -189,13 +179,14 @@ xboxkrnl_vardump(
         }
     }
 
-    s = xboxkrnl_stack_indent(stack);
     if (type == STRING || type == WSTRING) {
         size_t l;
         register int ret = (type == WSTRING && xboxkrnl_wchar_to_char(a, &a, &l));
         if (!ret) l = (sz) ? sz : strlen(a);
-        debug("%svar: %s: *%s = '%.*s' (%zu) [0x%llx]",
-            s,
+        debug(
+            level,
+            stack,
+            "var: %s: *%s = '%.*s' (%zu) [0x%.08llx]",
             xboxkrnl_vardump_type_name[type],
             vname,
             l,
@@ -203,9 +194,20 @@ xboxkrnl_vardump(
             l,
             v);
         if (ret) free(a);
+    } else if (type == FLOAT) {
+        debug(
+            level,
+            stack,
+            "var: %s: *%s = %g [0x%.08llx]",
+            xboxkrnl_vardump_type_name[type],
+            vname,
+            *(float *)&v,
+            v);
     } else {
-        debug("%svar: %s: *%s = 0x%llx (%llu)%s%s%s",
-            s,
+        debug(
+            level,
+            stack,
+            "var: %s: *%s = 0x%.08llx (%llu)%s%s%s",
             xboxkrnl_vardump_type_name[type],
             vname,
             v,
@@ -214,33 +216,28 @@ xboxkrnl_vardump(
             (c) ?    c : "",
             (c) ?  ")" : "");
     }
-    free(s);
 
     if (mask && c) free(c);
 }
 
 static void
 xboxkrnl_hexdump(int8_t stack, const void *in, uint16_t inlen, const char *var) {
+    static const int level = XEXEC_DBG_HEXDUMP;
     register const uint8_t *d;
     register char *h;
     register int i;
     char buf[4096];
     char b[67];
 
-    if (!dbg || !inlen) return;
+    if (!(xexec_debug & level) || !inlen) return;
 
-    h = xboxkrnl_stack_indent(stack);
-    i = snprintf(buf, sizeof(buf), "%svar: %s: ", h, xboxkrnl_vardump_type_name[HEX]);
-    free(h);
+    if ((i = snprintf(buf, sizeof(buf), "var: %s: ", xboxkrnl_vardump_type_name[HEX])) <= 0) return;
 
-    if (i <= 0) return;
+    if (var) debug(level, stack, "%sdump: *%s = 0x%.08x | size: %hu (0x%hx)", buf, var, in, inlen, inlen);
+    else debug(level, stack, "%sdump: 0x%.08x | size: %hu (0x%hx)", buf, in, inlen, inlen);
+    debug(level, stack, "%s            0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  |0123456789abcdef|", buf);
 
-    if (var) debug("%sdump: *%s = %p | size: %hu (0x%hx)", buf, var, in, inlen, inlen);
-    else debug("%sdump: %p | size: %hu (0x%hx)", buf, in, inlen, inlen);
-    debug("%s            0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  |0123456789abcdef|", buf);
-
-    memset(b, ' ', 66), b[66] = 0;
-    for (d = in, h = b; inlen; h = b) {
+    for (memset(b, ' ', 66), b[66] = 0, d = in, h = b; inlen; h = b) {
         for (i = 0; i < 16; ++i) {
             if (inlen) {
                 *h++ = "0123456789abcdef"[*d >> 4];
@@ -257,7 +254,7 @@ xboxkrnl_hexdump(int8_t stack, const void *in, uint16_t inlen, const char *var) 
             }
         }
         if ((i = ((void *)d - 16 - in)) & 15) i &= ~15, i += 16;
-        debug("%s[0x%.04x]:  %s", buf, i, b);
+        debug(level, stack, "%s[0x%.04x]:  %s", buf, i, b);
     }
 }
 
@@ -270,87 +267,84 @@ xboxkrnl_backtrace(void) {
 
 static void
 xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix) {
+    static const int level = XEXEC_DBG_STACK;
     register void *bt = xboxkrnl_backtrace();
-    register char *s;
 
-    s = xboxkrnl_stack_indent(*stack);
-    debug("%senter%s%s%s: [%p] --> %s()",
-        s,
+    debug(
+        level,
+        *stack,
+        "enter%s%s%s: [0x%.08x] --> %s()",
         (prefix && *prefix) ?   " (" : "",
         (prefix && *prefix) ? prefix : "",
         (prefix && *prefix) ?    ")" : "",
         (bt) ? bt - 6 : bt,
         func);
-    free(s);
 
     if (++*stack & 0xc0) *stack = 0;
 }
 
 static void
 xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix) {
+    static const int level = XEXEC_DBG_STACK;
     register void *bt = xboxkrnl_backtrace();
-    register char *s;
 
     if (--*stack & 0xc0) *stack = 0;
 
-    s = xboxkrnl_stack_indent(*stack);
-    debug("%sleave%s%s%s: [%p] <-- %s()",
-        s,
+    debug(
+        level,
+        *stack,
+        "leave%s%s%s: [0x%.08x] <-- %s()",
         (prefix && *prefix) ?   " (" : "",
         (prefix && *prefix) ? prefix : "",
         (prefix && *prefix) ?    ")" : "",
         bt,
         func);
-    free(s);
 }
 
 static void
-xboxkrnl_print(int8_t stack, const char *format, ...) {
-    register char *s;
-    register size_t len;
-    register size_t n;
-    register int ret;
-    char buf[4096];
+xboxkrnl_print(int level, int8_t stack, const char *format, ...) {
     va_list args;
+    char buf[4096];
+    register ssize_t n;
 
-    if (!dbg) return;
-
-    s   = xboxkrnl_stack_indent(stack);
-    n   = sizeof(buf) - 1;
-    len = strlen(s);
-    strncpy(buf, s, n);
-    free(s);
-
-    if (len >= n) return;
+    if (!level) return;
 
     va_start(args, format);
-    ret = vsnprintf(&buf[len], n - len, format, args);
+    n = sizeof(buf);
+    if ((n = vsnprintf(buf, n, format, args)) < 0) {
+        va_end(args);
+        return;
+    }
+    buf[n - (n == sizeof(buf))] = 0;
     va_end(args);
 
-    if (ret > 0) {
-        ret += len;
-        buf[ret] = 0;
-        debug("%.*s", ret, buf);
-    }
+    debug(level, stack, "%.*s", n, buf);
 }
 
-#define INT3                __asm__ __volatile__("int3")
+#define INT3 \
+        do { \
+            PRINT(XEXEC_DBG_ALL, \
+                "INT3: %s(): breakpoint triggered at line %i of file \"%s\" (git version: %s)", \
+                __func__, __LINE__, __FILE__, "UNKNOWN"); /* FIXME include git version */ \
+            __asm__ __volatile__("int3"); \
+        } while (0)
 #define STDCALL             __attribute__((__stdcall__))
 #define FASTCALL            __attribute__((__fastcall__))
 
-#define ENTER               xboxkrnl_enter(&xboxkrnl_stack, __func__, NULL)
-#define LEAVE               xboxkrnl_leave(&xboxkrnl_stack, __func__, NULL)
-#define PRINT(x,...)        xboxkrnl_print(xboxkrnl_stack, (x), __VA_ARGS__)
-#define HEXDUMP(x)          xboxkrnl_hexdump(xboxkrnl_stack, (x), sizeof(x), #x)
-#define HEXDUMPN(x,y)       xboxkrnl_hexdump(xboxkrnl_stack, (x), (y), #x)
+#define ENTER               xboxkrnl_enter(&xboxkrnl_stack,__func__,NULL)
+#define LEAVE               xboxkrnl_leave(&xboxkrnl_stack,__func__,NULL)
+#define PRINT(x,y,...)      xboxkrnl_print(x,xboxkrnl_stack,(y),__VA_ARGS__)
+#define HEXDUMP(x)          xboxkrnl_hexdump(xboxkrnl_stack,(x),sizeof(x),#x)
+#define HEXDUMPN(x,y)       xboxkrnl_hexdump(xboxkrnl_stack,(x),(y),#x)
 static int8_t               xboxkrnl_stack = 0;
 
 static void                 (*xboxkrnl_entry)(void) = NULL;
 
-static pthread_mutex_t      xboxkrnl_tsc_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t      xboxkrnl_tsc_mutex     = PTHREAD_MUTEX_INITIALIZER;
 static int                  xboxkrnl_tsc_intercept = 0;
-static uint128_t            xboxkrnl_tsc_hz = uint128_0;
-static uint128_t            xboxkrnl_tsc_scaler = uint128_0;
+static int                  xboxkrnl_tsc_overflow  = 0;
+static uint128_t            xboxkrnl_tsc_hz        = uint128_0;
+static uint128_t            xboxkrnl_tsc_scaler    = uint128_0;
 #define TSC_LOCK            pthread_mutex_lock(&xboxkrnl_tsc_mutex)
 #define TSC_UNLOCK          pthread_mutex_unlock(&xboxkrnl_tsc_mutex)
 
@@ -381,16 +375,16 @@ xboxkrnl_tsc_init(void) {
     do {
         xboxkrnl_tsc_intercept = 1;
         if (xboxkrnl_tsc_off() < 0) {
-            PRINT("error: failed to intercept TSC register: prctl(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: failed to intercept TSC register: prctl(): '%s'", strerror(errno));
             break;
         }
         xboxkrnl_tsc_on();
         if ((fd = open("/proc/cpuinfo", O_RDONLY)) < 0) {
-            PRINT("error: failed to query TSC frequency: open(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: failed to query TSC frequency: open(): '%s'", strerror(errno));
             break;
         }
         if ((tmp = read(fd, buf, sizeof(buf))) <= 0) {
-            PRINT("error: failed to query TSC frequency: read(): '%s'", (!tmp) ? "empty read" : strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: failed to query TSC frequency: read(): '%s'", (!tmp) ? "empty read" : strerror(errno));
             break;
         }
         if (!(x = strstr(buf, "cpu MHz")) ||
@@ -398,12 +392,13 @@ xboxkrnl_tsc_init(void) {
             (*y = 0) ||
             !(x = strrchr(x, ' ')) ||
             sscanf(x + 1, "%u.%03u", &mhz, &khz) != 2) {
-            PRINT("error: failed to query TSC frequency: string not found", 0);
+            PRINT(XEXEC_DBG_ERROR, "error: failed to query TSC frequency: string not found", 0);
             break;
         }
-        PRINT("/* TSC frequency is %u.%.03u MHz */", mhz, khz);
+        PRINT(XEXEC_DBG_INFO, "/* TSC frequency is %u.%.03u MHz */", mhz, khz);
         if (mhz < 733 || (mhz == 733 && khz <= 333)) break;
         uint128_set(xboxkrnl_tsc_hz, mhz * 1000000 + khz * 1000);
+        VARDUMP(DUMP, xboxkrnl_tsc_hz.hi);
         VARDUMP(DUMP, xboxkrnl_tsc_hz.lo);
     } while ((ret = 0));
 
@@ -411,15 +406,15 @@ xboxkrnl_tsc_init(void) {
 
     if (ret) {
         xboxkrnl_tsc_intercept = 0;
-        PRINT("/* TSC scaling is disabled */", 0);
+        PRINT(XEXEC_DBG_INFO, "/* TSC scaling is disabled */", 0);
     } else {
         xboxkrnl_tsc_intercept = 1;
-        PRINT("/* TSC scaling is enabled */", 0);
+        PRINT(XEXEC_DBG_INFO, "/* TSC scaling is enabled */", 0);
         uint128_set(host, 1000000000);
         uint128_set(freq, 733333333);
         host = uint128_mul(&host, &xboxkrnl_tsc_hz);
         uint128_divmod(&host, &freq, &xboxkrnl_tsc_scaler, NULL);
-        PRINT("/* TSC scaling factor: %llu.%.09llu per 733 MHz tick */",
+        PRINT(XEXEC_DBG_INFO, "/* TSC scaling factor: %llu.%.09llu per 733 MHz tick */",
             xboxkrnl_tsc_scaler.lo / 1000000000,
             xboxkrnl_tsc_scaler.lo % 1000000000);
     }
@@ -446,9 +441,15 @@ xboxkrnl_tsc(uint32_t *lo, uint32_t *hi, uint64_t *v, int xbox) {
         uint128_set(tick, ((uint64_t)d << 32) | a);
         host = uint128_mul(&host, &tick);
         uint128_divmod(&host, &xboxkrnl_tsc_scaler, &tick, NULL);
-        if (tick.hi) {
-            fprintf(stderr, "xboxkrnl: FATAL: TSC scaler overflow\n");
-            _exit(-1);
+        if (tick.hi && !xboxkrnl_tsc_overflow) {
+            xboxkrnl_tsc_overflow = 1;
+            TSC_UNLOCK;
+            ENTER;
+            PRINT(XEXEC_DBG_ALL, "FIXME: TSC scaler overflow", 0);
+            VARDUMP(DUMP, tick.hi);
+            VARDUMP(DUMP, tick.lo);
+            LEAVE;
+            TSC_LOCK;
         }
         if (lo) *lo = tick.lo & 0xffffffff;
         if (hi) *hi = tick.lo >> 32;
@@ -492,6 +493,7 @@ xboxkrnl_entry_thread(void *arg) {
     xboxkrnl_tsc_off();
     xboxkrnl_entry();
 
+    pthread_detach(pthread_self());
     pthread_exit(NULL);
     return NULL;
 }
@@ -871,7 +873,7 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_DIRTY_WP(wp,m) \
         do { \
             if (mprotect((m)->AllocationBase, (m)->RegionSize, (wp) ? (m)->prot & ~PROT_WRITE : (m)->prot) < 0) { \
-                PRINT("error: mprotect(): '%s'", strerror(errno)); \
+                PRINT(XEXEC_DBG_ERROR, "error: mprotect(): '%s'", strerror(errno)); \
                 INT3; \
             } \
         } while (0)
@@ -1086,7 +1088,6 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
     register xboxkrnl_mem *m;
     xboxkrnl_mem mem;
     register ssize_t i;
-    register int ret = 0;
 
     if (!locked) MEM_LOCK, MEM_CACHE = NULL;
 
@@ -1095,13 +1096,14 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
             mem = *m;
             ++i;
             if (i < t->sz) memmove(m, m + 1, sizeof(*m) * (t->sz - i));
-            --t->sz;
-            ret = 1;
+            if (!--t->sz) {
+                free(t->mem);
+                t->mem = NULL;
+            }
             break;
         }
     }
-
-    if (ret) {
+    if (i >= 0) {
         if (index != MEM_RESERVE) t->commit -= mem.RegionSize;
         t->reserve -= ALIGN(t->align, mem.RegionSize);
         if (mem.parent) {
@@ -1203,23 +1205,27 @@ xboxkrnl_mem_dirty_set__locked(void *addr, xboxkrnl_mem *m) {
     if (m || (m = MEM_RET__LOCKED(MEM_DIRTY, addr))) {
         if (!m->dirty) {
             m->dirty = 1;
-            PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu)",
+            PRINT(
+                XEXEC_DBG_MEMORY,
+                "MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu)",
                 addr,
                 m->BaseAddress,
                 m->RegionSize,
-                m->RegionSize);//TODO loglevel
+                m->RegionSize);
             if (m->parent) {
                 for (i = t->sz - 1; i >= 0; --i) {
                     if ((p = &t->mem[i]) != m && p->parent == m->parent && !p->dirty) break;
                     if (!i) {
                         if ((p = MEM_DIRTY_PARENT_RET__LOCKED(m->parent)) && !p->dirty) {
                             p->dirty = 1;
-                            PRINT("MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu) (%s)",
+                            PRINT(
+                                XEXEC_DBG_MEMORY,
+                                "MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu) (%s)",
                                 addr,
                                 p->BaseAddress,
                                 p->RegionSize,
                                 p->RegionSize,
-                                xboxkrnl_mem_tables[p->index].name);//TODO loglevel
+                                xboxkrnl_mem_tables[p->index].name);
                             MEM_DIRTY_WP(0, p);
                             ++ret;
                         }
@@ -1328,7 +1334,11 @@ xboxkrnl_mem_heap_brk_adjust(int locked) {
                 if (!(m = MEM_RET__LOCKED(MEM_MAP, MEM_HEAP_BASE))) INT3;
                 m->RegionSize = sz;
             }
-            PRINT("MEM: heap break: was 0x%.08zx, now 0x%.08zx", xboxkrnl_mem_heap_brk, brk);
+            PRINT(
+                XEXEC_DBG_MEMORY,
+                "MEM: heap break: was 0x%.08zx, now 0x%.08zx",
+                xboxkrnl_mem_heap_brk,
+                brk);
             xboxkrnl_mem_heap_brk = brk;
         }
     } else if (xboxkrnl_mem_heap_brk) {
@@ -2202,14 +2212,14 @@ xboxkrnl_dpc_iterate(void) {
         for (i = 1; i <= xboxkrnl_dpc_list_sz; ++i) {
             dpc = xboxkrnl_dpc_list[i - 1];
             if (!dpc || !dpc->Inserted || !dpc->DeferredRoutine) continue;
-            PRINT("/* deferred procedure call 0x%.08x handled */", dpc);
+            PRINT(XEXEC_DBG_THREAD, "/* deferred procedure call 0x%.08x handled */", dpc);
             ((void (STDCALL *)(void *, void *, void *, void *))dpc->DeferredRoutine)(
                 dpc,
                 dpc->DeferredContext,
                 dpc->SystemArgument1,
                 dpc->SystemArgument2);
             dpc->Inserted = 0;
-            PRINT("/* deferred procedure call 0x%.08x finished */", dpc);
+            PRINT(XEXEC_DBG_THREAD, "/* deferred procedure call 0x%.08x finished */", dpc);
         }
         free(xboxkrnl_dpc_list);
         xboxkrnl_dpc_list = NULL;
@@ -2264,14 +2274,14 @@ static ssize_t                          xboxkrnl_thread_count = 0;
 
 void
 xboxkrnl_thread_wait(xboxkrnl_thread *t) {
-while (!t->raised) {PRINT("sem: waiting: '%s'",t->name); if (sem_wait(&t->sem) && errno != EINTR) INT3; PRINT("sem: waited: '%s'",t->name);}//XXX debugging
+while (!t->raised) {PRINT(XEXEC_DBG_ALL,"sem: waiting: '%s'",t->name); if (sem_wait(&t->sem) && errno != EINTR) INT3; PRINT(XEXEC_DBG_ALL,"sem: waited: '%s'",t->name);}//XXX debugging
 //    while (!t->raised) if (sem_wait(&t->sem) && errno != EINTR) INT3;
     t->raised = 0;
 }
 
 void
 xboxkrnl_thread_post(xboxkrnl_thread *t) {
-PRINT("sem: raised: '%s'",t->name);//XXX debugging
+PRINT(XEXEC_DBG_ALL,"sem: raised: '%s'",t->name);//XXX debugging
     t->raised = 1;
     if (sem_post(&t->sem)) INT3;
 }
@@ -2301,7 +2311,7 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, const char *name, void
     t->context = context;
 
     if ((err = pthread_create(&t->id, &t->attr, t->routine, t->arg))) {
-        PRINT("%s(): failed to create thread '%s': '%s'", __func__, name, strerror(err));
+        PRINT(XEXEC_DBG_THREAD, "%s(): failed to create thread '%s': '%s'", __func__, name, strerror(err));
         INT3;
     }
 
@@ -2309,7 +2319,7 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, const char *name, void
     else snprintf(t->name, sizeof(t->name) - 1, "%p", (void *)t->id);
     pthread_setname_np(t->id, t->name);
 
-    PRINT("/* created thread '%s' [%p] */", t->name, t->id);
+    PRINT(XEXEC_DBG_THREAD, "/* created thread '%s' [%p] */", t->name, t->id);
 
     if (!locked) THREAD_UNLOCK;
 
@@ -2396,7 +2406,7 @@ xboxkrnl_worker(void *arg) {
         THREAD_SET_SCHED(t, SCHED_RR); \
         xboxkrnl_thread_##y = t
         THREAD(2, dpc);
-        THREAD(3, event);
+        THREAD(3, event);//FIXME should be renamed for nv2a_pfifo_pusher()
         THREAD(4, irq_nv2a);
 #undef THREAD
 
@@ -2410,16 +2420,16 @@ xboxkrnl_worker(void *arg) {
     if (arg == (void *)2) {
         for (;;) {
             while (!xboxkrnl_dpc_list_sz) {
-                PRINT("/* waiting for deferred procedure call routines */", 0);
+                PRINT(XEXEC_DBG_THREAD, "/* waiting for deferred procedure call routines */", 0);
                 THREAD_WAIT(t);
             }
             xboxkrnl_dpc_iterate();
         }
     } else if (arg == (void *)3) {
         for (;;) {
-            PRINT("/* waiting for event routines */", 0);
+            PRINT(XEXEC_DBG_THREAD, "/* waiting for event routines */", 0);
             THREAD_WAIT(t);
-            PRINT("/* signaled for event routines */", 0);
+            PRINT(XEXEC_DBG_THREAD, "/* signaled for event routines */", 0);
             nv2a_pfifo_pusher(NULL);
         }
     } else if (arg == (void *)4) {
@@ -2427,7 +2437,7 @@ xboxkrnl_worker(void *arg) {
 
         for (;;) {
             while (!nv2a->op->irq()) {
-                PRINT("/* waiting for '%s' interrupt */", nv2a->name);
+                PRINT(XEXEC_DBG_IRQ, "/* waiting for '%s' interrupt */", nv2a->name);
                 if ((ret = nv2a->irq_busy)) {
                     nv2a->irq_busy = 0;
                     nv2a->op->irq_restore(ret);
@@ -2436,11 +2446,11 @@ xboxkrnl_worker(void *arg) {
             }
             if (nv2a->irq_kinterrupt && nv2a->irq_connected && nv2a->irq_level && nv2a->irq_isr_routine) {
                 nv2a->irq_busy = /* NV2A_IRQ_BUSY */ 1;
-                PRINT("/* '%s' interrupt handled */", nv2a->name);
+                PRINT(XEXEC_DBG_IRQ, "/* '%s' interrupt handled */", nv2a->name);
                 ret = ((char (STDCALL *)(void *, void *))nv2a->irq_isr_routine)(
                     nv2a->irq_kinterrupt,
                     nv2a->irq_isr_context);
-                PRINT("/* '%s' interrupt routine returned: %i */", nv2a->name, ret);
+                PRINT(XEXEC_DBG_IRQ, "/* '%s' interrupt routine returned: %i */", nv2a->name, ret);
                 xboxkrnl_dpc_iterate();
                 nv2a->irq_level = 0;
             }
@@ -2448,6 +2458,7 @@ xboxkrnl_worker(void *arg) {
     }
 
     THREAD_LEAVE(t);
+    pthread_detach(pthread_self());
     pthread_exit(NULL);
     return NULL;
 }
@@ -2465,9 +2476,25 @@ xboxkrnl_init_hw(void) {
     for (i = 0; !ret && i < ARRAY_SIZE(xpci) && xpci[i].name; ++i) {
         if ((p = (typeof(p))xpci[i].memreg_base)) {
             sz = xpci[i].memreg_size;
-            PRINT("/* reserve: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, p, sz, sz);
+            PRINT(
+                XEXEC_DBG_MEMORY,
+                "/* "
+                "reserve: '%s': "
+                "address 0x%.08x size 0x%.08x (%lu)"
+                " */",
+                xpci[i].name,
+                p,
+                sz,
+                sz);
             if (MEM_ALLOC_RESERVE__LOCKED(p, sz) != p) {
-                PRINT("error: failed to reserve hardware memory: mmap(): address %p size %p (%lu): '%s'", p, sz, sz, strerror(errno));
+                PRINT(
+                    XEXEC_DBG_ERROR,
+                    "error: failed to reserve hardware memory: "
+                    "mmap(): address 0x%.08x size 0x%.08x (%lu): '%s'",
+                    p,
+                    sz,
+                    sz,
+                    strerror(errno));
                 ret = 1;
                 break;
             }
@@ -2477,12 +2504,27 @@ xboxkrnl_init_hw(void) {
         if ((p = (typeof(p))xpci[i].memreg_base)) {
             sz = xpci[i].memreg_size;
             if ((p = MEM_ALLOC_EXEC__LOCKED(NULL, sz)) == MAP_FAILED) {
-                PRINT("error: failed to allocate hardware memory: mmap(): size %p (%lu): '%s'", sz, sz, strerror(errno));
+                PRINT(
+                    XEXEC_DBG_ERROR,
+                    "error: failed to allocate hardware memory: "
+                    "mmap(): size 0x%.08x (%lu): '%s'",
+                    sz,
+                    sz,
+                    strerror(errno));
                 ret = 1;
                 break;
             }
             xpci[i].memreg = p;
-            PRINT("/* allocate: '%s': address 0x%.08x size 0x%.08x (%lu) */", xpci[i].name, p, sz, sz);
+            PRINT(
+                XEXEC_DBG_MEMORY,
+                "/* "
+                "allocate: '%s': "
+                "address 0x%.08x size 0x%.08x (%lu)"
+                " */",
+                xpci[i].name,
+                p,
+                sz,
+                sz);
         }
     }
 
@@ -2530,7 +2572,11 @@ xboxkrnl_init(void/* **x*/) {
     do {
         if ((xboxkrnl_wc_c = iconv_open("UTF-8", "UTF-16LE")) == (iconv_t)-1 ||
             (xboxkrnl_c_wc = iconv_open("UTF-16LE", "UTF-8")) == (iconv_t)-1) {
-            PRINT("error: failed to allocate descriptor for character set conversion: iconv_open(): '%s'", strerror(errno));
+            PRINT(
+                XEXEC_DBG_ERROR,
+                "error: failed to allocate descriptor for character set conversion: "
+                "iconv_open(): '%s'",
+                strerror(errno));
             break;
         }
         xboxkrnl_tsc_init();
@@ -2556,15 +2602,30 @@ xboxkrnl_write_dma(uint32_t addr, const uint32_t *val, size_t sz) {
 
     switch (sz) {
     case 1:
-        PRINT("DMA: write: [0x%.08x]       (0x%.02hhx) <- 0x%.02hhx", addr, REG08(wr), REG08(val));
+        PRINT(
+            XEXEC_DBG_DMA,
+            "DMA: write: [0x%.08x]       (0x%.02hhx) <- 0x%.02hhx",
+            addr,
+            REG08(wr),
+            REG08(val));
         REG08(wr) = REG08(val);
         break;
     case 2:
-        PRINT("DMA: write: [0x%.08x]     (0x%.04hx) <- 0x%.04hx", addr, REG16(wr), REG16(val));
+        PRINT(
+            XEXEC_DBG_DMA,
+            "DMA: write: [0x%.08x]     (0x%.04hx) <- 0x%.04hx",
+            addr,
+            REG16(wr),
+            REG16(val));
         REG16(wr) = REG16(val);
         break;
     case 4:
-//        PRINT("DMA: write: [0x%.08x] (0x%.08x) <- 0x%.08x", addr, REG32(wr), REG32(val));
+        PRINT(
+            XEXEC_DBG_DMA,
+            "DMA: write: [0x%.08x] (0x%.08x) <- 0x%.08x",
+            addr,
+            REG32(wr),
+            REG32(val));
         REG32(wr) = REG32(val);
         break;
     default:
@@ -2582,15 +2643,27 @@ xboxkrnl_read_dma(uint32_t addr, uint32_t *val, size_t sz) {
     switch (sz) {
     case 1:
         REG08(val) = REG08(rd);
-        PRINT("DMA:  read: [0x%.08x]              -> 0x%.02hhx", addr, REG08(val));
+        PRINT(
+            XEXEC_DBG_DMA,
+            "DMA:  read: [0x%.08x]              -> 0x%.02hhx",
+            addr,
+            REG08(val));
         break;
     case 2:
         REG16(val) = REG16(rd);
-        PRINT("DMA:  read: [0x%.08x]              -> 0x%.04hx", addr, REG16(val));
+        PRINT(
+            XEXEC_DBG_DMA,
+            "DMA:  read: [0x%.08x]              -> 0x%.04hx",
+            addr,
+            REG16(val));
         break;
     case 4:
         REG32(val) = REG32(rd);
-//        PRINT("DMA:  read: [0x%.08x]              -> 0x%.08x", addr, REG32(val));
+        PRINT(
+            XEXEC_DBG_DMA,
+            "DMA:  read: [0x%.08x]              -> 0x%.08x",
+            addr,
+            REG32(val));
         break;
     default:
         INT3;
@@ -2708,7 +2781,7 @@ xboxkrnl_path_resolve_insensitive(char *path) {
         if ((d = opendir(buf))) {
             while ((e = readdir(d))) {
                 if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
-//PRINT("'%s' '%s'",(t) ? t : p,e->d_name);//XXX
+//PRINT(XEXEC_DBG_ALL,"'%s' '%s'",(t) ? t : p,e->d_name);//XXX
                 if (!strncasecmp((t) ? t : p, e->d_name, l + 1)) {
                     if (name) {
                         closedir(d);
@@ -2731,7 +2804,7 @@ xboxkrnl_path_resolve_insensitive(char *path) {
         free(t);
     }
 
-//PRINT("'%s'",&buf[2]);//XXX
+//PRINT(XEXEC_DBG_ALL,"'%s'",&buf[2]);//XXX
     if (buf[2]) strcpy(path, &buf[2]);
     free(buf);
 }
@@ -3006,7 +3079,7 @@ xboxkrnl_DbgPrint( /* 008 (0x008) */
     ret = vsnprintf(buf, sizeof(buf), Format, args);
     va_end(args);
 
-    if (ret > 0) PRINT("/* kernel debug output: */\n%s", buf);
+    if (ret > 0) PRINT(XEXEC_DBG_INFO, "/* kernel debug output: */\n%s", buf);
 
     ret = (ret < 0);
 
@@ -3886,11 +3959,11 @@ xboxkrnl_IoCreateSymbolicLink( /* 067 (0x043) */
         ret = 0;
     } else {
         if (!lstat(dest, &st) && S_ISLNK(st.st_mode) && unlink(dest) < 0) {
-            PRINT("error: unlink(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: unlink(): '%s'", strerror(errno));
             INT3;
         }
         if (symlink(src, dest) < 0) {
-            PRINT("error: symlink(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: symlink(): '%s'", strerror(errno));
             INT3;
         } else {
             ret = 0;
@@ -5012,7 +5085,7 @@ xboxkrnl_MmAllocateContiguousMemory( /* 165 (0x0a5) */
     VARDUMP(VAR_IN, NumberOfBytes);
 
     if ((ret = MEM_ALLOC_MAP(MEM_MAP, NULL, NumberOfBytes)) == MAP_FAILED) {
-        PRINT("error: mmap(): '%s'", strerror(errno));
+        PRINT(XEXEC_DBG_ERROR, "error: mmap(): '%s'", strerror(errno));
         INT3;
     }
 
@@ -5036,7 +5109,7 @@ xboxkrnl_MmAllocateContiguousMemoryEx( /* 166 (0x0a6) */
     VARDUMP3(VAR_IN, Protect, xboxkrnl_page_type_name);
 
     if ((ret = MEM_ALLOC_MAP(MEM_MAP, NULL, NumberOfBytes)) == MAP_FAILED) {
-        PRINT("error: mmap(): '%s'", strerror(errno));
+        PRINT(XEXEC_DBG_ERROR, "error: mmap(): '%s'", strerror(errno));
         INT3;
     }
 
@@ -5290,7 +5363,7 @@ xboxkrnl_NtAllocateVirtualMemory( /* 184 (0x0b8) */
 
     if (AllocationType & XBOXKRNL_MEM_RESERVE /* 0x2000 */) {
         if ((*BaseAddress = MEM_ALLOC_MAP(MEM_MAP, *BaseAddress, *RegionSize)) == MAP_FAILED) {
-            PRINT("error: mmap(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: mmap(): '%s'", strerror(errno));
             *BaseAddress = NULL;
         } else {
             ret = 0;
@@ -5437,31 +5510,31 @@ enum XBOXKRNL_FILE_CREATE_DISPOSITION {
             (CreateDisposition == XBOXKRNL_FILE_OPEN ||
             CreateDisposition == XBOXKRNL_FILE_OVERWRITE ||
             errno != ENOENT)) {
-            PRINT("error: stat(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: stat(): '%s'", strerror(errno));
             break;
         }
         exists = !tmp;
         if (!tmp &&
             CreateDisposition == XBOXKRNL_FILE_CREATE) {
             IoStatusBlock->Information = XBOXKRNL_FILE_EXISTS;
-            PRINT("error: file exists", 0);
+            PRINT(XEXEC_DBG_ERROR, "error: file exists", 0);
             break;
         }
         if (!tmp &&
             CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE &&
             !S_ISDIR(st.st_mode)) {
-            PRINT("error: not a directory", 0);
+            PRINT(XEXEC_DBG_ERROR, "error: not a directory", 0);
             break;
         }
         if (tmp &&
             CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE &&
             mkdir(path, 0755) < 0) {
-            PRINT("error: mkdir(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: mkdir(): '%s'", strerror(errno));
             break;
         }
         if (CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE) {
             if (!(f.dir = opendir(path))) {
-                PRINT("error: opendir(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: opendir(): '%s'", strerror(errno));
                 break;
             }
         } else {
@@ -5483,7 +5556,7 @@ enum XBOXKRNL_FILE_CREATE_DISPOSITION {
                 }
             }
             if ((f.fd = open(path, tmp, 0644)) < 0) {
-                PRINT("error: open(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: open(): '%s'", strerror(errno));
                 break;
             }
             if (tmp & O_RDWR) {
@@ -5491,12 +5564,12 @@ enum XBOXKRNL_FILE_CREATE_DISPOSITION {
                     AllocationSize &&
                     *AllocationSize &&
                     ftruncate(f.fd, *AllocationSize) < 0) {
-                    PRINT("error: ftruncate(): '%s'", strerror(errno));
+                    PRINT(XEXEC_DBG_ERROR, "error: ftruncate(): '%s'", strerror(errno));
                     break;
                 }
                 if (DesiredAccess & XBOXKRNL_FILE_APPEND_DATA &&
                     lseek(f.fd, 0, SEEK_END) < 0) {
-                    PRINT("error: lseek(): '%s'", strerror(errno));
+                    PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s'", strerror(errno));
                     break;
                 }
             }
@@ -5606,7 +5679,7 @@ xboxkrnl_NtDuplicateObject( /* 197 (0x0c5) */
 
     if (SourceHandle->fd >= 0) {
         if (((*TargetHandle)->fd = dup(SourceHandle->fd)) < 0) {
-            PRINT("error: dup(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: dup(): '%s'", strerror(errno));
             INT3;
         }
         VARDUMP(DUMP, SourceHandle->fd);
@@ -5823,7 +5896,7 @@ xboxkrnl_NtQueryInformationFile( /* 211 (0x0d3) */
 
             if (!(i = calloc(1, (sz = sizeof(*i))))) INT3;
             if ((i->CurrentByteOffset = lseek(FileHandle->fd, 0, SEEK_CUR)) < 0) {
-                PRINT("error: lseek(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s'", strerror(errno));
                 free(i);
                 break;
             }
@@ -5839,7 +5912,7 @@ xboxkrnl_NtQueryInformationFile( /* 211 (0x0d3) */
 
             if (!(i = calloc(1, (sz = sizeof(*i))))) INT3;
             if (fstat(FileHandle->fd, &st) < 0) {
-                PRINT("error: fstat(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: fstat(): '%s'", strerror(errno));
                 free(i);
                 break;
             }
@@ -6094,7 +6167,7 @@ xboxkrnl_NtReadFile( /* 219 (0x0db) */
         VARDUMP(DUMP, lseek(FileHandle->fd, 0, SEEK_CUR));
         if (ByteOffset) INT3;
         if ((rd = read(FileHandle->fd, Buffer, Length)) < 0) {
-            PRINT("error: read(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: read(): '%s'", strerror(errno));
             break;
         }
     } while ((ret = 0));
@@ -6204,7 +6277,7 @@ xboxkrnl_NtSetInformationFile( /* 226 (0x0e2) */
             SET;
             INC(i->CurrentByteOffset);
             if (lseek(FileHandle->fd, i->CurrentByteOffset, SEEK_SET) < 0) {
-                PRINT("error: lseek(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s'", strerror(errno));
                 BREAK;
             }
         }
@@ -6217,7 +6290,7 @@ xboxkrnl_NtSetInformationFile( /* 226 (0x0e2) */
 
             if (!(i = calloc(1, (sz = sizeof(*i))))) INT3;
             if (fstat(FileHandle->fd, &st) < 0) {
-                PRINT("error: fstat(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: fstat(): '%s'", strerror(errno));
                 free(i);
                 break;
             }
@@ -6372,7 +6445,7 @@ xboxkrnl_NtWriteFile( /* 236 (0x0ec) */
         VARDUMP(DUMP, lseek(FileHandle->fd, 0, SEEK_CUR));
         if (ByteOffset) INT3;
         if ((wr = write(FileHandle->fd, Buffer, Length)) < 0) {
-            PRINT("error: write(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: write(): '%s'", strerror(errno));
             break;
         }
     } while ((ret = 0));
@@ -6634,7 +6707,7 @@ xboxkrnl_PsCreateSystemThreadEx( /* 255 (0x0ff) */
     VARDUMP(VAR_IN,  DebuggerThread);
     VARDUMP(VAR_IN,  SystemRoutine);
 
-    PRINT("/* calling thread is system thread */", 0);
+    PRINT(XEXEC_DBG_THREAD, "/* calling thread is system thread */", 0);
     LEAVE;
     ((void (*)(void *))StartRoutine)(StartContext);
 
@@ -8560,12 +8633,14 @@ xboxkrnl_thunk_resolve(register const void **k) {
     register uint32_t t;
     ENTER;
 
-    PRINT("/* resolving kernel thunk table ordinals @ %p */", k);
+    PRINT(XEXEC_DBG_INFO, "/* resolving kernel thunk table ordinals @ 0x%.08x */", k);
 
     for (i = 0; k[i]; ++i) {
         t = ((typeof(t) *)k)[i] & 0x1ff;
         k[i] = xboxkrnl_thunk[t];
-        PRINT("thunk: %03u (0x%03x): *%p <- %p %s()",
+        PRINT(
+            XEXEC_DBG_INFO,
+            "thunk: %03u (0x%03x): *0x%.08x <- 0x%.08x %s()",
             t,
             t,
             &k[i],
@@ -8573,7 +8648,7 @@ xboxkrnl_thunk_resolve(register const void **k) {
             xboxkrnl_thunk_name[t]);
     }
 
-    PRINT("/* resolved %zu ordinals in kernel thunk table */", i);
+    PRINT(XEXEC_DBG_INFO, "/* resolved %zu ordinal%s in kernel thunk table */", i, (i != 1) ? "s" : "");
 
     LEAVE;
     return i;

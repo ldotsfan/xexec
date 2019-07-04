@@ -1,7 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License

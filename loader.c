@@ -1,7 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (c) 2012 Michael Saga. All rights reserved.
+ *  Copyright (c) 2012-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -40,7 +41,26 @@
 
 #include <pthread.h>
 
-static int dbg = 1;
+#define XEXEC_LIBNAME "libxexec"
+
+#define XEXEC_DBG_NONE    (0 << 0)
+#define XEXEC_DBG_ERROR   (1 << 0)
+#define XEXEC_DBG_STACK   (1 << 1)
+#define XEXEC_DBG_INFO    (1 << 2)
+#define XEXEC_DBG_EVENT   (1 << 3)
+#define XEXEC_DBG_MESSAGE (1 << 4)
+#define XEXEC_DBG_VARDUMP (1 << 5)
+#define XEXEC_DBG_HEXDUMP (1 << 6)
+#define XEXEC_DBG_FD      (1 << 7)
+#define XEXEC_DBG_MUTEX   (1 << 8)
+#define XEXEC_DBG_MEMORY  (1 << 9)
+#define XEXEC_DBG_THREAD  (1 << 10)
+#define XEXEC_DBG_IRQ     (1 << 11)
+#define XEXEC_DBG_REG     (1 << 12)
+#define XEXEC_DBG_DMA     (1 << 13)
+#define XEXEC_DBG_ALL     (0xffff)
+
+static int xexec_debug = XEXEC_DBG_ALL & ~(XEXEC_DBG_DMA);
 
 int xboxkrnl_tsc_on(void);
 int xboxkrnl_tsc_off(void);
@@ -48,30 +68,52 @@ void xboxkrnl_clock_local(struct timeval *tv);
 void xboxkrnl_clock_wall(struct timespec *tp);
 
 void
-debug(const char *format, ...) {
+debug(int level, int8_t stack, const char *format, ...) {
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    register int *debug;
     va_list args;
     char buf[4096];
+    char spc[0x3f * 4 + 1];
     char time[32];
     struct timeval tv;
-    struct tm *tm;
-    int ret;
+    register struct tm *tm;
+    register ssize_t n = 0;
 
-    if (!dbg) return;
+    if (!(*(debug = &xexec_debug) & level) && level != XEXEC_DBG_ALL) return;
 
     va_start(args, format);
-    ret = sizeof(buf) - 1;
-    ret = vsnprintf(buf, ret, format, args);
-    va_end(args);
-
-    if (ret > 0) {
-        buf[ret] = 0;
-        xboxkrnl_clock_local(&tv);
-        if (!(tm = localtime(&tv.tv_sec)) || !strftime(time, sizeof(time), "%T", tm)) {
-            fprintf(stderr, "%s\n", buf);
-        } else {
-            fprintf(stderr, "%s.%06lu: %s\n", time, tv.tv_usec, buf);
-        }
+    n = sizeof(buf);
+    if ((n = vsnprintf(buf, n, format, args)) < 0) {
+        va_end(args);
+        return;
     }
+    buf[n - (n == sizeof(buf))] = 0;
+    va_end(args);
+    spc[0] = 0;
+    if ((*debug & XEXEC_DBG_STACK) && (n = stack & 0x3f)) {
+        n *= 4;
+        memset(spc, ' ', n);
+        spc[n] = 0;
+    }
+
+    pthread_mutex_lock(&mutex);
+
+    xboxkrnl_clock_local(&tv);
+    if ((tm = localtime(&tv.tv_sec)) && strftime(time, sizeof(time), "%T", tm) > 0) {
+#ifndef ANDROID
+        fprintf(stderr, "%s.%06lu: %s%s\n", time, tv.tv_usec, spc, buf);
+#else
+        __android_log_print(ANDROID_LOG_VERBOSE, XEXEC_LIBNAME, "%s.%06lu: %s%s", time, tv.tv_usec, spc, buf);
+#endif
+    } else {
+#ifndef ANDROID
+        fprintf(stderr, "%lu.%06lu: %s%s\n", tv.tv_sec, tv.tv_usec, spc, buf);
+#else
+        __android_log_print(ANDROID_LOG_VERBOSE, XEXEC_LIBNAME, "%lu.%06lu: %s%s", tv.tv_sec, tv.tv_usec, spc, buf);
+#endif
+    }
+
+    pthread_mutex_unlock(&mutex);
 }
 
 #define hexdump(x,y) fhexdump(stderr, (x), (y))
@@ -83,8 +125,7 @@ fhexdump(FILE *stream, const void *in, size_t inlen) {
     register int i;
     char buf[67];
 
-    memset(buf, ' ', 66), buf[66] = 0;
-    for (d = in, b = buf; inlen; b = buf) {
+    for (memset(buf, ' ', 66), buf[66] = 0, d = in, b = buf; inlen; b = buf) {
         for (i = 0; i < 16; ++i) {
             if (inlen) {
                 *b++ = "0123456789abcdef"[*d >> 4];
@@ -104,8 +145,8 @@ fhexdump(FILE *stream, const void *in, size_t inlen) {
     }
 }
 
-#define PACKED              __attribute__((__packed__))
-#define PAGESIZE            0x1000
+#define PACKED   __attribute__((__packed__))
+#define PAGESIZE 0x1000
 
 #include "sw/xbe.h"
 #include "hw/common.h"
@@ -129,8 +170,8 @@ extern const hw_ops_t aci_op;
 int
 main(int argc, char **argv) {
     struct sigaction s = {
-        .sa_sigaction   = x86_signal_segv,
-        .sa_flags       = SA_SIGINFO,
+        .sa_sigaction = x86_signal_segv,
+        .sa_flags     = SA_SIGINFO,
     };
     pthread_t entry;
     XbeHeader *xbeh;
@@ -149,11 +190,11 @@ main(int argc, char **argv) {
         return ret;
     }
     if ((fd = open(argv[1], O_RDONLY)) < 0) {
-        PRINT("error: open(): '%s': '%s'", argv[1], strerror(errno));
+        PRINT(XEXEC_DBG_ERROR, "error: open(): '%s': '%s'", argv[1], strerror(errno));
         return ret;
     }
     if (sigaction(SIGSEGV, &s, NULL) < 0) {
-        PRINT("error: sigaction(): '%s'", strerror(errno));
+        PRINT(XEXEC_DBG_ERROR, "error: sigaction(): '%s'", strerror(errno));
         return ret;
     }
 
@@ -169,15 +210,15 @@ main(int argc, char **argv) {
 
         xbeh = (void *)XBE_BASE;
         if (MEM_ALLOC_EXEC(xbeh, PAGESIZE) != xbeh) {
-            PRINT("error: mmap(): failed to map XBE header @ %p: '%s'", xbeh, strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: mmap(): failed to map XBE header @ 0x%.08x: '%s'", xbeh, strerror(errno));
             break;
         }
         if ((rd = read(fd, xbeh, PAGESIZE)) != PAGESIZE) {
-            PRINT("error: read(): '%s': '%s'", argv[1], (rd < 0) ? strerror(errno) : "short read");
+            PRINT(XEXEC_DBG_ERROR, "error: read(): '%s': '%s'", argv[1], (rd >= 0) ? "short read" : strerror(errno));
             break;
         }
         if (xbeh->dwMagic != REG32(XBE_MAGIC)) {
-            PRINT("error: invalid XBE: '%s'", argv[1]);
+            PRINT(XEXEC_DBG_ERROR, "error: invalid XBE file: '%s'", argv[1]);
             break;
         }
         XbeHeader_dump(xbeh);
@@ -193,10 +234,10 @@ main(int argc, char **argv) {
                 ? XBE_XOR_KT_DEBUG
                 : XBE_XOR_KT_RETAIL;
 
-        PRINT("XBE entry: %p | thunk table: %p", xbeh->dwEntryAddr, xbeh->dwKernelImageThunkAddr);
+        PRINT(XEXEC_DBG_INFO, "XBE entry: 0x%.08x | thunk table: 0x%.08x", xbeh->dwEntryAddr, xbeh->dwKernelImageThunkAddr);
 
         if (!xbeh->dwSections) {
-            PRINT("error: XBE has no sections to map: '%s'", argv[1]);
+            PRINT(XEXEC_DBG_ERROR, "error: XBE has no sections to map: '%s'", argv[1]);
             break;
         }
 
@@ -209,14 +250,17 @@ main(int argc, char **argv) {
 
         xboxkrnl_mem_contiguous = (void *)raddr;
 
-        PRINT("mmap(): total section map: "
+        PRINT(
+            XEXEC_DBG_MEMORY,
+            "mmap(): "
+            "total section map: "
             "start: 0x%.08x | "
             "end: 0x%.08x | "
             "size: 0x%.08x",
             vaddr, raddr, vsize);
 
         if (MEM_ALLOC_EXEC((void *)vaddr, vsize) != (void *)vaddr) {
-            PRINT("error: mmap(): failed to map XBE sections @ %p: '%s'", vaddr, strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: mmap(): failed to map XBE sections @ 0x%.08x: '%s'", vaddr, strerror(errno));
             break;
         }
         for (i = 0; i < xbeh->dwSections; ++i) {
@@ -227,18 +271,21 @@ main(int argc, char **argv) {
             raddr = xbes[i].dwRawAddr;
             rsize = xbes[i].dwSizeofRaw;
 
-            PRINT("mmap(): section %2u | "
+            PRINT(
+                XEXEC_DBG_MEMORY,
+                "mmap(): "
+                "section %2u | "
                 "name %10s | "
                 "virtual: address 0x%.08x size 0x%.08x | "
                 "raw: address 0x%.08x size 0x%.08x",
                 i, sname, vaddr, vsize, raddr, rsize);
 
             if (lseek(fd, raddr, SEEK_SET) != (ssize_t)raddr) {
-                PRINT("error: lseek(): '%s': '%s'", argv[1], strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s': '%s'", argv[1], strerror(errno));
                 break;
             }
             if ((rd = read(fd, (void *)vaddr, rsize)) != (ssize_t)rsize) {
-                PRINT("error: read(): '%s': '%s'", argv[1], (rd < 0) ? strerror(errno) : "short read");
+                PRINT(XEXEC_DBG_ERROR, "error: read(): '%s': '%s'", argv[1], (rd >= 0) ? "short read" : strerror(errno));
                 break;
             }
             if (!strncmp(sname, ".text", sizeof(".text"))) {
@@ -260,7 +307,7 @@ main(int argc, char **argv) {
 
         xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
 
-        PRINT("/* spawning entry thread with entry point @ %p */", xbeh->dwEntryAddr);
+        PRINT(XEXEC_DBG_THREAD, "/* spawning entry thread with entry point @ 0x%.08x */", xbeh->dwEntryAddr);
 
         if (argc >= 3) INT3;
 

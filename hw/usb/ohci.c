@@ -1,7 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -107,7 +108,9 @@ ohci_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_OHCI("%s: "
+        PRINT_OHCI(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "reg: 0x%x",
@@ -123,7 +126,9 @@ ohci_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_OHCI("%s: "
+        PRINT_OHCI(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "reg: 0x%x",
@@ -139,7 +144,9 @@ ohci_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_OHCI("%s: "
+        PRINT_OHCI(
+            XEXEC_DBG_REG,
+            "%s: "
             "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "reg: 0x%x",
@@ -193,7 +200,9 @@ ohci_read(uint32_t addr, void *val, size_t sz) {
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_OHCI("%s: "
+        PRINT_OHCI(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "reg: 0x%x",
@@ -207,7 +216,9 @@ ohci_read(uint32_t addr, void *val, size_t sz) {
         break;
     case 2:
         v &= 0xffff;
-        PRINT_OHCI("%s: "
+        PRINT_OHCI(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "reg: 0x%x",
@@ -220,7 +231,9 @@ ohci_read(uint32_t addr, void *val, size_t sz) {
         ret = 1;
         break;
     case 4:
-        PRINT_OHCI("%s: "
+        PRINT_OHCI(
+            XEXEC_DBG_REG,
+            "%s: "
             " read: "
             "[0x%.08x+0x%.08x]              -> 0x%.08x | "
             "reg: 0x%x",

@@ -1,7 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -25,7 +26,7 @@
 #include "../common.h"
 //#undef DEV_PREFIX
 
-#define APU_MAX_VOICES              256
+#define APU_MAX_VOICES 256
 
 enum {
     NV_PAVS             =   0,
@@ -46,9 +47,10 @@ enum {
     NV_PAPU_EP,         /* 15 */    /* encode processor */
 };
 
-#define APU_BLOCK_SIZE(x) apu_blocks[x].size
+#define APU_BLOCK_OFFSET(x) apu_block[x].offset
+#define APU_BLOCK_SIZE(x)   apu_block[x].size
 
-static const hw_block_t apu_blocks[] = {
+static const hw_block_t apu_block[] = {
     HW_BLOCK(NV_PAVS,          0x00000, 0x00080),   /*  0 */
     HW_BLOCK(NV_PAHRTFC,       0x00300, 0x00080),   /*  1 */
     HW_BLOCK(NV_PAHRTFT,       0x00380, 0x00040),   /*  2 */

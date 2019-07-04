@@ -10059,7 +10059,7 @@ typedef union {
         uint32_t context_beta4    : 1;  /* 30 */    /* valid flag */
         uint32_t volatile_reset   : 1;  /* 31 */    /* enable flag */
     } PACKED;
-} PACKED nv2a_pgraph_ctx1;
+} PACKED nv2a_pgraph_ctx1_t;
 
 typedef union {
     uint32_t     field;
@@ -10070,7 +10070,7 @@ typedef union {
         uint32_t pad2             : 2;  /* 14 */
         uint32_t notify_instance  : 16; /* 16 */
     } PACKED;
-} PACKED nv2a_pgraph_ctx2;
+} PACKED nv2a_pgraph_ctx2_t;
 
 typedef union {
     uint32_t     field;
@@ -10078,7 +10078,7 @@ typedef union {
         uint32_t dma_instance0    : 16; /*  0 */
         uint32_t dma_instance1    : 16; /* 16 */
     } PACKED;
-} PACKED nv2a_pgraph_ctx3;
+} PACKED nv2a_pgraph_ctx3_t;
 
 typedef union {
     uint32_t     field;
@@ -10086,22 +10086,14 @@ typedef union {
         uint32_t user_instance    : 16; /*  0 */
         uint32_t pad1             : 16; /* 16 */
     } PACKED;
-} PACKED nv2a_pgraph_ctx4;
+} PACKED nv2a_pgraph_ctx4_t;
 
 typedef union {
     uint32_t     field;
     struct {
         uint32_t trap_bits;             /*  0 */
     } PACKED;
-} PACKED nv2a_pgraph_ctx5;
-
-typedef struct {
-    nv2a_pgraph_ctx1 *ctx1;
-    nv2a_pgraph_ctx2 *ctx2;
-    nv2a_pgraph_ctx3 *ctx3;
-    nv2a_pgraph_ctx4 *ctx4;
-    nv2a_pgraph_ctx5 *ctx5;
-} nv2a_pgraph_ctx;
+} PACKED nv2a_pgraph_ctx5_t;
 
 static const char *const nv2a_pgraph_intr_name[] = {
     NAMEB(0,  notify),

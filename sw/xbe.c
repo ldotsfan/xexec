@@ -1,7 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
- *  Copyright (c) 2017 Michael Saga. All rights reserved.
+ *  Copyright (c) 2017-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -20,7 +21,7 @@
 
 static void
 XbeHeader_dump(const XbeHeader *xbeh) {
-    if (!dbg || !xbeh) return;
+    if (!(xexec_debug & XEXEC_DBG_VARDUMP) || !xbeh) return;
     ENTER;
 
     VARDUMP(DUMP, xbeh);
@@ -69,7 +70,7 @@ XbeHeader_dump(const XbeHeader *xbeh) {
 
 static void
 XbeSectionHeader_dump(const XbeSectionHeader *xbes) {
-    if (!dbg || !xbes) return;
+    if (!(xexec_debug & XEXEC_DBG_VARDUMP) || !xbes) return;
     ENTER;
 
     VARDUMP(DUMP, xbes);
@@ -96,7 +97,7 @@ XbeSectionHeader_dump(const XbeSectionHeader *xbes) {
 
 static void
 XbeTLS_dump(const XbeTLS *xbet) {
-    if (!dbg || !xbet) return;
+    if (!(xexec_debug & XEXEC_DBG_VARDUMP) || !xbet) return;
     ENTER;
 
     VARDUMP(DUMP, xbet);

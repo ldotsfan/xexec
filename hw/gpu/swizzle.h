@@ -5,7 +5,8 @@
  *
  *  Copyright (c) 2013 espes
  *  Copyright (c) 2015 Jannik Vogel
- *  Copyright (c) 2018 Michael Saga. All rights reserved.
+ *  Copyright (c) 2018-2019 Michael Saga
+ *  All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
