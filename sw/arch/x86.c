@@ -114,7 +114,7 @@ typedef struct {
 } x86_context;
 
 void
-x86_push_call(ucontext_t *uc) {
+x86_push_callback(ucontext_t *uc) {
 
 }
 #endif

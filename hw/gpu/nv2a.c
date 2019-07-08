@@ -2724,10 +2724,16 @@ attribute->converted_elements -> a->converted_count
 #undef CASE
         default:
             VARDUMP_NV2A(VAR_IN, c->param);
+            t = (c->method / 4 < ARRAY_SIZE(nv2a_097_name));
             PRINT_NV2A(
                 XEXEC_DBG_ERROR,
-                "%s(): warning: unhandled method: 0x%.08x (%u)",
-                __func__, c->method, c->method);
+                "%s(): warning: unhandled method: 0x%.08x (%u)%s%s%s",
+                __func__,
+                c->method,
+                c->method,
+                (t) ? " (" : "",
+                (t) ? nv2a_097_name[c->method / 4] : "",
+                (t) ?  ")" : "");
             break;
         }
         break;
@@ -2737,7 +2743,9 @@ attribute->converted_elements -> a->converted_count
         PRINT_NV2A(
             XEXEC_DBG_ERROR,
             "%s(): warning: unhandled graphics class: 0x%.08x (%u)",
-            __func__, ctx1->grclass, ctx1->grclass);
+            __func__,
+            ctx1->grclass,
+            ctx1->grclass);
         break;
     }
 
@@ -2929,7 +2937,7 @@ nv2a_pfifo_pusher(void *p) {
             nv2a_pfifo_puller(p, &cmd);
             if (!c->non_inc) c->method += 4;
             --c->method_count;
-            ++*d;
+            ++(*d);
         } else {
             /* no command active - this is the first word of a new one */
             NV2A_REG32(p, NV_PFIFO, CACHE1_DMA_RSVD_SHADOW) = word;
@@ -3569,7 +3577,12 @@ nv2a_init(void) {
         if (glo_create(&nv2a_ctx->glo)) break;
         glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &tmp);
         if (tmp < NV2A_MAX_VERTEX_ATTRIBS) {
-            fprintf(stderr, "error: %s(): not enough GL vertex attributes supported\n", __func__);
+            PRINT_NV2A(
+                XEXEC_DBG_ALL,
+                "error: %s(): not enough GL vertex attributes supported: have %i, expected %zu\n",
+                __func__,
+                tmp,
+                NV2A_MAX_VERTEX_ATTRIBS);
             break;
         }
         glGenFramebuffers(1, &nv2a_ctx->gl_framebuffer);
@@ -3579,7 +3592,11 @@ nv2a_init(void) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, nv2a_ctx->gl_color_buffer, 0);
         if ((tmp = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
-            fprintf(stderr, "error: %s(): GL framebuffer operation did not complete: error %i\n", __func__, tmp);
+            PRINT_NV2A(
+                XEXEC_DBG_ALL,
+                "error: %s(): GL framebuffer operation did not complete: error %i\n",
+                __func__,
+                tmp);
             break;
         }
         for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
@@ -3594,7 +3611,11 @@ nv2a_init(void) {
         glGenVertexArrays(1, &nv2a_ctx->gl_vertex_array);
         glBindVertexArray(nv2a_ctx->gl_vertex_array);
         if ((ret = ((tmp = glGetError()) != GL_NO_ERROR))) {
-            fprintf(stderr, "error: %s(): GL error occurred: error %i\n", __func__, tmp);
+            PRINT_NV2A(
+                XEXEC_DBG_ALL,
+                "error: %s(): GL error occurred: error %i\n",
+                __func__,
+                tmp);
             break;
         }
         glo_current(nv2a_ctx->glo, 0);
