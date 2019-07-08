@@ -246,6 +246,8 @@ typedef struct {
     const nv2a_inline_array_format_t *f;
     uint32_t                    inline_array_offset;
     /* converted inline array data */
+    uint32_t                    converted_count;
+    void *                      converted_buffer;
     GLuint                      gl_converted_buffer;
     /* inline array data */
 //    uint32_t                    voffset;
@@ -361,7 +363,7 @@ static pthread_cond_t           nv2a_flip_stall_cond = PTHREAD_COND_INITIALIZER;
                                 FLIP_STALL_UNLOCK
 
 static int
-nv2a_offset(register uint32_t *addr) {
+nv2a_offset(uint32_t *addr) {
     register int ret;
 
     if ((ret = (*addr & 0xff000000) == nv2a->memreg_base)) *addr &= ~0xff000000;
@@ -370,7 +372,7 @@ nv2a_offset(register uint32_t *addr) {
 }
 
 static const hw_block_t *
-nv2a_block_lookup(register uint32_t addr, register const char **reg) {
+nv2a_block_lookup(uint32_t addr, const char **reg) {
     register const hw_block_t *b;
     register size_t i;
     ENTER_NV2A;
@@ -445,14 +447,14 @@ nv2a_block_lookup(register uint32_t addr, register const char **reg) {
         x##_##y##_UNLOCK
 
 static void
-nv2a_irq_restore(register int mask) {
+nv2a_irq_restore(int mask) {
     if (!mask || !(mask & ~NV2A_IRQ_BUSY)) return;
     if (mask & NV2A_IRQ_PGRAPH) PGRAPH_INTR_SIGNAL;
     if (mask & NV2A_IRQ_FIFO)   PGRAPH_FIFO_SIGNAL;
 }
 
 static void
-nv2a_irq_raise(register int mask) {
+nv2a_irq_raise(int mask) {
     if (!mask) return;
     if (nv2a->irq_busy) {
         if (mask & NV2A_IRQ_PGRAPH) nv2a->irq_busy |= NV2A_IRQ_PGRAPH;
@@ -535,7 +537,7 @@ nv2a_irq(void) {
 }
 
 static void
-nv2a_pgraph_intr_context_switch(register void *p, register uint32_t chid) {
+nv2a_pgraph_intr_context_switch(void *p, uint32_t chid) {
     ENTER_NV2A;
 
     if (//NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PGRAPH, CTX_CONTROL, CHID, VALID) &&//FIXME will be invalid
@@ -663,6 +665,7 @@ nv2a_texture_binding_upload(nv2a_texture_binding_t *b, nv2a_texture_t *t) {
 
     switch (gl_target) {
     case GL_TEXTURE_1D:
+        PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: 1d texture not supported */", 0);
         INT3;
         break;
     case GL_TEXTURE_RECTANGLE:
@@ -732,7 +735,7 @@ nv2a_texture_binding_upload(nv2a_texture_binding_t *b, nv2a_texture_t *t) {
                 d      /= 2;
             }
         } else {
-            /* FIXME: compressed not supported yet */
+            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: compressed 3d texture not supported yet */", 0);
             INT3;
         }
         break;
@@ -783,10 +786,10 @@ nv2a_texture_binding_create(nv2a_texture_t *t) {
     PRINT_NV2A(
         XEXEC_DBG_VARDUMP,
         "%s(): "
-        "texture: index %zu, "
+        "texture: index %zu | "
         "%u dimensions%s, "
         "w=%u x h=%u x d=%u | "
-        "format: '%s%s', "
+        "format: '%s%s' (%i), "
         "bpp=%u",
         __func__,
         t->index,
@@ -797,6 +800,7 @@ nv2a_texture_binding_create(nv2a_texture_t *t) {
         t->depth,
         t->cf->name,
         (!t->cf->linear) ? " (sz)" : "",
+        t->cf->index,
         t->cf->pixel_size * 8);
 
     nv2a_texture_binding_upload(b, t);
@@ -837,7 +841,7 @@ nv2a_texture_binding_destroy(nv2a_texture_binding_t **b, int now) {
 }
 
 static void
-nv2a_texture_bind(register void *p, uint32_t index) {
+nv2a_texture_bind(void *p, uint32_t index) {
     register nv2a_texture_t *t;
     nv2a_dma_t dma;
     uint32_t bsizeu;
@@ -881,11 +885,11 @@ nv2a_texture_bind(register void *p, uint32_t index) {
         PRINT_NV2A(
             XEXEC_DBG_VARDUMP,
             "%s(): "
-            "texture: index %zu, "
+            "texture: index %zu | "
             "%u dimensions%s, "
             "pitch=%u, "
             "w=%u (u=%u) x h=%u (v=%u) x d=%u (p=%u) | "
-            "format: '%s%s', "
+            "format: '%s%s' (%i), "
             "bpp=%u",
             __func__,
             t->index,
@@ -899,6 +903,7 @@ nv2a_texture_bind(register void *p, uint32_t index) {
             t->depth,
             1 << t->format.base_size_p,
             t->cf->name,
+            t->cf->index,
             (!t->cf->linear) ? " (sz)" : "",
             t->cf->pixel_size * 8);
 
@@ -1139,7 +1144,7 @@ MEM_DIRTY_CREATE(t->pdata, t->plen);//TODO cache
 }
 
 static void
-nv2a_texture_bind_all(register void *p) {
+nv2a_texture_bind_all(void *p) {
     register uint32_t i;
     ENTER_NV2A;
 
@@ -1149,7 +1154,7 @@ nv2a_texture_bind_all(register void *p) {
 }
 #if 0
 static int
-nv2a_pgraph_ctx_lookup(register void *p, uint32_t grclass, nv2a_pgraph_ctx *ctx) {
+nv2a_pgraph_ctx_lookup(void *p, uint32_t grclass, nv2a_pgraph_ctx *ctx) {
     register uint32_t i;
     register uint32_t pos;
     nv2a_pgraph_ctx C;
@@ -1175,15 +1180,15 @@ nv2a_pgraph_ctx_lookup(register void *p, uint32_t grclass, nv2a_pgraph_ctx *ctx)
 }
 #endif
 static void
-nv2a_09f_blit(register void *p) {
+nv2a_09f_blit(void *p) {
 //    nv2a_pgraph_ctx C;
-    register uint32_t addr;
-    register uint32_t i;
-    register uint8_t *srcr, *destr;
+    register const nv2a_color_format_t *cf;
+    nv2a_dma_t dma;
     uint8_t *src, *dest;
     uint32_t srcp, destp, inx, iny, outx, outy, w, h;
-    const nv2a_color_format_t *cf;
-    nv2a_dma_t dma;
+    register uint8_t *srcr, *destr;
+    register uint32_t addr;
+    register uint32_t i;
     ENTER_NV2A;
 
     switch (NV2A_REG32(p, NV_09F, SET_OPERATION)) {
@@ -1274,22 +1279,28 @@ nv2a_vertex_attrib_inline_buffer_finish(void) {
 
     LEAVE_NV2A;
 }
-#if 0
-//#elif 0
-static void pgraph_bind_vertex_attributes(NV2AState *d,
-                                          unsigned int num_elements,
-                                          bool use_inline_array,
-                                          unsigned int inline_array_stride)
-{
-    int i, j;
-    PGRAPHState *pg = &d->pgraph;
 
-    if (use_inline_array) {
-        NV2A_GL_DGROUP_BEGIN("%s (num_elements: %d inline stride: %d)",
-                             __func__, num_elements, inline_array_stride);
-    } else {
-        NV2A_GL_DGROUP_BEGIN("%s (num_elements: %d)", __func__, num_elements);
-    }
+static void
+nv2a_vertex_attrib_bind(void *p, uint32_t count, uint32_t inline_array_stride) {
+    register nv2a_vertex_attrib_t *a;
+//    void *vdata;
+    nv2a_dma_t dma;
+    register uint32_t stride;
+    register uint32_t i;
+    register uint32_t j;
+    ENTER_NV2A;
+    VARDUMP_NV2A(VAR_IN, count);
+    VARDUMP_NV2A(VAR_IN, inline_array_stride);
+
+    for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
+        if ((a = &nv2a_ctx->va[i])->format.size) {
+#if 0
+renamed:
+num_elements      -> count
+attribute->count  -> a->format.size
+data              -> a->vdata
+in_stride         -> a->vstride
+attribute->stride -> a->format.stride
 
 //    for (i=0; i<NV2A_VERTEXSHADER_ATTRIBUTES; i++) {
 //        VertexAttribute *attribute = &pg->vertex_attributes[i];
@@ -1307,106 +1318,12 @@ static void pgraph_bind_vertex_attributes(NV2AState *d,
 //                } else {
 //                    data = nv_dma_map(d, pg->dma_vertex_a, &dma_len);
 //                }
-
 //                assert(attribute->offset < dma_len);
 //                data += attribute->offset;
-
 //                in_stride = attribute->stride;
 //            }
-
-            if (attribute->needs_conversion) {
-                NV2A_DPRINTF("converted %d\n", i);
-
-                unsigned int out_stride = attribute->converted_size
-                                        * attribute->converted_count;
-
-                if (num_elements > attribute->converted_elements) {
-                    attribute->converted_buffer = g_realloc(
-                        attribute->converted_buffer,
-                        num_elements * out_stride);
-                }
-
-                for (j=attribute->converted_elements; j<num_elements; j++) {
-                    uint8_t *in = data + j * in_stride;
-                    uint8_t *out = attribute->converted_buffer + j * out_stride;
-
-                    switch (attribute->format) {
-                    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP: {
-                        uint32_t p = ldl_le_p((uint32_t*)in);
-                        float *xyz = (float*)out;
-                        xyz[0] = ((int32_t)(((p >>  0) & 0x7FF) << 21) >> 21)
-                                                                      / 1023.0f;
-                        xyz[1] = ((int32_t)(((p >> 11) & 0x7FF) << 21) >> 21)
-                                                                      / 1023.0f;
-                        xyz[2] = ((int32_t)(((p >> 22) & 0x3FF) << 22) >> 22)
-                                                                       / 511.0f;
-                        break;
-                    }
-                    default:
-                        assert(false);
-                        break;
-                    }
-                }
-
-
-                glBindBuffer(GL_ARRAY_BUFFER, attribute->gl_converted_buffer);
-                if (num_elements != attribute->converted_elements) {
-                    glBufferData(GL_ARRAY_BUFFER,
-                                 num_elements * out_stride,
-                                 attribute->converted_buffer,
-                                 GL_DYNAMIC_DRAW);
-                    attribute->converted_elements = num_elements;
-                }
-
-
-                glVertexAttribPointer(i,
-                    attribute->converted_count,
-                    attribute->gl_type,
-                    attribute->gl_normalize,
-                    out_stride,
-                    0);
-            } else if (use_inline_array) {
-                glBindBuffer(GL_ARRAY_BUFFER, pg->gl_inline_array_buffer);
-                glVertexAttribPointer(i,
-                                      attribute->gl_count,
-                                      attribute->gl_type,
-                                      attribute->gl_normalize,
-                                      inline_array_stride,
-                                      (void*)(uintptr_t)attribute->inline_array_offset);
-            } else {
-                hwaddr addr = data - d->vram_ptr;
-                pgraph_update_memory_buffer(d, addr,
-                                            num_elements * attribute->stride,
-                                            false);
-                glVertexAttribPointer(i,
-                    attribute->gl_count,
-                    attribute->gl_type,
-                    attribute->gl_normalize,
-                    attribute->stride,
-                    (void*)addr);
-            }
-            glEnableVertexAttribArray(i);
-        } else {
-            glDisableVertexAttribArray(i);
-
-            glVertexAttrib4fv(i, attribute->inline_value);
-        }
-    }
-    NV2A_GL_DGROUP_END();
-}
-#elif 0
-static void
-nv2a_vertex_attrib_bind(uint32_t count, int use_inline_array, uint32_t inline_array_stride) {
-    register nv2a_vertex_attrib_t *a;
-    register uint32_t i;
-//    void *vdata;
-    uint32_t stride;
-    nv2a_dma_t dma;
-    ENTER_NV2A;
-
-    for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
-        if ((a = &nv2a_ctx->va[i])->format.size) {
-            if (use_inline_array && a->f->convert) {
+#endif
+            if (inline_array_stride && a->f->convert) {
                 a->vdata    = nv2a_ctx->inline_array;
                 a->vdata   += a->inline_array_offset;
                 a->vstride  = inline_array_stride;
@@ -1431,78 +1348,133 @@ nv2a_vertex_attrib_bind(uint32_t count, int use_inline_array, uint32_t inline_ar
             VARDUMP_NV2A(DUMP, a->vdata);
             VARDUMP_NV2A(DUMP, a->vstride);
             if (a->f->convert) {
-#if 0
-                unsigned int out_stride = attribute->converted_size
-                                        * attribute->converted_count;
-
-                if (num_elements > attribute->converted_elements) {
-                    attribute->converted_buffer = g_realloc(
-                        attribute->converted_buffer,
-                        num_elements * out_stride);
+                stride = a->format.size * a->f->convert_nmemb * a->f->convert_size;
+                if (count > a->converted_count) {
+                    if (!(a->converted_buffer = realloc(a->converted_buffer, stride * count))) INT3;
                 }
-
-                for (j=attribute->converted_elements; j<num_elements; j++) {
-                    uint8_t *in = data + j * in_stride;
-                    uint8_t *out = attribute->converted_buffer + j * out_stride;
-
-                    switch (attribute->format) {
-                    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP: {
-                        uint32_t p = ldl_le_p((uint32_t*)in);
-                        float *xyz = (float*)out;
-                        xyz[0] = ((int32_t)(((p >>  0) & 0x7FF) << 21) >> 21)
-                                                                      / 1023.0f;
-                        xyz[1] = ((int32_t)(((p >> 11) & 0x7FF) << 21) >> 21)
-                                                                      / 1023.0f;
-                        xyz[2] = ((int32_t)(((p >> 22) & 0x3FF) << 22) >> 22)
-                                                                       / 511.0f;
+                for (j = a->converted_count; j < count; ++j) {
+                    switch (a->format.type) {
+                    case NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP /* 6 */:
+                        {
+                            register int32_t *in = a->vdata + a->vstride * j;
+                            register float *out  = a->converted_buffer + stride * j;
+                            out[0] = ((*in >>  0) & 0x7ff) / 1023.f;
+                            out[1] = ((*in >> 11) & 0x7ff) / 1023.f;
+                            out[2] = ((*in >> 22) & 0x3ff) / 511.f;
+                        }
                         break;
-                    }
                     default:
-                        assert(false);
+                        INT3;
                         break;
                     }
                 }
-                glBindBuffer(GL_ARRAY_BUFFER, attribute->gl_converted_buffer);
-                if (num_elements != attribute->converted_elements) {
+                glBindBuffer(GL_ARRAY_BUFFER, a->gl_converted_buffer);
+                if (a->converted_count != count) {
+                    a->converted_count = count;
                     glBufferData(GL_ARRAY_BUFFER,
-                                 num_elements * out_stride,
-                                 attribute->converted_buffer,
-                                 GL_DYNAMIC_DRAW);
-                    attribute->converted_elements = num_elements;
+                        stride * count,
+                        a->converted_buffer,
+                        GL_DYNAMIC_DRAW);
                 }
-
-
                 glVertexAttribPointer(i,
-                    attribute->converted_count,
-                    attribute->gl_type,
-                    attribute->gl_normalize,
-                    out_stride,
-                    0);
-#elif 0
-
-#endif
-            } else if (use_inline_array) {
+                    a->format.size * a->f->convert_nmemb,
+                    a->f->gl_type,
+                    a->f->gl_normalized,
+                    stride,
+                    NULL);
 #if 0
-                glBindBuffer(GL_ARRAY_BUFFER, pg->gl_inline_array_buffer);
-                glVertexAttribPointer(i,
-                                      attribute->gl_count,
-                                      attribute->gl_type,
-                                      attribute->gl_normalize,
-                                      inline_array_stride,
-                                      (void*)(uintptr_t)attribute->inline_array_offset);
+renamed:
+attribute->format             -> a->format.type
+num_elements                  -> count
+attribute->converted_elements -> a->converted_count
+attribute->converted_size     -> a->f->convert_size
+
+//                unsigned int out_stride = attribute->converted_size
+//                                        * attribute->converted_count;
+//                if (num_elements > attribute->converted_elements) {
+//                    attribute->converted_buffer = g_realloc(
+//                        attribute->converted_buffer,
+//                        num_elements * out_stride);
+//                }
+//                for (j=attribute->converted_elements; j<num_elements; j++) {
+//                    uint8_t *in = data + j * in_stride;
+//                    uint8_t *out = attribute->converted_buffer + j * out_stride;
+//                    switch (attribute->format) {
+//                    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP: {
+//                        uint32_t p = ldl_le_p((uint32_t*)in);
+//                        float *xyz = (float*)out;
+//                        xyz[0] = ((int32_t)(((p >>  0) & 0x7FF) << 21) >> 21)
+//                                                                      / 1023.0f;
+//                        xyz[1] = ((int32_t)(((p >> 11) & 0x7FF) << 21) >> 21)
+//                                                                      / 1023.0f;
+//                        xyz[2] = ((int32_t)(((p >> 22) & 0x3FF) << 22) >> 22)
+//                                                                       / 511.0f;
+//                        break;
+//                    }
+//                    default:
+//                        assert(false);
+//                        break;
+//                    }
+//                }
+//                glBindBuffer(GL_ARRAY_BUFFER, attribute->gl_converted_buffer);
+//                if (num_elements != attribute->converted_elements) {
+//                    glBufferData(GL_ARRAY_BUFFER,
+//                                 num_elements * out_stride,
+//                                 attribute->converted_buffer,
+//                                 GL_DYNAMIC_DRAW);
+//                    attribute->converted_elements = num_elements;
+//                }
+//                glVertexAttribPointer(i,
+//                    attribute->converted_count,
+//                    attribute->gl_type,
+//                    attribute->gl_normalize,
+//                    out_stride,
+//                    0);
 #endif
+            } else if (inline_array_stride) {
+#if 0
+renamed:
+attribute->gl_count -> a->f->gl_size
+attribute->gl_count == attribute->count == (a->f->gl_size) ? a->f->gl_size : a->format.size
+
+//                glBindBuffer(GL_ARRAY_BUFFER, pg->gl_inline_array_buffer);
+//                glVertexAttribPointer(i,
+//                                      attribute->gl_count,
+//                                      attribute->gl_type,
+//                                      attribute->gl_normalize,
+//                                      inline_array_stride,
+//                                      (void*)(uintptr_t)attribute->inline_array_offset);
+#endif
+                glBindBuffer(GL_ARRAY_BUFFER, nv2a_ctx->gl_inline_array_buffer);
+                glVertexAttribPointer(i,
+                    (a->f->gl_size) ? a->f->gl_size : a->format.size,
+                    a->f->gl_type,
+                    a->f->gl_normalized,
+                    inline_array_stride,
+                    (void *)a->inline_array_offset);
             } else {
 #if 0
-                hwaddr addr = data - d->vram_ptr;
-                pgraph_update_memory_buffer(d, addr,
-                                            num_elements * attribute->stride,
-                                            false);
+//                hwaddr addr = data - d->vram_ptr;
+//                pgraph_update_memory_buffer(d, addr,
+//                                            num_elements * attribute->stride,
+//                                            false);
+//                glVertexAttribPointer(i,
+//                    attribute->gl_count,
+//                    attribute->gl_type,
+//                    attribute->gl_normalize,
+//                    attribute->stride,
+//                    (void*)addr);
+#elif 0 //TODO
+                hwaddr addr = a->vdata - d->vram_ptr;
+                pgraph_update_memory_buffer(d, addr, a->format.stride * count, false);
                 glVertexAttribPointer(i,
-                    attribute->gl_count,
-                    attribute->gl_type,
-                    attribute->gl_normalize,
-                    attribute->stride,
-                    (void*)addr);
+                    (a->f->gl_size) ? a->f->gl_size : a->format.size,
+                    a->f->gl_type,
+                    a->f->gl_normalized,
+                    a->format.stride,
+                    (void *)addr);
+#else
+INT3;//XXX
 #endif
             }
             glEnableVertexAttribArray(i);
@@ -1514,85 +1486,109 @@ nv2a_vertex_attrib_bind(uint32_t count, int use_inline_array, uint32_t inline_ar
 
     LEAVE_NV2A;
 }
-#endif
 #if 0
-static unsigned int pgraph_bind_inline_array(NV2AState *d)
-{
+renamed:
+attribute->count -> a->format.size
+attribute->size  -> a->f->size
+vertex_size      == stride (offset)
+
+//static unsigned int pgraph_bind_inline_array(NV2AState *d)
+//{
 //    int i;
-
 //    PGRAPHState *pg = &d->pgraph;
-
 //    unsigned int offset = 0;
 //    for (i=0; i<NV2A_VERTEXSHADER_ATTRIBUTES; i++) {
 //        VertexAttribute *attribute = &pg->vertex_attributes[i];
 //        if (attribute->count) {
 //            attribute->inline_array_offset = offset;
-
-            NV2A_DPRINTF("bind inline attribute %d size=%d, count=%d\n",
-                i, attribute->size, attribute->count);
+//            NV2A_DPRINTF("bind inline attribute %d size=%d, count=%d\n",
+//                i, attribute->size, attribute->count);
 //            offset += attribute->size * attribute->count;
 //            assert(offset % 4 == 0);
 //        }
 //    }
-
 //    unsigned int vertex_size = offset;
-
-
 //    unsigned int index_count = pg->inline_array_length*4 / vertex_size;
-
-    NV2A_DPRINTF("draw inline array %d, %d\n", vertex_size, index_count);
-
+//    NV2A_DPRINTF("draw inline array %d, %d\n", vertex_size, index_count);
 //    glBindBuffer(GL_ARRAY_BUFFER, pg->gl_inline_array_buffer);
 //    glBufferData(GL_ARRAY_BUFFER, pg->inline_array_length*4, pg->inline_array,
 //                 GL_DYNAMIC_DRAW);
-
 //    pgraph_bind_vertex_attributes(d, index_count, true, vertex_size);
-
 //    return index_count;
-}
-#elif 0
+//}
+#endif
 static uint32_t
-nv2a_inline_array_bind(void) {
+nv2a_inline_array_bind(void *p) {
     register nv2a_vertex_attrib_t *a;
+    register uint32_t stride;
+    register uint32_t size;
+    register uint32_t count;
     register uint32_t i;
-    uint32_t offset;
-    uint32_t size;
-    uint32_t count;
     ENTER_NV2A;
 
-    for (offset = 0, i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
+    for (stride = 0, i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
         if ((a = &nv2a_ctx->va[i])->format.size) {
-            a->inline_array_offset  = offset;
-            offset                 += a->format.size * a->f->size;
-            if (offset % 4) INT3;
+            a->inline_array_offset = stride;
+
+            PRINT_NV2A(
+                XEXEC_DBG_VARDUMP,
+                "%s(): "
+                "inline array: bind: index %u | "
+                "format: '%s' (%i), "
+                "stride=0x%.08x (%u) += "
+                "size=%u x count=%u = %u bytes",
+                __func__,
+                i,
+                a->f->name,
+                a->f->index,
+                stride,
+                stride,
+                a->f->size,
+                a->format.size,
+                a->f->size * a->format.size);
+
+            stride += a->f->size * a->format.size;
+            if (stride % 4) INT3;
         }
     }
 
+    if (!stride) INT3;
+
     size  = nv2a_ctx->inline_array_len * sizeof(*nv2a_ctx->inline_array);
-    count = size / offset;
+    count = size / stride;
+
+    PRINT_NV2A(
+        XEXEC_DBG_VARDUMP,
+        "%s(): "
+        "inline array: draw: "
+        "count=%u = size=%u / stride=%u",
+        __func__,
+        count,
+        size,
+        stride);
 
     glBindBuffer(GL_ARRAY_BUFFER, nv2a_ctx->gl_inline_array_buffer);
     glBufferData(GL_ARRAY_BUFFER, size, nv2a_ctx->inline_array, GL_DYNAMIC_DRAW);
 
-    nv2a_vertex_attrib_bind(count, 1, offset);
+    nv2a_vertex_attrib_bind(p, count, stride);
 
     LEAVE_NV2A;
     return count;
 }
-#endif
+
 static void
-nv2a_pgraph_fifo(register void *p, register const nv2a_pfifo_command_t *c) {
+nv2a_pgraph_fifo(void *p, const nv2a_pfifo_command_t *c) {
     register nv2a_vertex_attrib_t *a;
-    register uint32_t pos;
-    register uint32_t *get;
-    register uint32_t v;
-    register uint32_t t;
     nv2a_pgraph_ctx1_t *ctx1;
     nv2a_pgraph_ctx2_t *ctx2;
     nv2a_pgraph_ctx3_t *ctx3;
     nv2a_pgraph_ctx4_t *ctx4;
     nv2a_pgraph_ctx5_t *ctx5;
     nv2a_dma_t dma;
+    register uint32_t pos;
+    register uint32_t *get;
+    register uint32_t v;
+    register uint32_t t;
     ENTER_NV2A;
 
     NV2A_IRQ_WAITN(PGRAPH, FIFO, ACCESS_ENABLED);
@@ -1812,28 +1808,25 @@ INT3;//XXX make sure blit works
             nv2a_ctx->inline_array[nv2a_ctx->inline_array_len++] = c->param;
             break;
 #if 0
-case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
-        NV097_SET_VERTEX_DATA_ARRAY_FORMAT + 0x3c: {
+renamed:
+attribute->count              -> a->format.size
+attribute->converted_elements -> a->converted_count
 
+//case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
+//        NV097_SET_VERTEX_DATA_ARRAY_FORMAT + 0x3c: {
 //    slot = (method - NV097_SET_VERTEX_DATA_ARRAY_FORMAT) / 4;
 //    VertexAttribute *vertex_attribute = &pg->vertex_attributes[slot];
-
 //    vertex_attribute->format =
 //        GET_MASK(parameter, NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE);
 //    vertex_attribute->count =
 //        GET_MASK(parameter, NV097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE);
 //    vertex_attribute->stride =
 //        GET_MASK(parameter, NV097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE);
-
-    NV2A_DPRINTF("vertex data array format=%d, count=%d, stride=%d\n",
-        vertex_attribute->format,
-        vertex_attribute->count,
-        vertex_attribute->stride);
-
+//    NV2A_DPRINTF("vertex data array format=%d, count=%d, stride=%d\n",
+//        vertex_attribute->format,
+//        vertex_attribute->count,
+//        vertex_attribute->stride);
 //    vertex_attribute->gl_count = vertex_attribute->count;
-
-//
-
 //    if (vertex_attribute->needs_conversion) {
 //        vertex_attribute->converted_elements = 0;
 //    } else {
@@ -1842,9 +1835,8 @@ case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
 //            vertex_attribute->converted_buffer = NULL;
 //        }
 //    }
-
-    break;
-}
+//    break;
+//}
 
 #define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE                      0xffffff00
 #define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_STRIDE__BITSHIFT            8
@@ -1864,65 +1856,66 @@ case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
 #define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_OGL                 4
 #define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S32K                   5
 #define NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP                    6
-#elif 1
-#define CASE(x) \
-        case NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_##x: \
-            VARDUMP_NV2A(VAR_IN, c->param); \
-            a = &nv2a_ctx->va[x]; \
-            a->vertex.field = c->param; \
-            /*a->converted_elements = 0;FIXME*/ \
-            break
-        CASE(0);
-        CASE(1);
-        CASE(2);
-        CASE(3);
-        CASE(4);
-        CASE(5);
-        CASE(6);
-        CASE(7);
-        CASE(8);
-        CASE(9);
-        CASE(10);
-        CASE(11);
-        CASE(12);
-        CASE(13);
-        CASE(14);
-        CASE(15);
-#undef CASE
-#define CASE(x) \
-        case NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_##x: \
-            VARDUMP_NV2A(VAR_IN, c->param); \
-            a = &nv2a_ctx->va[x]; \
-            a->format.field = c->param; \
-            /*a->gl_size = a->format.size;FIXME*/ \
-            if (a->format.type >= ARRAY_SIZE(nv2a_inline_array_format)) INT3; \
-            a->f = &nv2a_inline_array_format[a->format.type]; \
-            if (!a->f->name) INT3; \
-            if (a->f->convert) { \
-                /*a->converted_elements = 0;FIXME*/ \
-            }/* else if (a->converted_buffer) {FIXME*/ \
-            /*    free(a->converted_buffer);FIXME*/ \
-            /*    a->converted_buffer = NULL;FIXME*/ \
-            /*}FIXME*/ \
-            break
-        CASE(0);
-        CASE(1);
-        CASE(2);
-        CASE(3);
-        CASE(4);
-        CASE(5);
-        CASE(6);
-        CASE(7);
-        CASE(8);
-        CASE(9);
-        CASE(10);
-        CASE(11);
-        CASE(12);
-        CASE(13);
-        CASE(14);
-        CASE(15);
-#undef CASE
 #endif
+        case NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_0 ...
+             NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_15:
+            if ((pos = c->method - NV_097_SET_VERTEX_DATA_ARRAY_OFFSET_0) % 4) INT3;
+            pos /= 4;
+            VARDUMP_NV2A(VAR_IN, c->param);
+            a = &nv2a_ctx->va[pos];
+            a->vertex.field = c->param;
+
+            PRINT_NV2A(
+                XEXEC_DBG_VARDUMP,
+                "%s(): "
+                "vertex data array: index %u | "
+                "offset=0x%.08x (%u), "
+                "context_dma=%u",
+                __func__,
+                pos,
+                a->vertex.offset,
+                a->vertex.offset,
+                a->vertex.context_dma);
+
+            a->converted_count = 0;
+            break;
+        case NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_0 ...
+             NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_15:
+            if ((pos = c->method - NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_0) % 4) INT3;
+            pos /= 4;
+            VARDUMP_NV2A(VAR_IN, c->param);
+            a = &nv2a_ctx->va[pos];
+            a->format.field = c->param;
+            if (a->format.type >= ARRAY_SIZE(nv2a_inline_array_format)) INT3;
+            a->f = &nv2a_inline_array_format[a->format.type];
+            if (!a->f->name) INT3;
+
+            PRINT_NV2A(
+                XEXEC_DBG_VARDUMP,
+                "%s(): "
+                "vertex data array: index %u | "
+                "format: '%s' (%i), "
+                "count=%u, "
+                "stride=%u",
+                __func__,
+                pos,
+                a->f->name,
+                a->f->index,
+                a->format.size,
+                a->format.stride);
+
+            if (a->f->convert) {
+                a->converted_count = 0;
+            } else if (a->converted_buffer) {
+                free(a->converted_buffer);
+                a->converted_buffer = NULL;
+            }
+            switch (a->format.type) {
+            case NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_D3D:
+                if (a->format.size != NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_SIZE_4) INT3;
+                break;
+            }
+            break;
         /* parameters are uploaded to the vertex attributes' inline buffer below */
         /* x = vertex method name, y = vertex attribute index, z = inline value index */
 #define CASES(y,z) \
@@ -1984,7 +1977,7 @@ case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
         CASE(SET_VERTEX4F,  0, 2);
         CASEF(SET_VERTEX4F, 0, 3);
 #define CASE2V \
-            /* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */ \
+            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */", 0); \
             a->inline_value[2] = 0.f; \
             a->inline_value[3] = 1.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[2])); \
@@ -2089,14 +2082,15 @@ case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
 #undef CASEV
         /* z = used as y here */
 #define CASEV(z) \
-            INT3; /* FIXME: Untested! */ \
-            /* FIXME: Is mapping to [-1,+1] correct? */ \
+            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: Untested! */", 0); \
+            INT3; \
+            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Is mapping to [-1,+1] correct? */", 0); \
             a->inline_value[0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
             a->inline_value[1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[0])); \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[1]));
 #define CASE2V \
-            /* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */ \
+            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */", 0); \
             a->inline_value[2] = 0.f; \
             a->inline_value[3] = 1.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[2])); \
@@ -2147,8 +2141,9 @@ case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
         CASE(SET_VERTEX_DATA4UB, 15, 15);
 #undef CASEV
 #define CASEV(z) \
-            INT3; /* FIXME: Untested! */ \
-            /* FIXME: Is mapping to [-1,+1] correct? */ \
+            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: Untested! */", 0); \
+            INT3; \
+            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Is mapping to [-1,+1] correct? */", 0); \
             a->inline_value[z * 2 + 0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
             a->inline_value[z * 2 + 1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[z * 2 + 0])); \
@@ -2729,12 +2724,20 @@ case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
 #undef CASE
         default:
             VARDUMP_NV2A(VAR_IN, c->param);
+            PRINT_NV2A(
+                XEXEC_DBG_ERROR,
+                "%s(): warning: unhandled method: 0x%.08x (%u)",
+                __func__, c->method, c->method);
             break;
         }
         break;
     default:
         VARDUMP_NV2A(VAR_IN, c->method);
         VARDUMP_NV2A(VAR_IN, c->param);
+        PRINT_NV2A(
+            XEXEC_DBG_ERROR,
+            "%s(): warning: unhandled graphics class: 0x%.08x (%u)",
+            __func__, ctx1->grclass, ctx1->grclass);
         break;
     }
 
@@ -2742,7 +2745,7 @@ case NV097_SET_VERTEX_DATA_ARRAY_FORMAT ...
 }
 
 static int
-nv2a_pfifo_ramht_lookup(register void *p, register uint32_t *handle, register nv2a_pfifo_ramht_t *r) {
+nv2a_pfifo_ramht_lookup(void *p, uint32_t *handle, nv2a_pfifo_ramht_t *r) {
     register uint32_t bits;
     register uint32_t size;
     register uint32_t hash;
@@ -2775,7 +2778,7 @@ nv2a_pfifo_ramht_lookup(register void *p, register uint32_t *handle, register nv
 }
 
 static void
-nv2a_pfifo_puller(register void *p, register nv2a_pfifo_command_t *c) {
+nv2a_pfifo_puller(void *p, nv2a_pfifo_command_t *c) {
     nv2a_pfifo_ramht_t r;
     ENTER_NV2A;
 
@@ -2850,15 +2853,15 @@ fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c->method,c->pa
 }
 
 void
-nv2a_pfifo_pusher(register void *p) {
+nv2a_pfifo_pusher(void *p) {
     register nv2a_pfifo_command_t *c;
-    register uint32_t *get;
-    register uint32_t *put;
-    register uint32_t *d;
     nv2a_pfifo_command_t cmd;
     nv2a_dma_t dma;
     uint32_t addr;
     uint32_t v;
+    register uint32_t *get;
+    register uint32_t *put;
+    register uint32_t *d;
     register uint32_t word;
     ENTER_NV2A;
 
@@ -2877,11 +2880,11 @@ nv2a_pfifo_pusher(register void *p) {
     v = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID);
     /* TODO: PIO not supported */
     if (!(NV2A_REG32(p, NV_PFIFO, MODE) & (1 << v))) {
-        PRINT_NV2A(XEXEC_DBG_ERROR, "pb error: channel %u is not in DMA mode", v);
+        PRINT_NV2A(XEXEC_DBG_ALL, "pb error: channel %u is not in DMA mode", v);
         INT3;
     }
     if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_PUSH1, MODE, PIO)) {
-        PRINT_NV2A(XEXEC_DBG_ERROR, "pb error: PIO not supported", 0);
+        PRINT_NV2A(XEXEC_DBG_ALL, "pb error: PIO not supported", 0);
         INT3;
     }
 
@@ -2990,14 +2993,14 @@ nv2a_pfifo_pusher(register void *p) {
         *get,
         *put);
 
-    NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_PUSH, STATE, IDLE);
-
     if (c->error) {
         VARDUMP2_NV2A(DUMP, c->error, nv2a_pfifo_cache1_dma_state_error_name);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_PUSH, STATUS, SUSPENDED);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, INTR_0, DMA_PUSHER, PENDING);
         IRQ_NV2A_SIGNAL;
     }
+
+    NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_PUSH, STATE, IDLE);
 
     LEAVE_NV2A;
 }
@@ -3247,6 +3250,7 @@ INT3;//XXX make sure this works
             }
         } else {
             /* pio */
+            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: pio not supported */", 0);
             INT3;
         }
         break;
@@ -3604,7 +3608,8 @@ nv2a_init(void) {
 
 static void
 nv2a_reset(void) {
-    //TODO
+    //TODO disconnect irq
+    //TODO free resources
 }
 
 const hw_ops_t nv2a_op = {

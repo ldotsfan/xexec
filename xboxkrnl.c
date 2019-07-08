@@ -147,12 +147,10 @@ xboxkrnl_vardump(
         size_t sz) {
     static const int level = XEXEC_DBG_VARDUMP;
     register char *c = NULL;
-    char *a;
 
     if (!(xexec_debug & level)) return;
 
     if (v >> 32 == ~0UL) v &= ~0UL; /* unwanted sign extension from 32-bit to 64-bit */
-    a = *(char **)&v;
 
     if (nsz) {
         if (!mask) {
@@ -180,6 +178,7 @@ xboxkrnl_vardump(
     }
 
     if (type == STRING || type == WSTRING) {
+        char *a = *(char **)&v;
         size_t l;
         register int ret = (type == WSTRING && xboxkrnl_wchar_to_char(a, &a, &l));
         if (!ret) l = (sz) ? sz : strlen(a);
@@ -325,7 +324,7 @@ xboxkrnl_print(int level, int8_t stack, const char *format, ...) {
         do { \
             PRINT(XEXEC_DBG_ALL, \
                 "INT3: %s(): breakpoint triggered at line %i of file \"%s\" (git version: %s)", \
-                __func__, __LINE__, __FILE__, "UNKNOWN"); /* FIXME include git version */ \
+                __func__, __LINE__, __FILE__, "FIXME: include git version"); \
             __asm__ __volatile__("int3"); \
         } while (0)
 #define STDCALL             __attribute__((__stdcall__))
@@ -734,7 +733,7 @@ static struct xpci *const   aci   = &xpci[XPCI_ACI];
 static struct xpci *const   nv2a  = &xpci[XPCI_GPU];
 
 /* memory */
-static void *               xboxkrnl_gpuinstmem = NULL;//FIXME
+static void *               xboxkrnl_gpuinstmem = NULL;//TODO find use case
 static size_t               xboxkrnl_gpuinstsz = 0;
 
 enum XBOXKRNL_PAGE_TYPE {
@@ -3138,7 +3137,7 @@ xboxkrnl_ExAllocatePoolWithTag( /* 015 (0x00f) */
     STRDUMPR(Tag);
 
     if (!(ret = MEM_ALLOC_HEAP(NumberOfBytes))) INT3;
-    //TODO save tag
+    PRINT(XEXEC_DBG_VARDUMP, "/* TODO: save tag */", 0);//TODO
 
     VARDUMP(DUMP, ret);
     LEAVE;
@@ -3666,7 +3665,7 @@ xboxkrnl_HalReadWritePCISpace( /* 046 (0x02e) */
     VARDUMP(VAR_IN, Length);
     VARDUMP(VAR_IN, WritePCISpace);
 
-    //TODO interrupt mutex
+    PRINT(XEXEC_DBG_VARDUMP, "/* TODO: interrupt mutex */", 0);//TODO
 
     LEAVE;
 }
@@ -6925,7 +6924,7 @@ xboxkrnl_RtlEnterCriticalSection( /* 277 (0x115) */
     VARDUMP(VAR_IN, CriticalSection);
     VARDUMP(VAR_IN, *CriticalSection);
 
-    /* FIXME: some locks are passed from the stack in game code */
+    PRINT(XEXEC_DBG_VARDUMP, "/* FIXME: some locks are passed from the game code stack */", 0);//FIXME
     pthread_mutex_lock(*CriticalSection);
 
     LEAVE;
@@ -7115,6 +7114,7 @@ xboxkrnl_RtlLeaveCriticalSection( /* 294 (0x126) */
     VARDUMP(VAR_IN, CriticalSection);
     VARDUMP(VAR_IN, *CriticalSection);
 
+    PRINT(XEXEC_DBG_VARDUMP, "/* FIXME: some locks are passed from the game code stack */", 0);//FIXME
     pthread_mutex_unlock(*CriticalSection);
 
     LEAVE;
@@ -8628,7 +8628,7 @@ static const char *const xboxkrnl_thunk_name[] = {
 };
 
 static size_t
-xboxkrnl_thunk_resolve(register const void **k) {
+xboxkrnl_thunk_resolve(const void **k) {
     register size_t i;
     register uint32_t t;
     ENTER;

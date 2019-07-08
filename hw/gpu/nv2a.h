@@ -193,6 +193,7 @@ static const hw_block_t nv2a_block[] = {
 #include "reg/user.h"       /* NV_USER */
 
 typedef struct {
+    const int      index;
     const char *   name;
     const uint32_t pixel_size;
     const uint32_t block_size;
@@ -207,7 +208,7 @@ static const nv2a_color_format_t nv2a_texture_color_format[] = {
 #define FORMAT1(a,b,c,d,e,f,g) \
         FORMAT2(a,b,c,d,e,f,g,0,0,0,0)
 #define FORMAT2(a,b,c,d,e,f,g,h,i,j,k) \
-    [NV_097_SET_TEXTURE_FORMAT_COLOR_##a] = { #a, b, c, d, e, f, g, { h, i, j, k } }
+    [NV_097_SET_TEXTURE_FORMAT_COLOR_##a] = { NV_097_SET_TEXTURE_FORMAT_COLOR_##a, #a, b, c, d, e, f, g, { h, i, j, k } }
     /*  0 */ FORMAT2(SZ_Y8,
                 1, 0, 0, GL_R8, GL_RED, GL_UNSIGNED_BYTE, GL_RED, GL_RED, GL_RED, GL_ONE),
     /*  1 */ FORMAT2(SZ_AY8,
@@ -309,7 +310,7 @@ static const nv2a_color_format_t nv2a_texture_color_format[] = {
 
 static const nv2a_color_format_t nv2a_surface_color_format[] = {
 #define FORMAT(a,b,c,d,e) \
-    [NV_097_SET_SURFACE_FORMAT_COLOR_##a] = { #a, b, 0, 0, c, d, e, { 0, 0, 0, 0 } }
+    [NV_097_SET_SURFACE_FORMAT_COLOR_##a] = { NV_097_SET_SURFACE_FORMAT_COLOR_##a, #a, b, 0, 0, c, d, e, { 0, 0, 0, 0 } }
     /*  1 */ FORMAT(LE_X1R5G5B5_Z1R5G5B5,
                 2, GL_RGB5_A1, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV),
     /*  2 */ // LE_X1R5G5B5_O1R5G5B5
@@ -329,7 +330,7 @@ static const nv2a_color_format_t nv2a_surface_color_format[] = {
 
 static const nv2a_color_format_t nv2a_062_color_format[] = {
 #define FORMAT(a,b,c,d,e) \
-    [NV_062_COLOR_FORMAT_##a] = { #a, b, 0, 0, c, d, e, { 0, 0, 0, 0 } }
+    [NV_062_COLOR_FORMAT_##a] = { NV_062_COLOR_FORMAT_##a, #a, b, 0, 0, c, d, e, { 0, 0, 0, 0 } }
     /*  1 */ // LE_Y8
     /*  2 */ FORMAT(LE_X1R5G5B5_Z1R5G5B5,
                 2, GL_RGB5_A1, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV),
@@ -369,50 +370,58 @@ typedef union {
 } PACKED nv2a_color_r6g5b5_t;
 
 #if 0
-    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_D3D:
+renamed:
+attribute->count -> a->format.size
 
-        assert(vertex_attribute->count == 4);
-        // http://www.opengl.org/registry/specs/ARB/vertex_array_bgra.txt
-        vertex_attribute->gl_count = GL_BGRA;
-        break;
-    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S1:
-        break;
-    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_F:
-        break;
-    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_OGL:
-        break;
-    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S32K:
-        break;
-    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP:
-
-        vertex_attribute->converted_size = sizeof(float);
-        vertex_attribute->converted_count = 3 * vertex_attribute->count;
-        break;
+//    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_D3D:
+//        assert(vertex_attribute->count == 4);
+//        // http://www.opengl.org/registry/specs/ARB/vertex_array_bgra.txt
+//        vertex_attribute->gl_count = GL_BGRA;
+//        break;
+//    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S1:
+//        break;
+//    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_F:
+//        break;
+//    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_UB_OGL:
+//        break;
+//    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_S32K:
+//        break;
+//    case NV097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_CMP:
+//        vertex_attribute->converted_size = sizeof(float);
+//        vertex_attribute->converted_count = 3 * vertex_attribute->count;
+//        break;
 #endif
 typedef struct {
+    const int       index;
     const char *    name;
     const uint32_t  size;
+    const GLint     gl_size;
     const GLenum    gl_type;
     const GLboolean gl_normalized;
     const int       convert;
+    const uint32_t  convert_nmemb;
+    const uint32_t  convert_size;
 } nv2a_inline_array_format_t;
 
 static const nv2a_inline_array_format_t nv2a_inline_array_format[] = {
-#define FORMAT(a,b,c,d,e) \
-    [NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_##a] = { #a, b, c, d, e }
-    /* 0 */ FORMAT(UB_D3D,
-                1, GL_UNSIGNED_BYTE, GL_TRUE, 0),
-    /* 1 */ FORMAT(S1,
-                2, GL_SHORT, GL_TRUE, 0),
-    /* 2 */ FORMAT(F,
-                4, GL_FLOAT, GL_FALSE, 0),
-    /* 4 */ FORMAT(UB_OGL,
-                1, GL_UNSIGNED_BYTE, GL_TRUE, 0),
-    /* 5 */ FORMAT(S32K,
-                2, GL_SHORT, GL_FALSE, 0),
-    /* 6 */ FORMAT(CMP, /* 3 signed, normalized components packed in 32-bits [11,11,10] */
-                4, GL_FLOAT, GL_FALSE, 1),
-#undef FORMAT
+#define FORMAT1(a,b,c,d,e) \
+    [NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_##a] = { NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_##a, #a, b, c, d, e, 0, 0, 0 }
+#define FORMAT2(a,b,c,d,e,f,g) \
+    [NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_##a] = { NV_097_SET_VERTEX_DATA_ARRAY_FORMAT_TYPE_##a, #a, b, c, d, e, 1, f, g }
+    /* 0 */ FORMAT1(UB_D3D, /* http://www.opengl.org/registry/specs/ARB/vertex_array_bgra.txt */
+                1, GL_BGRA, GL_UNSIGNED_BYTE, GL_TRUE),
+    /* 1 */ FORMAT1(S1,
+                2, 0, GL_SHORT, GL_TRUE),
+    /* 2 */ FORMAT1(F,
+                4, 0, GL_FLOAT, GL_FALSE),
+    /* 4 */ FORMAT1(UB_OGL,
+                1, 0, GL_UNSIGNED_BYTE, GL_TRUE),
+    /* 5 */ FORMAT1(S32K,
+                2, 0, GL_SHORT, GL_FALSE),
+    /* 6 */ FORMAT2(CMP, /* 3 signed, normalized components packed in 32-bits [11,11,10] */
+                4, 0, GL_FLOAT, GL_FALSE, 3, sizeof(float)),
+#undef FORMAT2
+#undef FORMAT1
 };
 
 #endif
