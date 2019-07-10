@@ -290,7 +290,7 @@ typedef struct {
     nv2a_texture_t              t[NV2A_MAX_TEXTURES];
 
     nv2a_vertex_attrib_t        va[NV2A_MAX_VERTEX_ATTRIBS];
-    uint32_t                    inline_buffer_len;
+    uint32_t                    inline_buffer_pos;
     uint32_t                    inline_element_len;
     uint32_t                    inline_element[NV2A_MAX_BATCH_LENGTH];
     GLuint                      gl_inline_element_buffer;
@@ -1248,8 +1248,8 @@ nv2a_vertex_attrib_inline_buffer_start(uint32_t index) {
     if (index >= NV2A_MAX_VERTEX_ATTRIBS) INT3;
     a = &nv2a_ctx->va[index];
 
-    if (!a->inline_buffer_len && nv2a_ctx->inline_buffer_len) {
-        for (i = 0; i < nv2a_ctx->inline_buffer_len; ++i) {
+    if (!a->inline_buffer_len && nv2a_ctx->inline_buffer_pos) {
+        for (i = 0; i < nv2a_ctx->inline_buffer_pos; ++i) {
             /* upload the previous inline value */
             memcpy(
                 a->inline_buffer[i],
@@ -1278,7 +1278,7 @@ nv2a_vertex_attrib_inline_buffer_finish(void) {
         }
     }
 
-    if (++nv2a_ctx->inline_buffer_len >= NV2A_MAX_BATCH_LENGTH) INT3;
+    if (++nv2a_ctx->inline_buffer_pos >= NV2A_MAX_BATCH_LENGTH) INT3;
 
     LEAVE_NV2A;
 }
@@ -3551,7 +3551,6 @@ nv2a_destroy(void) {
     glDeleteBuffers(1, &nv2a_ctx->gl_inline_element_buffer);
     for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
         glDeleteBuffers(1, &nv2a_ctx->va[i].gl_inline_buffer);
-        nv2a_ctx->va[i].inline_buffer_len = 0;
         glDeleteBuffers(1, &nv2a_ctx->va[i].gl_converted_buffer);
     }
     glDeleteTextures(1, &nv2a_ctx->gl_zeta_buffer);
