@@ -2075,7 +2075,7 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
         else VARDUMPN(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i]);
     }
 
-    HEXDUMPN(*ip, 16);
+    HEXDUMPN(*ip, 15); /* x86/x86-64 maximum instruction length */
 
     PRINT(XEXEC_DBG_ALL, "/* stack trace */", 0);
 

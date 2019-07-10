@@ -254,7 +254,8 @@ typedef struct {
     void *                      vdata;
     uint32_t                    vstride;
     float                       inline_value[4];
-    float *                     inline_buffer;
+    uint32_t                    inline_buffer_len;
+    float                       inline_buffer[NV2A_MAX_BATCH_LENGTH][4];
     GLuint                      gl_inline_buffer;
     /* register state */
     union {
@@ -1247,14 +1248,15 @@ nv2a_vertex_attrib_inline_buffer_start(uint32_t index) {
     if (index >= NV2A_MAX_VERTEX_ATTRIBS) INT3;
     a = &nv2a_ctx->va[index];
 
-    if (!a->inline_buffer && nv2a_ctx->inline_buffer_len) {
-        a->inline_buffer = calloc(NV2A_MAX_BATCH_LENGTH, sizeof(a->inline_value));
-        /* upload the previous inline value */
+    if (!a->inline_buffer_len && nv2a_ctx->inline_buffer_len) {
         for (i = 0; i < nv2a_ctx->inline_buffer_len; ++i) {
-            memcpy(&a->inline_buffer[ARRAY_SIZE(a->inline_value) * i],
+            /* upload the previous inline value */
+            memcpy(
+                a->inline_buffer[i],
                 a->inline_value,
                 sizeof(a->inline_value));
         }
+        a->inline_buffer_len = i;
     }
 
     LEAVE_NV2A;
@@ -1268,8 +1270,9 @@ nv2a_vertex_attrib_inline_buffer_finish(void) {
     ENTER_NV2A;
 
     for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
-        if ((a = &nv2a_ctx->va[i])->inline_buffer) {
-            memcpy(&a->inline_buffer[ARRAY_SIZE(a->inline_value) * nv2a_ctx->inline_buffer_len],
+        if ((a = &nv2a_ctx->va[i])->inline_buffer_len) {
+            memcpy(
+                a->inline_buffer[a->inline_buffer_len++],
                 a->inline_value,
                 sizeof(a->inline_value));
         }
@@ -1466,7 +1469,7 @@ attribute->gl_count == attribute->count == (a->f->gl_size) ? a->f->gl_size : a->
 //                    (void*)addr);
 #elif 0 //TODO
                 hwaddr addr = a->vdata - d->vram_ptr;
-                pgraph_update_memory_buffer(d, addr, a->format.stride * count, false);
+                pgraph_update_memory_buffer(d, addr, a->format.stride * count, false);//glBindBuffer(GL_ARRAY_BUFFER)
                 glVertexAttribPointer(i,
                     (a->f->gl_size) ? a->f->gl_size : a->format.size,
                     a->f->gl_type,
@@ -3548,6 +3551,7 @@ nv2a_destroy(void) {
     glDeleteBuffers(1, &nv2a_ctx->gl_inline_element_buffer);
     for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
         glDeleteBuffers(1, &nv2a_ctx->va[i].gl_inline_buffer);
+        nv2a_ctx->va[i].inline_buffer_len = 0;
         glDeleteBuffers(1, &nv2a_ctx->va[i].gl_converted_buffer);
     }
     glDeleteTextures(1, &nv2a_ctx->gl_zeta_buffer);
