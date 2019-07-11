@@ -28,10 +28,12 @@
 #define DEBUG_NV2A 2
 
 #ifdef DEBUG_NV2A
-# if DEBUG_NV2A == 1
+# if DEBUG_NV2A >= 1
 #  define PRINT_NV2A        PRINT
-# elif DEBUG_NV2A == 2
+#  define PRINTF_NV2A       PRINTF
+# elif DEBUG_NV2A >= 2
 #  define PRINT_NV2A        PRINT
+#  define PRINTF_NV2A       PRINTF
 #  define VARDUMP_NV2A      VARDUMP
 #  define VARDUMP2_NV2A     VARDUMP2
 #  define VARDUMP3_NV2A     VARDUMP3
@@ -40,6 +42,7 @@
 #  define ENTER_NV2A        ENTER
 #  define LEAVE_NV2A        LEAVE
 #  define PRINT_NV2A        PRINT
+#  define PRINTF_NV2A       PRINTF
 #  define VARDUMP_NV2A      VARDUMP
 #  define VARDUMP2_NV2A     VARDUMP2
 #  define VARDUMP3_NV2A     VARDUMP3
@@ -54,6 +57,9 @@
 #endif
 #ifndef PRINT_NV2A
 # define PRINT_NV2A(...)
+#endif
+#ifndef PRINTF_NV2A
+# define PRINTF_NV2A(...)
 #endif
 #ifndef VARDUMP_NV2A
 # define VARDUMP_NV2A(...)
@@ -784,15 +790,13 @@ nv2a_texture_binding_create(nv2a_texture_t *t) {
 
     glBindTexture(b->gl_target, b->gl_texture);
 
-    PRINT_NV2A(
+    PRINTF_NV2A(
         XEXEC_DBG_VARDUMP,
-        "%s(): "
         "texture: index %zu | "
         "%u dimensions%s, "
         "w=%u x h=%u x d=%u | "
         "format: '%s%s' (%i), "
         "bpp=%u",
-        __func__,
         t->index,
         t->format.dimensionality,
         (t->format.cubemap) ? " (cubemap)" : "",
@@ -883,16 +887,14 @@ nv2a_texture_bind(void *p, uint32_t index) {
         t->cf = &nv2a_texture_color_format[t->format.color];
         if (!t->cf->name) INT3;
 
-        PRINT_NV2A(
+        PRINTF_NV2A(
             XEXEC_DBG_VARDUMP,
-            "%s(): "
             "texture: index %zu | "
             "%u dimensions%s, "
             "pitch=%u, "
             "w=%u (u=%u) x h=%u (v=%u) x d=%u (p=%u) | "
             "format: '%s%s' (%i), "
             "bpp=%u",
-            __func__,
             t->index,
             t->format.dimensionality,
             (t->format.cubemap) ? " (cubemap)" : "",
@@ -1533,14 +1535,12 @@ nv2a_inline_array_bind(void *p) {
         if ((a = &nv2a_ctx->va[i])->format.size) {
             a->inline_array_offset = stride;
 
-            PRINT_NV2A(
+            PRINTF_NV2A(
                 XEXEC_DBG_VARDUMP,
-                "%s(): "
                 "inline array: bind: index %u | "
                 "format: '%s' (%i), "
                 "stride=0x%.08x (%u) += "
                 "size=%u x count=%u = %u bytes",
-                __func__,
                 i,
                 a->f->name,
                 a->f->index,
@@ -1560,12 +1560,10 @@ nv2a_inline_array_bind(void *p) {
     size  = nv2a_ctx->inline_array_len * sizeof(*nv2a_ctx->inline_array);
     count = size / stride;
 
-    PRINT_NV2A(
+    PRINTF_NV2A(
         XEXEC_DBG_VARDUMP,
-        "%s(): "
         "inline array: draw: "
         "count=%u = size=%u / stride=%u",
-        __func__,
         count,
         size,
         stride);
@@ -1868,13 +1866,11 @@ attribute->converted_elements -> a->converted_count
             a = &nv2a_ctx->va[pos];
             a->vertex.field = c->param;
 
-            PRINT_NV2A(
+            PRINTF_NV2A(
                 XEXEC_DBG_VARDUMP,
-                "%s(): "
                 "vertex data array: index %u | "
                 "offset=0x%.08x (%u), "
                 "context_dma=%u",
-                __func__,
                 pos,
                 a->vertex.offset,
                 a->vertex.offset,
@@ -1893,14 +1889,12 @@ attribute->converted_elements -> a->converted_count
             a->f = &nv2a_inline_array_format[a->format.type];
             if (!a->f->name) INT3;
 
-            PRINT_NV2A(
+            PRINTF_NV2A(
                 XEXEC_DBG_VARDUMP,
-                "%s(): "
                 "vertex data array: index %u | "
                 "format: '%s' (%i), "
                 "count=%u, "
                 "stride=%u",
-                __func__,
                 pos,
                 a->f->name,
                 a->f->index,
@@ -2728,10 +2722,9 @@ attribute->converted_elements -> a->converted_count
         default:
             VARDUMP_NV2A(VAR_IN, c->param);
             t = (c->method / 4 < ARRAY_SIZE(nv2a_097_name));
-            PRINT_NV2A(
+            PRINTF_NV2A(
                 XEXEC_DBG_ERROR,
-                "%s(): warning: unhandled method: 0x%.08x (%u)%s%s%s",
-                __func__,
+                "warning: unhandled method: 0x%.08x (%u)%s%s%s",
                 c->method,
                 c->method,
                 (t) ? " (" : "",
@@ -2743,10 +2736,9 @@ attribute->converted_elements -> a->converted_count
     default:
         VARDUMP_NV2A(VAR_IN, c->method);
         VARDUMP_NV2A(VAR_IN, c->param);
-        PRINT_NV2A(
+        PRINTF_NV2A(
             XEXEC_DBG_ERROR,
-            "%s(): warning: unhandled graphics class: 0x%.08x (%u)",
-            __func__,
+            "warning: unhandled graphics class: 0x%.08x (%u)",
             ctx1->grclass,
             ctx1->grclass);
         break;
@@ -2795,12 +2787,15 @@ nv2a_pfifo_puller(void *p, nv2a_pfifo_command_t *c) {
 
     do {
         if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_PULL0, ACCESS, DISABLED)) {
-            PRINT_NV2A(XEXEC_DBG_ERROR, "%s(): warning: puller access disabled; cannot process command method: 0x%x", __func__, c->method);
+            PRINTF_NV2A(
+                XEXEC_DBG_ERROR,
+                "warning: puller access disabled; cannot process command method: 0x%x",
+                c->method);
             break;
         }
 //glo_current(nv2a_ctx->glo, 1);//TODO
         if (c->method == /* NV_SET_OBJECT */ 0 || (c->method >= 0x180 && c->method <= 0x1a8)) {
-fprintf(stderr,"ramht_lookup: method: 0x%x | handle:%u / 0x%x\n",c->method,c->param,c->param);//XXX
+PRINTF_NV2A(XEXEC_DBG_ALL,"ramht_lookup: method: 0x%x | handle:%u / 0x%x",c->method,c->param,c->param);//XXX
             if (!nv2a_pfifo_ramht_lookup(p, &c->param, &r)) break;
             if (r.chid != NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID)) INT3;
         }
@@ -3580,10 +3575,9 @@ nv2a_init(void) {
         if (glo_create(&nv2a_ctx->glo)) break;
         glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &tmp);
         if (tmp < NV2A_MAX_VERTEX_ATTRIBS) {
-            PRINT_NV2A(
+            PRINTF_NV2A(
                 XEXEC_DBG_ALL,
-                "error: %s(): not enough GL vertex attributes supported: have %i, expected %zu\n",
-                __func__,
+                "error: not enough GL vertex attributes supported: have %i, expected %zu\n",
                 tmp,
                 NV2A_MAX_VERTEX_ATTRIBS);
             break;
@@ -3595,10 +3589,9 @@ nv2a_init(void) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, nv2a_ctx->gl_color_buffer, 0);
         if ((tmp = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
-            PRINT_NV2A(
+            PRINTF_NV2A(
                 XEXEC_DBG_ALL,
-                "error: %s(): GL framebuffer operation did not complete: error %i\n",
-                __func__,
+                "error: GL framebuffer operation did not complete: error %i\n",
                 tmp);
             break;
         }
@@ -3614,10 +3607,9 @@ nv2a_init(void) {
         glGenVertexArrays(1, &nv2a_ctx->gl_vertex_array);
         glBindVertexArray(nv2a_ctx->gl_vertex_array);
         if ((ret = ((tmp = glGetError()) != GL_NO_ERROR))) {
-            PRINT_NV2A(
+            PRINTF_NV2A(
                 XEXEC_DBG_ALL,
-                "error: %s(): GL error occurred: error %i\n",
-                __func__,
+                "error: GL error occurred: error %i\n",
                 tmp);
             break;
         }

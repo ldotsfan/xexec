@@ -10,8 +10,8 @@ all:
 		-pthread -lX11 -lGL -lGLEW
 
 gdb:
-	gdb --args ./xexec $(xbe)
+	gdb --args ./xexec -d $(xbe)
 
 wait:
-	gdb --args ./xexec $(xbe) 1
+	gdb --args ./xexec -dg $(xbe)
 

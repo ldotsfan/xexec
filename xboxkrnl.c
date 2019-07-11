@@ -145,7 +145,7 @@ xboxkrnl_vardump(
         size_t nsz,
         int mask,
         size_t sz) {
-    static const int level = XEXEC_DBG_VARDUMP;
+    static const xexec_dbg_t level = XEXEC_DBG_VARDUMP;
     register char *c = NULL;
 
     if (!(xexec_debug & level)) return;
@@ -221,7 +221,7 @@ xboxkrnl_vardump(
 
 static void
 xboxkrnl_hexdump(int8_t stack, const void *in, uint16_t inlen, const char *var) {
-    static const int level = XEXEC_DBG_HEXDUMP;
+    static const xexec_dbg_t level = XEXEC_DBG_HEXDUMP;
     register const uint8_t *d;
     register char *h;
     register int i;
@@ -266,11 +266,10 @@ xboxkrnl_backtrace(void) {
 
 static void
 xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix) {
-    static const int level = XEXEC_DBG_STACK;
     register void *bt = xboxkrnl_backtrace();
 
     debug(
-        level,
+        XEXEC_DBG_STACK,
         *stack,
         "enter%s%s%s: [0x%.08x] --> %s()",
         (prefix && *prefix) ?   " (" : "",
@@ -284,13 +283,12 @@ xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix) {
 
 static void
 xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix) {
-    static const int level = XEXEC_DBG_STACK;
     register void *bt = xboxkrnl_backtrace();
 
     if (--*stack & 0xc0) *stack = 0;
 
     debug(
-        level,
+        XEXEC_DBG_STACK,
         *stack,
         "leave%s%s%s: [0x%.08x] <-- %s()",
         (prefix && *prefix) ?   " (" : "",
@@ -301,7 +299,7 @@ xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix) {
 }
 
 static void
-xboxkrnl_print(int level, int8_t stack, const char *format, ...) {
+xboxkrnl_print(xexec_dbg_t level, int8_t stack, const char *format, ...) {
     va_list args;
     char buf[4096];
     register ssize_t n;
@@ -322,9 +320,9 @@ xboxkrnl_print(int level, int8_t stack, const char *format, ...) {
 
 #define INT3 \
         do { \
-            PRINT(XEXEC_DBG_ALL, \
-                "INT3: %s(): breakpoint triggered at line %i of file \"%s\" (git version: %s)", \
-                __func__, __LINE__, __FILE__, "FIXME: include git version"); \
+            PRINTF(XEXEC_DBG_ALL, \
+                "INT3: breakpoint triggered at line %i of file \"%s\" (" XEXEC_LIBNAME " version: " XEXEC_VERSION ")", \
+                __LINE__, __FILE__); \
             __asm__ __volatile__("int3"); \
         } while (0)
 #define STDCALL             __attribute__((__stdcall__))
@@ -332,7 +330,9 @@ xboxkrnl_print(int level, int8_t stack, const char *format, ...) {
 
 #define ENTER               xboxkrnl_enter(&xboxkrnl_stack,__func__,NULL)
 #define LEAVE               xboxkrnl_leave(&xboxkrnl_stack,__func__,NULL)
-#define PRINT(x,y,...)      xboxkrnl_print(x,xboxkrnl_stack,(y),__VA_ARGS__)
+//#define PRINT(x,y,...)      xboxkrnl_print(x,xboxkrnl_stack,y,__VA_ARGS__)
+#define PRINT PRINTF //FIXME
+#define PRINTF(x,y,...)     xboxkrnl_print(x,xboxkrnl_stack,"%s(): "y,__func__,__VA_ARGS__)
 #define HEXDUMP(x)          xboxkrnl_hexdump(xboxkrnl_stack,(x),sizeof(x),#x)
 #define HEXDUMPN(x,y)       xboxkrnl_hexdump(xboxkrnl_stack,(x),(y),#x)
 static int8_t               xboxkrnl_stack = 0;
@@ -359,6 +359,7 @@ xboxkrnl_tsc_off(void) {
 
 int
 xboxkrnl_tsc_init(void) {
+    static const char *path = "/proc/cpuinfo";
     char buf[4096];
     uint32_t mhz;
     uint32_t khz;
@@ -378,12 +379,12 @@ xboxkrnl_tsc_init(void) {
             break;
         }
         xboxkrnl_tsc_on();
-        if ((fd = open("/proc/cpuinfo", O_RDONLY)) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: failed to query TSC frequency: open(): '%s'", strerror(errno));
+        if ((fd = open(path, O_RDONLY)) < 0) {
+            PRINT(XEXEC_DBG_ERROR, "error: failed to query TSC frequency: open('%s'): '%s'", path, strerror(errno));
             break;
         }
         if ((tmp = read(fd, buf, sizeof(buf))) <= 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: failed to query TSC frequency: read(): '%s'", (!tmp) ? "empty read" : strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: failed to query TSC frequency: read('%s'): '%s'", path, (!tmp) ? "empty read" : strerror(errno));
             break;
         }
         if (!(x = strstr(buf, "cpu MHz")) ||
@@ -889,14 +890,14 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
             if (MEM_DIRTY_SET__LOCKED(a) < 2 && \
                 (cache = ((MEM_CACHE_TEST(a)) ? MEM_CACHE : MEM_DIRTY_PARENT_RET__LOCKED(a))) && \
                 cache->index != MEM_RESERVE && !cache->dirty) { \
-fprintf(stderr,"WP0! ");/*XXX*/ \
+PRINT(XEXEC_DBG_ALL,"WP0!",0);/*XXX*/ \
                 MEM_DIRTY_WP(0, cache); \
             } else { \
                 cache = NULL; \
             }
 #define MEM_DIRTY_SET3__FINALLY__LOCKED \
             if (cache) { \
-fprintf(stderr,"WP1!\n");/*XXX*/ \
+PRINT(XEXEC_DBG_ALL,"WP1!",0);/*XXX*/ \
                 MEM_DIRTY_WP(1, cache); \
                 MEM_CACHE = cache; \
             } \
@@ -1070,11 +1071,11 @@ xboxkrnl_mem_push(int index, const xboxkrnl_mem *in, int locked) {
     *ret = *in;
     ret->dirty = 1;
     if (ret->parent) MEM_DIRTY_CLEAR2__LOCKED(ret);
-#if 1
+#if 1 //XXX dump page table
 m=ret;
-fprintf(stderr,"start 0x%.08zx\n",(size_t)m->BaseAddress);
-for (i=0;i<t->sz;++i) m=&t->mem[i],fprintf(stderr,"%s: 0x%.08zx-0x%.08zx (dirty=%i) (0x%zx / %zu)\n",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->dirty,m->RegionSize,m->RegionSize);//XXX
-fprintf(stderr,"end\n");
+PRINT(XEXEC_DBG_MEMORY,"start 0x%.08zx",(size_t)ret->BaseAddress);
+for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (dirty=%i) (0x%zx / %zu)",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->dirty,m->RegionSize,m->RegionSize);
+PRINT(XEXEC_DBG_MEMORY,"end 0x%.08zx",(size_t)ret->BaseAddress);
 #endif
     if (!locked) MEM_UNLOCK;
 
@@ -1382,10 +1383,10 @@ xboxkrnl_mem_alloc(int index, void *addr, size_t size, int prot, int flags, int 
         break;
     }
     ret = (typeof(ret))ALIGN(t->align, ret);
-#if 1
-fprintf(stderr,"start alloc %p\n",ret);
-for (i=0;i<t->sz;++i) m=&t->mem[i],fprintf(stderr,"%s: 0x%.08zx-0x%.08zx (dirty=%i) (0x%zx / %zu)\n",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->dirty,m->RegionSize,m->RegionSize);//XXX
-fprintf(stderr,"end\n");
+#if 1 //XXX dump page table
+PRINT(XEXEC_DBG_MEMORY,"start alloc %p",ret);
+for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (dirty=%i) (0x%zx / %zu)",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->dirty,m->RegionSize,m->RegionSize);
+PRINT(XEXEC_DBG_MEMORY,"end alloc %p",ret);
 #endif
     /* find a free range */
     for (i = 0; i <= t->sz; ++i) {
@@ -1397,8 +1398,10 @@ fprintf(stderr,"end\n");
                 ret = m->BaseAddress + ALIGN(t->align, m->RegionSize);
                 break;
             case MEM_MAP:
-ptr=m->BaseAddress + ALIGN(t->align, m->RegionSize);//XXX
-fprintf(stderr,"ret=%p ; m=%p ; (ptr=%p >= n=%p) == continue=%i\n",ret,m->BaseAddress,ptr,(n)?n->BaseAddress:0,(n && ptr >= n->BaseAddress));//XXX
+#if 1 //XXX find free range
+ptr=m->BaseAddress + ALIGN(t->align, m->RegionSize);
+PRINT(XEXEC_DBG_MEMORY,"1: find free range: ret=%p ; m=%p ; (ptr=%p >= n=%p) == continue=%i",ret,m->BaseAddress,ptr,(n)?n->BaseAddress:0,(n && ptr >= n->BaseAddress));
+#endif
                 if (!n) {
                     if (ret >= m->BaseAddress) INT3;
                 } else {
@@ -1406,7 +1409,9 @@ fprintf(stderr,"ret=%p ; m=%p ; (ptr=%p >= n=%p) == continue=%i\n",ret,m->BaseAd
                     if (ret > ptr || ptr >= n->BaseAddress) continue;
                     ret = ptr;
                 }
-fprintf(stderr,"ret=%p\n",ret);//XXX
+#if 1 //XXX find free range
+PRINT(XEXEC_DBG_MEMORY,"2: find free range: ret=%p",ret);
+#endif
                 break;
             }
         }
@@ -1415,7 +1420,9 @@ fprintf(stderr,"ret=%p\n",ret);//XXX
             if (m) ret += t->align;
             /* fall through */
         case MEM_MAP:
-fprintf(stderr,"ret=%p ; (ret+size=%p > n=%p) == continue=%i\n",ret,ret+size,(n)?n->BaseAddress:0,(n)?(ret + size > n->BaseAddress):0);//XXX
+#if 1 //XXX find free range
+PRINT(XEXEC_DBG_MEMORY,"3: find free range: ret=%p ; (ret+size=%p > n=%p) == continue=%i",ret,ret+size,(n)?n->BaseAddress:0,(n)?(ret + size > n->BaseAddress):0);
+#endif
             if (n && ret + size > n->BaseAddress) continue;
             break;
         }
@@ -1530,10 +1537,10 @@ xboxkrnl_mem_realloc(int index, void *ptr, size_t size, int locked) {
         switch (index) {
         case MEM_HEAP:
             if (!(ret = MEM_ALLOC_HEAP__LOCKED(size))) break;
-fprintf(stderr,"realloc reloc start | %p -> %p\n",ptr,ret);//XXX
+PRINT(XEXEC_DBG_MEMORY,"realloc reloc start | %p -> %p",ptr,ret);//XXX
             memcpy(ret, m->BaseAddress, m->RegionSize);
             MEM_FREE_HEAP__LOCKED(m->BaseAddress);
-fprintf(stderr,"realloc reloc end\n");//XXX
+PRINT(XEXEC_DBG_MEMORY,"realloc reloc end\n",0);//XXX
             break;
         case MEM_MAP:
         case MEM_ALLOC:
@@ -2273,14 +2280,14 @@ static ssize_t                          xboxkrnl_thread_count = 0;
 
 void
 xboxkrnl_thread_wait(xboxkrnl_thread *t) {
-while (!t->raised) {PRINT(XEXEC_DBG_ALL,"sem: waiting: '%s'",t->name); if (sem_wait(&t->sem) && errno != EINTR) INT3; PRINT(XEXEC_DBG_ALL,"sem: waited: '%s'",t->name);}//XXX debugging
+while (!t->raised) {PRINT(XEXEC_DBG_MUTEX,"sem: waiting: '%s'",t->name); if (sem_wait(&t->sem) && errno != EINTR) INT3; PRINT(XEXEC_DBG_MUTEX,"sem: waited: '%s'",t->name);}//XXX debugging
 //    while (!t->raised) if (sem_wait(&t->sem) && errno != EINTR) INT3;
     t->raised = 0;
 }
 
 void
 xboxkrnl_thread_post(xboxkrnl_thread *t) {
-PRINT(XEXEC_DBG_ALL,"sem: raised: '%s'",t->name);//XXX debugging
+PRINT(XEXEC_DBG_MUTEX,"sem: raised: '%s'",t->name);//XXX debugging
     t->raised = 1;
     if (sem_post(&t->sem)) INT3;
 }
@@ -2310,7 +2317,7 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, const char *name, void
     t->context = context;
 
     if ((err = pthread_create(&t->id, &t->attr, t->routine, t->arg))) {
-        PRINT(XEXEC_DBG_THREAD, "%s(): failed to create thread '%s': '%s'", __func__, name, strerror(err));
+        PRINT(XEXEC_DBG_ERROR, "error: failed to create thread '%s': '%s'", name, strerror(err));
         INT3;
     }
 
@@ -2533,7 +2540,7 @@ xboxkrnl_init_hw(void) {
         ret = 1;
         do {
             if (nv2a->op->init()) break;
-MEM_DIRTY_CLEAR(MEM_ALLOC_HEAP(0x1000));//XXX
+MEM_DIRTY_CLEAR(MEM_ALLOC_HEAP(0x1000));//XXX testing
         } while ((ret = 0));
     }
 
@@ -3958,11 +3965,11 @@ xboxkrnl_IoCreateSymbolicLink( /* 067 (0x043) */
         ret = 0;
     } else {
         if (!lstat(dest, &st) && S_ISLNK(st.st_mode) && unlink(dest) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: unlink(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: unlink('%s'): '%s'", dest, strerror(errno));
             INT3;
         }
         if (symlink(src, dest) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: symlink(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: symlink('%s', '%s'): '%s'", src, dest, strerror(errno));
             INT3;
         } else {
             ret = 0;
@@ -5084,7 +5091,7 @@ xboxkrnl_MmAllocateContiguousMemory( /* 165 (0x0a5) */
     VARDUMP(VAR_IN, NumberOfBytes);
 
     if ((ret = MEM_ALLOC_MAP(MEM_MAP, NULL, NumberOfBytes)) == MAP_FAILED) {
-        PRINT(XEXEC_DBG_ERROR, "error: mmap(): '%s'", strerror(errno));
+        PRINT(XEXEC_DBG_ERROR, "error: mmap(NULL, %zu): '%s'", NumberOfBytes, strerror(errno));
         INT3;
     }
 
@@ -5108,7 +5115,7 @@ xboxkrnl_MmAllocateContiguousMemoryEx( /* 166 (0x0a6) */
     VARDUMP3(VAR_IN, Protect, xboxkrnl_page_type_name);
 
     if ((ret = MEM_ALLOC_MAP(MEM_MAP, NULL, NumberOfBytes)) == MAP_FAILED) {
-        PRINT(XEXEC_DBG_ERROR, "error: mmap(): '%s'", strerror(errno));
+        PRINT(XEXEC_DBG_ERROR, "error: mmap(NULL, %zu): '%s'", NumberOfBytes, strerror(errno));
         INT3;
     }
 
@@ -5349,6 +5356,7 @@ xboxkrnl_NtAllocateVirtualMemory( /* 184 (0x0b8) */
         /* in */       size_t *RegionSize,
         /* in */       uint32_t AllocationType,
         /* in */       uint32_t Protect) {
+    register void *addr;
     register int ret = -1;
     ENTER;
     VARDUMP(VAR_IN,  BaseAddress);
@@ -5361,10 +5369,11 @@ xboxkrnl_NtAllocateVirtualMemory( /* 184 (0x0b8) */
     VARDUMP3(VAR_IN, Protect, xboxkrnl_page_type_name);
 
     if (AllocationType & XBOXKRNL_MEM_RESERVE /* 0x2000 */) {
-        if ((*BaseAddress = MEM_ALLOC_MAP(MEM_MAP, *BaseAddress, *RegionSize)) == MAP_FAILED) {
-            PRINT(XEXEC_DBG_ERROR, "error: mmap(): '%s'", strerror(errno));
+        if ((addr = MEM_ALLOC_MAP(MEM_MAP, *BaseAddress, *RegionSize)) == MAP_FAILED) {
+            PRINT(XEXEC_DBG_ERROR, "error: mmap(0x%.08x, %zu): '%s'", (uint32_t)*BaseAddress, *RegionSize, strerror(errno));
             *BaseAddress = NULL;
         } else {
+            *BaseAddress = addr;
             ret = 0;
         }
     } else if (AllocationType & XBOXKRNL_MEM_COMMIT /* 0x1000 */) {
@@ -5509,31 +5518,31 @@ enum XBOXKRNL_FILE_CREATE_DISPOSITION {
             (CreateDisposition == XBOXKRNL_FILE_OPEN ||
             CreateDisposition == XBOXKRNL_FILE_OVERWRITE ||
             errno != ENOENT)) {
-            PRINT(XEXEC_DBG_ERROR, "error: stat(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: stat('%s'): '%s'", path, strerror(errno));
             break;
         }
         exists = !tmp;
         if (!tmp &&
             CreateDisposition == XBOXKRNL_FILE_CREATE) {
             IoStatusBlock->Information = XBOXKRNL_FILE_EXISTS;
-            PRINT(XEXEC_DBG_ERROR, "error: file exists", 0);
+            PRINT(XEXEC_DBG_ERROR, "error: file exists: '%s'", path);
             break;
         }
         if (!tmp &&
             CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE &&
             !S_ISDIR(st.st_mode)) {
-            PRINT(XEXEC_DBG_ERROR, "error: not a directory", 0);
+            PRINT(XEXEC_DBG_ERROR, "error: not a directory: '%s'", path);
             break;
         }
         if (tmp &&
             CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE &&
             mkdir(path, 0755) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: mkdir(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: mkdir('%s'): '%s'", path, strerror(errno));
             break;
         }
         if (CreateOptions & XBOXKRNL_FILE_DIRECTORY_FILE) {
             if (!(f.dir = opendir(path))) {
-                PRINT(XEXEC_DBG_ERROR, "error: opendir(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: opendir('%s'): '%s'", path, strerror(errno));
                 break;
             }
         } else {
@@ -5555,7 +5564,7 @@ enum XBOXKRNL_FILE_CREATE_DISPOSITION {
                 }
             }
             if ((f.fd = open(path, tmp, 0644)) < 0) {
-                PRINT(XEXEC_DBG_ERROR, "error: open(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: open('%s'): '%s'", path, strerror(errno));
                 break;
             }
             if (tmp & O_RDWR) {
@@ -5563,12 +5572,12 @@ enum XBOXKRNL_FILE_CREATE_DISPOSITION {
                     AllocationSize &&
                     *AllocationSize &&
                     ftruncate(f.fd, *AllocationSize) < 0) {
-                    PRINT(XEXEC_DBG_ERROR, "error: ftruncate(): '%s'", strerror(errno));
+                    PRINT(XEXEC_DBG_ERROR, "error: ftruncate('%s'): '%s'", path, strerror(errno));
                     break;
                 }
                 if (DesiredAccess & XBOXKRNL_FILE_APPEND_DATA &&
                     lseek(f.fd, 0, SEEK_END) < 0) {
-                    PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s'", strerror(errno));
+                    PRINT(XEXEC_DBG_ERROR, "error: lseek('%s'): '%s'", path, strerror(errno));
                     break;
                 }
             }
@@ -5678,7 +5687,7 @@ xboxkrnl_NtDuplicateObject( /* 197 (0x0c5) */
 
     if (SourceHandle->fd >= 0) {
         if (((*TargetHandle)->fd = dup(SourceHandle->fd)) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: dup(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: dup(%i): '%s'", SourceHandle->fd, strerror(errno));
             INT3;
         }
         VARDUMP(DUMP, SourceHandle->fd);
@@ -5895,7 +5904,7 @@ xboxkrnl_NtQueryInformationFile( /* 211 (0x0d3) */
 
             if (!(i = calloc(1, (sz = sizeof(*i))))) INT3;
             if ((i->CurrentByteOffset = lseek(FileHandle->fd, 0, SEEK_CUR)) < 0) {
-                PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: lseek('%s'): '%s'", FileHandle->path, strerror(errno));
                 free(i);
                 break;
             }
@@ -5911,7 +5920,7 @@ xboxkrnl_NtQueryInformationFile( /* 211 (0x0d3) */
 
             if (!(i = calloc(1, (sz = sizeof(*i))))) INT3;
             if (fstat(FileHandle->fd, &st) < 0) {
-                PRINT(XEXEC_DBG_ERROR, "error: fstat(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: fstat('%s'): '%s'", FileHandle->path, strerror(errno));
                 free(i);
                 break;
             }
@@ -6166,7 +6175,7 @@ xboxkrnl_NtReadFile( /* 219 (0x0db) */
         VARDUMP(DUMP, lseek(FileHandle->fd, 0, SEEK_CUR));
         if (ByteOffset) INT3;
         if ((rd = read(FileHandle->fd, Buffer, Length)) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: read(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: read('%s'): '%s'", FileHandle->path, strerror(errno));
             break;
         }
     } while ((ret = 0));
@@ -6276,7 +6285,7 @@ xboxkrnl_NtSetInformationFile( /* 226 (0x0e2) */
             SET;
             INC(i->CurrentByteOffset);
             if (lseek(FileHandle->fd, i->CurrentByteOffset, SEEK_SET) < 0) {
-                PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: lseek('%s'): '%s'", FileHandle->path, strerror(errno));
                 BREAK;
             }
         }
@@ -6289,7 +6298,7 @@ xboxkrnl_NtSetInformationFile( /* 226 (0x0e2) */
 
             if (!(i = calloc(1, (sz = sizeof(*i))))) INT3;
             if (fstat(FileHandle->fd, &st) < 0) {
-                PRINT(XEXEC_DBG_ERROR, "error: fstat(): '%s'", strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: fstat('%s'): '%s'", FileHandle->path, strerror(errno));
                 free(i);
                 break;
             }
@@ -6444,7 +6453,7 @@ xboxkrnl_NtWriteFile( /* 236 (0x0ec) */
         VARDUMP(DUMP, lseek(FileHandle->fd, 0, SEEK_CUR));
         if (ByteOffset) INT3;
         if ((wr = write(FileHandle->fd, Buffer, Length)) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: write(): '%s'", strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: write('%s'): '%s'", FileHandle->path, strerror(errno));
             break;
         }
     } while ((ret = 0));

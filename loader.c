@@ -37,30 +37,34 @@
 #include <time.h>
 #include <sys/mman.h>
 #include <sys/time.h>
+#include <getopt.h>
 #include <errno.h>
 
 #include <pthread.h>
 
 #define XEXEC_LIBNAME "libxexec"
+#define XEXEC_VERSION "'FIXME: unknown git version'" //FIXME
 
-#define XEXEC_DBG_NONE    (0 << 0)
-#define XEXEC_DBG_ERROR   (1 << 0)
-#define XEXEC_DBG_STACK   (1 << 1)
-#define XEXEC_DBG_INFO    (1 << 2)
-#define XEXEC_DBG_EVENT   (1 << 3)
-#define XEXEC_DBG_MESSAGE (1 << 4)
-#define XEXEC_DBG_VARDUMP (1 << 5)
-#define XEXEC_DBG_HEXDUMP (1 << 6)
-#define XEXEC_DBG_FD      (1 << 7)
-#define XEXEC_DBG_MUTEX   (1 << 8)
-#define XEXEC_DBG_MEMORY  (1 << 9)
-#define XEXEC_DBG_THREAD  (1 << 10)
-#define XEXEC_DBG_IRQ     (1 << 11)
-#define XEXEC_DBG_REG     (1 << 12)
-#define XEXEC_DBG_DMA     (1 << 13)
-#define XEXEC_DBG_ALL     (0xffff)
+typedef enum {
+    XEXEC_DBG_NONE    = 0 << 0,
+    XEXEC_DBG_ERROR   = 1 << 0,
+    XEXEC_DBG_STACK   = 1 << 1,
+    XEXEC_DBG_INFO    = 1 << 2,
+    XEXEC_DBG_EVENT   = 1 << 3,
+    XEXEC_DBG_MESSAGE = 1 << 4,
+    XEXEC_DBG_VARDUMP = 1 << 5,
+    XEXEC_DBG_HEXDUMP = 1 << 6,
+    XEXEC_DBG_FD      = 1 << 7,
+    XEXEC_DBG_MUTEX   = 1 << 8,
+    XEXEC_DBG_MEMORY  = 1 << 9,
+    XEXEC_DBG_THREAD  = 1 << 10,
+    XEXEC_DBG_IRQ     = 1 << 11,
+    XEXEC_DBG_REG     = 1 << 12,
+    XEXEC_DBG_DMA     = 1 << 13,
+    XEXEC_DBG_ALL     = 0xffffffff
+} xexec_dbg_t;
 
-static int xexec_debug = XEXEC_DBG_ALL & ~(XEXEC_DBG_DMA);
+static xexec_dbg_t xexec_debug = XEXEC_DBG_ERROR;
 
 int xboxkrnl_tsc_on(void);
 int xboxkrnl_tsc_off(void);
@@ -68,9 +72,9 @@ void xboxkrnl_clock_local(struct timeval *tv);
 void xboxkrnl_clock_wall(struct timespec *tp);
 
 void
-debug(int level, int8_t stack, const char *format, ...) {
+debug(xexec_dbg_t level, int8_t stack, const char *format, ...) {
     static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    register int *debug;
+    register xexec_dbg_t *debug;
     va_list args;
     char buf[4096];
     char spc[0x3f * 4 + 1];
@@ -167,6 +171,29 @@ extern const hw_ops_t aci_op;
 #include "hw/aci/aci.c"
 #include "sw/arch/x86.c"
 
+static const struct option long_options[] = {
+    { "debug", required_argument, 0,  0  },
+    { "gdb",   no_argument,       0, 'g' },
+    { "help",  no_argument,       0, 'h' },
+    { }
+};
+
+#define USAGE() usage(argc, argv)
+
+static void __attribute__((noreturn))
+usage(int argc, char **argv) {
+    (void)argc;
+    fprintf(stderr,
+        "usage: %s [options] <xbox executable>.xbe\n"
+        "options:\n"
+        "  -d                         increase debug level verbosity, dumped to standard error\n"
+        "      --debug=BITMASK        set debug level verbosity, dumped to standard error\n"
+        "  -g, --gdb                  trigger breakpoint for GDB before creating entry thread\n"
+        "  -h, --help                 display this help text\n",
+        basename(argv[0]));
+    _exit(1);
+}
+
 int
 main(int argc, char **argv) {
     struct sigaction s = {
@@ -175,29 +202,74 @@ main(int argc, char **argv) {
     };
     pthread_t entry;
     XbeHeader *xbeh;
-    int fd = -1;
-    int ret = 1;
+    char *path = NULL;
+    int dbg    = 0;
+    int gdb    = 0;
+    int fd     = -1;
+    int i;
+    int ret;
 
     setbuf(stdout, NULL);
 
-    if (argc < 2) {
-        fprintf(stderr, "usage: %s <xbox executable>.xbe [GDB flag]\n", argv[0]);
+    fprintf(stderr, "xexec XBE loader & emulator; " XEXEC_LIBNAME " version: " XEXEC_VERSION "\n");
+
+    while ((ret = getopt_long(argc, argv, "dgh", long_options, &i)) >= 0) {
+        switch (ret) {
+        case 0:
+            if (!strcmp(long_options[i].name, "debug")) {
+                if (!strncmp(optarg, "0x", sizeof("0x") - 1)) {
+                    sscanf(optarg, "0x%x", &xexec_debug);
+                } else {
+                    xexec_debug = atoi(optarg);
+                }
+            }
+            break;
+        case 'd':
+            switch (++dbg) {
+            case 1:
+                xexec_debug = XEXEC_DBG_ALL & ~XEXEC_DBG_DMA;
+                break;
+            case 2:
+                xexec_debug = XEXEC_DBG_ALL;
+                break;
+            }
+            break;
+        case 'g':
+            gdb = 1;
+            break;
+        case 'h':
+        case '?':
+        default:
+            USAGE();
+            break;
+        }
+    }
+    if (argc - optind < 1 || argc - optind >= 2) USAGE();
+//    if (argc - optind > 1) gdb = 1;
+    path = argv[optind];
+
+    ret = 1;
+    do {
+        if (xboxkrnl_init()) {
+            fprintf(stderr, "error: xboxkrnl initialization failed\n");
+            break;
+        }
+        if ((fd = open(path, O_RDONLY)) < 0) {
+            PRINT(XEXEC_DBG_ERROR, "error: open('%s'): '%s'", path, strerror(errno));
+            break;
+        }
+        if (sigaction(SIGSEGV, &s, NULL) < 0) {
+            PRINT(XEXEC_DBG_ERROR, "error: sigaction(): '%s'", strerror(errno));
+            break;
+        }
+    } while ((ret = 0));
+
+    if (ret) {
+        if (fd >= 0) close(fd);
         return ret;
     }
 
-    if (xboxkrnl_init()) {
-        fprintf(stderr, "error: xboxkrnl initialization failed\n");
-        return ret;
-    }
-    if ((fd = open(argv[1], O_RDONLY)) < 0) {
-        PRINT(XEXEC_DBG_ERROR, "error: open(): '%s': '%s'", argv[1], strerror(errno));
-        return ret;
-    }
-    if (sigaction(SIGSEGV, &s, NULL) < 0) {
-        PRINT(XEXEC_DBG_ERROR, "error: sigaction(): '%s'", strerror(errno));
-        return ret;
-    }
-
+    ret = 1;
     do {
         XbeSectionHeader *xbes;
         const char *sname;
@@ -210,15 +282,15 @@ main(int argc, char **argv) {
 
         xbeh = (void *)XBE_BASE;
         if (MEM_ALLOC_EXEC(xbeh, PAGESIZE) != xbeh) {
-            PRINT(XEXEC_DBG_ERROR, "error: mmap(): failed to map XBE header @ 0x%.08x: '%s'", xbeh, strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: failed to map XBE header @ 0x%.08x: mmap(): '%s'", xbeh, strerror(errno));
             break;
         }
         if ((rd = read(fd, xbeh, PAGESIZE)) != PAGESIZE) {
-            PRINT(XEXEC_DBG_ERROR, "error: read(): '%s': '%s'", argv[1], (rd >= 0) ? "short read" : strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: read('%s'): '%s'", path, (rd >= 0) ? "short read" : strerror(errno));
             break;
         }
         if (xbeh->dwMagic != REG32(XBE_MAGIC)) {
-            PRINT(XEXEC_DBG_ERROR, "error: invalid XBE file: '%s'", argv[1]);
+            PRINT(XEXEC_DBG_ERROR, "error: invalid XBE file: '%s'", path);
             break;
         }
         XbeHeader_dump(xbeh);
@@ -237,7 +309,7 @@ main(int argc, char **argv) {
         PRINT(XEXEC_DBG_INFO, "XBE entry: 0x%.08x | thunk table: 0x%.08x", xbeh->dwEntryAddr, xbeh->dwKernelImageThunkAddr);
 
         if (!xbeh->dwSections) {
-            PRINT(XEXEC_DBG_ERROR, "error: XBE has no sections to map: '%s'", argv[1]);
+            PRINT(XEXEC_DBG_ERROR, "error: XBE has no sections to map: '%s'", path);
             break;
         }
 
@@ -252,15 +324,14 @@ main(int argc, char **argv) {
 
         PRINT(
             XEXEC_DBG_MEMORY,
-            "mmap(): "
-            "total section map: "
+            "total XBE section map: "
             "start: 0x%.08x | "
             "end: 0x%.08x | "
             "size: 0x%.08x",
             vaddr, raddr, vsize);
 
         if (MEM_ALLOC_EXEC((void *)vaddr, vsize) != (void *)vaddr) {
-            PRINT(XEXEC_DBG_ERROR, "error: mmap(): failed to map XBE sections @ 0x%.08x: '%s'", vaddr, strerror(errno));
+            PRINT(XEXEC_DBG_ERROR, "error: failed to map XBE sections @ 0x%.08x: mmap(): '%s'", vaddr, strerror(errno));
             break;
         }
         for (i = 0; i < xbeh->dwSections; ++i) {
@@ -273,7 +344,6 @@ main(int argc, char **argv) {
 
             PRINT(
                 XEXEC_DBG_MEMORY,
-                "mmap(): "
                 "section %2u | "
                 "name %10s | "
                 "virtual: address 0x%.08x size 0x%.08x | "
@@ -281,11 +351,11 @@ main(int argc, char **argv) {
                 i, sname, vaddr, vsize, raddr, rsize);
 
             if (lseek(fd, raddr, SEEK_SET) != (ssize_t)raddr) {
-                PRINT(XEXEC_DBG_ERROR, "error: lseek(): '%s': '%s'", argv[1], strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: lseek('%s'): '%s'", path, strerror(errno));
                 break;
             }
             if ((rd = read(fd, (void *)vaddr, rsize)) != (ssize_t)rsize) {
-                PRINT(XEXEC_DBG_ERROR, "error: read(): '%s': '%s'", argv[1], (rd >= 0) ? "short read" : strerror(errno));
+                PRINT(XEXEC_DBG_ERROR, "error: read('%s'): '%s'", path, (rd >= 0) ? "short read" : strerror(errno));
                 break;
             }
             if (!strncmp(sname, ".text", sizeof(".text"))) {
@@ -307,9 +377,9 @@ main(int argc, char **argv) {
 
         xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
 
-        PRINT(XEXEC_DBG_THREAD, "/* spawning entry thread with entry point @ 0x%.08x */", xbeh->dwEntryAddr);
+        PRINT(XEXEC_DBG_THREAD, "/* creating entry thread with entry point @ 0x%.08x */", xbeh->dwEntryAddr);
 
-        if (argc >= 3) INT3;
+        if (gdb) INT3;
 
         entry = THREAD_PUSH(xboxkrnl_entry_thread, (void *)xbeh->dwEntryAddr, "entry")->id;
         pthread_join(entry, NULL);
