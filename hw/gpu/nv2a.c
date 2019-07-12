@@ -1268,19 +1268,21 @@ nv2a_vertex_attrib_inline_buffer_start(uint32_t index) {
 static void
 nv2a_vertex_attrib_inline_buffer_finish(void) {
     register nv2a_vertex_attrib_t *a;
+    register uint32_t pos;
     register uint32_t i;
     ENTER_NV2A;
+
+    if ((pos = ++nv2a_ctx->inline_buffer_pos) >= NV2A_MAX_BATCH_LENGTH) INT3;
 
     for (i = 0; i < NV2A_MAX_VERTEX_ATTRIBS; ++i) {
         if ((a = &nv2a_ctx->va[i])->inline_buffer_len) {
             memcpy(
-                a->inline_buffer[a->inline_buffer_len++],
+                a->inline_buffer[pos - 1],
                 a->inline_value,
                 sizeof(a->inline_value));
+            a->inline_buffer_len = pos;
         }
     }
-
-    if (++nv2a_ctx->inline_buffer_pos >= NV2A_MAX_BATCH_LENGTH) INT3;
 
     LEAVE_NV2A;
 }
