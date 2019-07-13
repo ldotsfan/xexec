@@ -39,6 +39,9 @@
 #define REG08(x)            *(uint8_t  *)(x)
 #define REG16(x)            *(uint16_t *)(x)
 #define REG32(x)            *(uint32_t *)(x)
+#define REGS08(x)           *(int8_t  *)(x)
+#define REGS16(x)           *(int16_t *)(x)
+#define REGS32(x)           *(int32_t *)(x)
 
 #define CLIP08(x) ({ \
         register int _x = (x); \
@@ -278,14 +281,14 @@ xboxkrnl_enter(int8_t *stack, const char *func, const char *prefix) {
         (bt) ? bt - 6 : bt,
         func);
 
-    if (++*stack & 0xc0) *stack = 0;
+    if (++(*stack) & 0xc0) *stack = 0;
 }
 
 static void
 xboxkrnl_leave(int8_t *stack, const char *func, const char *prefix) {
     register void *bt = xboxkrnl_backtrace();
 
-    if (--*stack & 0xc0) *stack = 0;
+    if (--(*stack) & 0xc0) *stack = 0;
 
     debug(
         XEXEC_DBG_STACK,
@@ -872,6 +875,7 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_RET2__LOCKED(i,p)           xboxkrnl_mem_ret__locked(i,NULL,(void *)(p))
 #define MEM_DIRTY_WP(wp,m) \
         do { \
+PRINT(XEXEC_DBG_ALL,"WP%i! 0x%.08x-0x%.08x",wp,(size_t)(m)->AllocationBase,(size_t)(m)->AllocationBase+(m)->RegionSize);/*XXX testing*/ \
             if (mprotect((m)->AllocationBase, (m)->RegionSize, (wp) ? (m)->prot & ~PROT_WRITE : (m)->prot) < 0) { \
                 PRINT(XEXEC_DBG_ERROR, "error: mprotect(): '%s'", strerror(errno)); \
                 INT3; \
@@ -890,14 +894,12 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
             if (MEM_DIRTY_SET__LOCKED(a) < 2 && \
                 (cache = ((MEM_CACHE_TEST(a)) ? MEM_CACHE : MEM_DIRTY_PARENT_RET__LOCKED(a))) && \
                 cache->index != MEM_RESERVE && !cache->dirty) { \
-PRINT(XEXEC_DBG_ALL,"WP0!",0);/*XXX*/ \
                 MEM_DIRTY_WP(0, cache); \
             } else { \
                 cache = NULL; \
             }
 #define MEM_DIRTY_SET3__FINALLY__LOCKED \
             if (cache) { \
-PRINT(XEXEC_DBG_ALL,"WP1!",0);/*XXX*/ \
                 MEM_DIRTY_WP(1, cache); \
                 MEM_CACHE = cache; \
             } \
@@ -1074,7 +1076,7 @@ xboxkrnl_mem_push(int index, const xboxkrnl_mem *in, int locked) {
 #if 1 //XXX dump page table
 m=ret;
 PRINT(XEXEC_DBG_MEMORY,"start 0x%.08zx",(size_t)ret->BaseAddress);
-for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (dirty=%i) (0x%zx / %zu)",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->dirty,m->RegionSize,m->RegionSize);
+for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (0x%zx / %zu) dirty=%i parent=0x%.08x",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->RegionSize,m->RegionSize,m->dirty,(size_t)m->parent);
 PRINT(XEXEC_DBG_MEMORY,"end 0x%.08zx",(size_t)ret->BaseAddress);
 #endif
     if (!locked) MEM_UNLOCK;
@@ -1385,7 +1387,7 @@ xboxkrnl_mem_alloc(int index, void *addr, size_t size, int prot, int flags, int 
     ret = (typeof(ret))ALIGN(t->align, ret);
 #if 1 //XXX dump page table
 PRINT(XEXEC_DBG_MEMORY,"start alloc %p",ret);
-for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (dirty=%i) (0x%zx / %zu)",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->dirty,m->RegionSize,m->RegionSize);
+for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (0x%zx / %zu) dirty=%i parent=0x%.08x",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->RegionSize,m->RegionSize,m->dirty,(size_t)m->parent);
 PRINT(XEXEC_DBG_MEMORY,"end alloc %p",ret);
 #endif
     /* find a free range */
@@ -1469,8 +1471,10 @@ PRINT(XEXEC_DBG_MEMORY,"3: find free range: ret=%p ; (ret+size=%p > n=%p) == con
             }
             break;
         }
-        if (ret != MAP_FAILED) {
-//            if (t->index != MEM_EXEC) MEM_DIRTY_CREATE__LOCKED(ret, size);//XXX
+        if (ret == MAP_FAILED) {
+            errno = ENOMEM;
+        } else {
+            if (t->index != MEM_EXEC) MEM_DIRTY_CREATE__LOCKED(ret, size);//XXX dirty page test
             errno = 0;
         }
     }
@@ -2716,7 +2720,7 @@ xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
 
     if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= host->memreg_size - 1;
 
-    MEM_DIRTY_SET3__TRY__LOCKED(addr);
+    MEM_DIRTY_SET3__TRY__LOCKED(addr);//FIXME write new val if old val is not the same for dirty page perf
 
     if (!phys && (!cache || cache->index == MEM_RESERVE)) {
         ret =
