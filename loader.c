@@ -46,21 +46,21 @@
 #define XEXEC_VERSION "'FIXME: unknown git version'" //FIXME
 
 typedef enum {
-    XEXEC_DBG_NONE    = 0 << 0,
-    XEXEC_DBG_ERROR   = 1 << 0,
-    XEXEC_DBG_STACK   = 1 << 1,
-    XEXEC_DBG_INFO    = 1 << 2,
-    XEXEC_DBG_EVENT   = 1 << 3,
-    XEXEC_DBG_MESSAGE = 1 << 4,
-    XEXEC_DBG_VARDUMP = 1 << 5,
-    XEXEC_DBG_HEXDUMP = 1 << 6,
-    XEXEC_DBG_FD      = 1 << 7,
-    XEXEC_DBG_MUTEX   = 1 << 8,
-    XEXEC_DBG_MEMORY  = 1 << 9,
-    XEXEC_DBG_THREAD  = 1 << 10,
-    XEXEC_DBG_IRQ     = 1 << 11,
-    XEXEC_DBG_REG     = 1 << 12,
-    XEXEC_DBG_DMA     = 1 << 13,
+    XEXEC_DBG_NONE    = 0 << 0,     /* 0x0 */
+    XEXEC_DBG_ERROR   = 1 << 0,     /* 0x1 */
+    XEXEC_DBG_STACK   = 1 << 1,     /* 0x2 */
+    XEXEC_DBG_INFO    = 1 << 2,     /* 0x4 */
+    XEXEC_DBG_EVENT   = 1 << 3,     /* 0x8 */
+    XEXEC_DBG_MESSAGE = 1 << 4,     /* 0x10 */
+    XEXEC_DBG_VARDUMP = 1 << 5,     /* 0x20 */
+    XEXEC_DBG_HEXDUMP = 1 << 6,     /* 0x40 */
+    XEXEC_DBG_FD      = 1 << 7,     /* 0x80 */
+    XEXEC_DBG_MUTEX   = 1 << 8,     /* 0x100 */
+    XEXEC_DBG_MEMORY  = 1 << 9,     /* 0x200 */
+    XEXEC_DBG_THREAD  = 1 << 10,    /* 0x400 */
+    XEXEC_DBG_IRQ     = 1 << 11,    /* 0x800 */
+    XEXEC_DBG_REG     = 1 << 12,    /* 0x1000 */
+    XEXEC_DBG_DMA     = 1 << 13,    /* 0x2000 */
     XEXEC_DBG_ALL     = 0xffffffff
 } xexec_dbg_t;
 
@@ -227,9 +227,12 @@ main(int argc, char **argv) {
         case 'd':
             switch (++dbg) {
             case 1:
-                xexec_debug = XEXEC_DBG_ALL & ~XEXEC_DBG_DMA;
+                xexec_debug = XEXEC_DBG_ALL & ~(XEXEC_DBG_REG | XEXEC_DBG_DMA);
                 break;
             case 2:
+                xexec_debug = XEXEC_DBG_ALL & ~XEXEC_DBG_DMA;
+                break;
+            case 3:
                 xexec_debug = XEXEC_DBG_ALL;
                 break;
             }

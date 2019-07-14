@@ -29,7 +29,7 @@ Standalone:
 * `$ ./xexec D/default.xbe`
 
 Debugging:
-* `$ ./xexec -d D/default.xbe`
+* `$ ./xexec -dd D/default.xbe`
 
 Debugging w/ `gdb`:
 * `$ xbe=D/default.xbe make gdb`
@@ -77,6 +77,6 @@ Upon execution in the terminal with debugging enabled, you will see the very hel
 16:23:44.248180: leave: [0x001b2042] <-- xboxkrnl_KfLowerIrql()
 ```
 You can save a full dump, as:
-* `./xexec -d D/default.xbe 2>&1 | tee "$(date +%Y%m%d-%H%M%S)"-xexec.log`
+* `./xexec -dd D/default.xbe 2>&1 | tee "$(date +%Y%m%d-%H%M%S)"-xexec.log`
 
 No framebuffer to see yet. There is no user support at this time.

@@ -2,7 +2,7 @@
 .DUMMY: gdb wait
 
 all:
-	gcc -m32 -g -Wall -Wextra \
+	gcc -g -m32 -march=i686 -Wall -Wextra \
 		-Wno-unused-variable \
 		-Wno-unused-but-set-variable \
 		-Wno-pointer-to-int-cast \
@@ -10,8 +10,8 @@ all:
 		-pthread -lX11 -lGL -lGLEW
 
 gdb:
-	gdb --args ./xexec -d $(xbe)
+	gdb --args ./xexec -dd $(xbe)
 
 wait:
-	gdb --args ./xexec -dg $(xbe)
+	gdb --args ./xexec -ddg $(xbe)
 

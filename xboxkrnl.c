@@ -39,9 +39,11 @@
 #define REG08(x)            *(uint8_t  *)(x)
 #define REG16(x)            *(uint16_t *)(x)
 #define REG32(x)            *(uint32_t *)(x)
+#define REG64(x)            *(uint64_t *)(x)
 #define REGS08(x)           *(int8_t  *)(x)
 #define REGS16(x)           *(int16_t *)(x)
 #define REGS32(x)           *(int32_t *)(x)
+#define REGS64(x)           *(int64_t *)(x)
 
 #define CLIP08(x) ({ \
         register int _x = (x); \
@@ -56,7 +58,7 @@
 
 #define ARRAY(x,y,z)        if ((z) < ARRAY_SIZE(y)) (x) = y[(z)]
 #define ARRAY_SIZE(x)       (sizeof(x) / sizeof(*x))
-#define ZERO(x)             memset(&x, 0, sizeof(x))
+#define ZERO(x)             xboxkrnl_memset(&x, 0, sizeof(x))
 
 #define ALIGN(x,y) ({ \
         register size_t _x = (typeof(_x))(x) - 1; \
@@ -83,6 +85,11 @@
 /* register name:           z = const *char[] name in relation to y; f = 0, r = register size */
 #define VARDUMP4(x,y,z)     VARDUMP5(x,y,z,ARRAY_SIZE(z),0,4)
 #define VARDUMP5(x,y,z,l,f,r) xboxkrnl_vardump(xboxkrnl_stack,x,(uint64_t)y,#y,z,l,f,r)
+
+/* mmx/sse extensionless routines for x86 emulation */
+void *                      xboxkrnl_memcpy(void *dest, const void *src, size_t n);
+void                        xboxkrnl_memset(void *s, int c, size_t n);
+char *                      xboxkrnl_strncpy(char *dest, const char *src, size_t n);
 
 enum XBOXKRNL_VARDUMP_TYPE {
     VAR_IN,
@@ -172,7 +179,7 @@ xboxkrnl_vardump(
                     if (l) ++l;
                     len = strlen(n);
                     c = realloc(c, l + len + 2);
-                    memcpy(&c[l], n, len);
+                    xboxkrnl_memcpy(&c[l], n, len);
                     l += len;
                     c[l] = '|';
                 }
@@ -239,7 +246,7 @@ xboxkrnl_hexdump(int8_t stack, const void *in, uint16_t inlen, const char *var) 
     else debug(level, stack, "%sdump: 0x%.08x | size: %hu (0x%hx)", buf, in, inlen, inlen);
     debug(level, stack, "%s            0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  |0123456789abcdef|", buf);
 
-    for (memset(b, ' ', 66), b[66] = 0, d = in, h = b; inlen; h = b) {
+    for (xboxkrnl_memset(b, ' ', 66), b[66] = 0, d = in, h = b; inlen; h = b) {
         for (i = 0; i < 16; ++i) {
             if (inlen) {
                 *h++ = "0123456789abcdef"[*d >> 4];
@@ -564,6 +571,20 @@ typedef struct {
     int32_t                 Period;
 } PACKED xboxkrnl_timer;
 
+typedef struct {
+    union {
+        pthread_mutex_t     mutex;          /* 24 bytes */
+        struct {
+            union {
+                uint32_t *  RawEvent[4];
+            } PACKED        Synchronization;
+            int32_t         LockCount;
+            int32_t         RecursionCount;
+            void *          OwningThread;
+        } PACKED;                           /* 28 bytes */
+    } PACKED;
+} PACKED xboxkrnl_criticalsection;
+
 /* pci */
 struct xpci {
     const uint8_t           bus;
@@ -740,6 +761,79 @@ static struct xpci *const   nv2a  = &xpci[XPCI_GPU];
 static void *               xboxkrnl_gpuinstmem = NULL;//TODO find use case
 static size_t               xboxkrnl_gpuinstsz = 0;
 
+void *
+xboxkrnl_memcpy(void *dest, const void *src, size_t n) {
+    register size_t i;
+
+    for (i = 0; i < n;) {
+        if (i + 8 <= n) {
+            REG64(dest + i) = REG64(src + i);
+            i += 8;
+        } else if (i + 4 <= n) {
+            REG32(dest + i) = REG32(src + i);
+            i += 4;
+        } else if (i + 2 <= n) {
+            REG16(dest + i) = REG16(src + i);
+            i += 2;
+        } else {
+            REG08(dest + i) = REG08(src + i);
+            i += 1;
+        }
+    }
+
+    return dest;
+}
+
+void
+xboxkrnl_memset(void *s, int c, size_t n) {
+    char buf[8];
+    register size_t i;
+
+    for (i = 0; i < sizeof(buf); buf[i] = c, ++i);
+    for (i = 0; i < n;) {
+        if (i + 8 <= n) {
+            REG64(s + i) = REG64(buf);
+            i += 8;
+        } else if (i + 4 <= n) {
+            REG32(s + i) = REG32(buf);
+            i += 4;
+        } else if (i + 2 <= n) {
+            REG16(s + i) = REG16(buf);
+            i += 2;
+        } else {
+            REG08(s + i) = REG08(buf);
+            i += 1;
+        }
+    }
+}
+
+char *
+xboxkrnl_strncpy(char *dest, const char *src, size_t n) {
+    register size_t i;
+    register size_t j;
+
+    for (i = 0; i < n;) {
+        for (j = 0; j < 8 && src[j]; ++j);
+        if (!j) break;
+        if (j >= 8 && i + 8 <= n) {
+            REG64(&dest[i]) = REG64(&src[i]);
+            i += 8;
+        } else if (j >= 4 && i + 4 <= n) {
+            REG32(&dest[i]) = REG32(&src[i]);
+            i += 4;
+        } else if (j >= 2 && i + 2 <= n) {
+            REG16(&dest[i]) = REG16(&src[i]);
+            i += 2;
+        } else {
+            REG08(&dest[i]) = REG08(&src[i]);
+            i += 1;
+        }
+    }
+    if (i < n) REG08(&dest[i++]) = 0;
+
+    return dest;
+}
+
 enum XBOXKRNL_PAGE_TYPE {
     XBOXKRNL_PAGE_NOACCESS                  = 1 << 0,   /* 0x1 */
     XBOXKRNL_PAGE_READONLY                  = 1 << 1,   /* 0x2 */
@@ -821,7 +915,7 @@ typedef struct {
     int                     prot;
     int                     flags;
     int                     dirty;
-    void *                  parent;     /* to write-protect parent page mapping for a dirty write catch */
+    void *                  parent;     /* write-protecting parent allocation for dirty page logic to catch a write */
 } PACKED xboxkrnl_mem;
 
 /* page tables */
@@ -873,9 +967,9 @@ static xboxkrnl_mem_table xboxkrnl_mem_tables[] = {
 #define MEM_RET(i,a)                    xboxkrnl_mem_ret(i,(void *)(a))
 #define MEM_RET__LOCKED(i,a)            xboxkrnl_mem_ret__locked(i,(void *)(a),NULL)
 #define MEM_RET2__LOCKED(i,p)           xboxkrnl_mem_ret__locked(i,NULL,(void *)(p))
-#define MEM_DIRTY_WP(wp,m) \
+#define MEM_WP(wp,m) \
         do { \
-PRINT(XEXEC_DBG_ALL,"WP%i! 0x%.08x-0x%.08x",wp,(size_t)(m)->AllocationBase,(size_t)(m)->AllocationBase+(m)->RegionSize);/*XXX testing*/ \
+PRINT(XEXEC_DBG_DMA,"WP%i! [0x%.08x-0x%.08x]",wp,(size_t)(m)->AllocationBase,(size_t)(m)->AllocationBase+(m)->RegionSize);/*XXX testing*/ \
             if (mprotect((m)->AllocationBase, (m)->RegionSize, (wp) ? (m)->prot & ~PROT_WRITE : (m)->prot) < 0) { \
                 PRINT(XEXEC_DBG_ERROR, "error: mprotect(): '%s'", strerror(errno)); \
                 INT3; \
@@ -894,13 +988,13 @@ PRINT(XEXEC_DBG_ALL,"WP%i! 0x%.08x-0x%.08x",wp,(size_t)(m)->AllocationBase,(size
             if (MEM_DIRTY_SET__LOCKED(a) < 2 && \
                 (cache = ((MEM_CACHE_TEST(a)) ? MEM_CACHE : MEM_DIRTY_PARENT_RET__LOCKED(a))) && \
                 cache->index != MEM_RESERVE && !cache->dirty) { \
-                MEM_DIRTY_WP(0, cache); \
+                MEM_WP(0, cache); \
             } else { \
                 cache = NULL; \
             }
 #define MEM_DIRTY_SET3__FINALLY__LOCKED \
             if (cache) { \
-                MEM_DIRTY_WP(1, cache); \
+                MEM_WP(1, cache); \
                 MEM_CACHE = cache; \
             } \
         } while (0)
@@ -1076,7 +1170,7 @@ xboxkrnl_mem_push(int index, const xboxkrnl_mem *in, int locked) {
 #if 1 //XXX dump page table
 m=ret;
 PRINT(XEXEC_DBG_MEMORY,"start 0x%.08zx",(size_t)ret->BaseAddress);
-for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (0x%zx / %zu) dirty=%i parent=0x%.08x",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->RegionSize,m->RegionSize,m->dirty,(size_t)m->parent);
+for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: [0x%.08zx-0x%.08zx] (0x%.08zx / %zu) dirty=%i parent=0x%.08x",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->RegionSize,m->RegionSize,m->dirty,(size_t)m->parent);
 PRINT(XEXEC_DBG_MEMORY,"end 0x%.08zx",(size_t)ret->BaseAddress);
 #endif
     if (!locked) MEM_UNLOCK;
@@ -1114,7 +1208,7 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
                 if (!i) {
                     if ((m = MEM_DIRTY_PARENT_RET__LOCKED(mem.parent)) && !m->dirty) {
                         m->dirty = 1;
-                        MEM_DIRTY_WP(0, m);
+                        MEM_WP(0, m);
                     }
                     break;
                 }
@@ -1209,9 +1303,10 @@ xboxkrnl_mem_dirty_set__locked(void *addr, xboxkrnl_mem *m) {
             m->dirty = 1;
             PRINT(
                 XEXEC_DBG_MEMORY,
-                "MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu)",
+                "MEM: dirty: 0x%.08x -> [0x%.08x-0x%.08x] (0x%.08x / %lu)",
                 addr,
                 m->BaseAddress,
+                m->BaseAddress + m->RegionSize,
                 m->RegionSize,
                 m->RegionSize);
             if (m->parent) {
@@ -1222,13 +1317,14 @@ xboxkrnl_mem_dirty_set__locked(void *addr, xboxkrnl_mem *m) {
                             p->dirty = 1;
                             PRINT(
                                 XEXEC_DBG_MEMORY,
-                                "MEM: dirty: 0x%.08x -> [0x%.08x+0x%.08x] (%lu) (%s)",
+                                "MEM: dirty: 0x%.08x -> [0x%.08x-0x%.08x] (0x%.08x / %lu) (%s)",
                                 addr,
                                 p->BaseAddress,
+                                p->BaseAddress + p->RegionSize,
                                 p->RegionSize,
                                 p->RegionSize,
                                 xboxkrnl_mem_tables[p->index].name);
-                            MEM_DIRTY_WP(0, p);
+                            MEM_WP(0, p);
                             ++ret;
                         }
                         break;
@@ -1252,7 +1348,7 @@ xboxkrnl_mem_dirty_clear__locked(void *addr, xboxkrnl_mem *m) {
             m->dirty = 0;
             if (m->parent && (p = MEM_DIRTY_PARENT_RET__LOCKED(m->parent)) && p->dirty) {
                 p->dirty = 0;
-                MEM_DIRTY_WP(1, p);
+                MEM_WP(1, p);
                 ++ret;
             }
         }
@@ -1336,7 +1432,7 @@ xboxkrnl_mem_heap_brk_adjust(int locked) {
                 if (!(m = MEM_RET__LOCKED(MEM_MAP, MEM_HEAP_BASE))) INT3;
                 m->RegionSize = sz;
             }
-            PRINT(
+            PRINTF(
                 XEXEC_DBG_MEMORY,
                 "MEM: heap break: was 0x%.08zx, now 0x%.08zx",
                 xboxkrnl_mem_heap_brk,
@@ -1387,7 +1483,7 @@ xboxkrnl_mem_alloc(int index, void *addr, size_t size, int prot, int flags, int 
     ret = (typeof(ret))ALIGN(t->align, ret);
 #if 1 //XXX dump page table
 PRINT(XEXEC_DBG_MEMORY,"start alloc %p",ret);
-for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: 0x%.08zx-0x%.08zx (0x%zx / %zu) dirty=%i parent=0x%.08x",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->RegionSize,m->RegionSize,m->dirty,(size_t)m->parent);
+for (i=0;i<t->sz;++i) m=&t->mem[i],PRINT(XEXEC_DBG_MEMORY,"%s: [0x%.08zx-0x%.08zx] (0x%.08zx / %zu) dirty=%i parent=0x%.08x",t->name,(size_t)m->BaseAddress,(size_t)m->BaseAddress+m->RegionSize,m->RegionSize,m->RegionSize,m->dirty,(size_t)m->parent);
 PRINT(XEXEC_DBG_MEMORY,"end alloc %p",ret);
 #endif
     /* find a free range */
@@ -1452,7 +1548,7 @@ PRINT(XEXEC_DBG_MEMORY,"3: find free range: ret=%p ; (ret+size=%p > n=%p) == con
         switch (index) {
         case MEM_HEAP:
             MEM_HEAP_BRK_ADJUST__LOCKED;
-            memset(ret, 0, i);
+            xboxkrnl_memset(ret, 0, i);//FIXME disable parent allocation's write-protection here
             break;
         case MEM_EXEC:
         case MEM_MAP:
@@ -1542,14 +1638,14 @@ xboxkrnl_mem_realloc(int index, void *ptr, size_t size, int locked) {
         case MEM_HEAP:
             if (!(ret = MEM_ALLOC_HEAP__LOCKED(size))) break;
 PRINT(XEXEC_DBG_MEMORY,"realloc reloc start | %p -> %p",ptr,ret);//XXX
-            memcpy(ret, m->BaseAddress, m->RegionSize);
+            xboxkrnl_memcpy(ret, m->BaseAddress, m->RegionSize);
             MEM_FREE_HEAP__LOCKED(m->BaseAddress);
 PRINT(XEXEC_DBG_MEMORY,"realloc reloc end\n",0);//XXX
             break;
         case MEM_MAP:
         case MEM_ALLOC:
             if ((ret = MEM_ALLOC_MAP__LOCKED(index, NULL, size)) == MAP_FAILED) break;
-            memcpy(ret, m->BaseAddress, m->RegionSize);
+            xboxkrnl_memcpy(ret, m->BaseAddress, m->RegionSize);
             MEM_FREE_MAP__LOCKED(index, m->BaseAddress);
             break;
         }
@@ -2325,7 +2421,7 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, const char *name, void
         INT3;
     }
 
-    if (name && *name) strncpy(t->name, name, sizeof(t->name) - 1);
+    if (name && *name) xboxkrnl_strncpy(t->name, name, sizeof(t->name) - 1);
     else snprintf(t->name, sizeof(t->name) - 1, "%p", (void *)t->id);
     pthread_setname_np(t->id, t->name);
 
@@ -2612,27 +2708,27 @@ xboxkrnl_write_dma(uint32_t addr, const uint32_t *val, size_t sz) {
 
     switch (sz) {
     case 1:
-        PRINT(
+        PRINTF(
             XEXEC_DBG_DMA,
-            "DMA: write: [0x%.08x]       (0x%.02hhx) <- 0x%.02hhx",
+            "[0x%.08x]       (0x%.02hhx) <- 0x%.02hhx",
             addr,
             REG08(wr),
             REG08(val));
         REG08(wr) = REG08(val);
         break;
     case 2:
-        PRINT(
+        PRINTF(
             XEXEC_DBG_DMA,
-            "DMA: write: [0x%.08x]     (0x%.04hx) <- 0x%.04hx",
+            "[0x%.08x]     (0x%.04hx) <- 0x%.04hx",
             addr,
             REG16(wr),
             REG16(val));
         REG16(wr) = REG16(val);
         break;
     case 4:
-        PRINT(
+        PRINTF(
             XEXEC_DBG_DMA,
-            "DMA: write: [0x%.08x] (0x%.08x) <- 0x%.08x",
+            "[0x%.08x] (0x%.08x) <- 0x%.08x",
             addr,
             REG32(wr),
             REG32(val));
@@ -2653,25 +2749,25 @@ xboxkrnl_read_dma(uint32_t addr, uint32_t *val, size_t sz) {
     switch (sz) {
     case 1:
         REG08(val) = REG08(rd);
-        PRINT(
+        PRINTF(
             XEXEC_DBG_DMA,
-            "DMA:  read: [0x%.08x]              -> 0x%.02hhx",
+            " [0x%.08x]              -> 0x%.02hhx",
             addr,
             REG08(val));
         break;
     case 2:
         REG16(val) = REG16(rd);
-        PRINT(
+        PRINTF(
             XEXEC_DBG_DMA,
-            "DMA:  read: [0x%.08x]              -> 0x%.04hx",
+            " [0x%.08x]              -> 0x%.04hx",
             addr,
             REG16(val));
         break;
     case 4:
         REG32(val) = REG32(rd);
-        PRINT(
+        PRINTF(
             XEXEC_DBG_DMA,
-            "DMA:  read: [0x%.08x]              -> 0x%.08x",
+            " [0x%.08x]              -> 0x%.08x",
             addr,
             REG32(val));
         break;
@@ -2687,11 +2783,11 @@ xboxkrnl_address_validate_hw(uint32_t addr) {
 
     ret =
         ((addr & 0xff000000) == nv2a->memreg_base ||
-        RANGE(usb0->memreg_base, usb0->memreg_size, addr) ||
-        RANGE(usb1->memreg_base, usb1->memreg_size, addr) ||
+        RANGE(usb0->memreg_base,  usb0->memreg_size,  addr) ||
+        RANGE(usb1->memreg_base,  usb1->memreg_size,  addr) ||
         RANGE(nvnet->memreg_base, nvnet->memreg_size, addr) ||
-        RANGE(apu->memreg_base, apu->memreg_size, addr) ||
-        RANGE(aci->memreg_base, aci->memreg_size, addr));
+        RANGE(apu->memreg_base,   apu->memreg_size,   addr) ||
+        RANGE(aci->memreg_base,   aci->memreg_size,   addr));
 
     return ret;
 }
@@ -2714,13 +2810,34 @@ static int
 xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
     register int locked;
     register int phys;
+    uint32_t tmp;
     register int ret = 0;
-
-    locked = MEM_TRYLOCK;
 
     if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= host->memreg_size - 1;
 
-    MEM_DIRTY_SET3__TRY__LOCKED(addr);//FIXME write new val if old val is not the same for dirty page perf
+    if (phys || !xboxkrnl_address_validate_hw(addr)) {
+        /* improve dirty page logic perf by comparing old dma value */
+        xboxkrnl_read_dma(addr, &tmp, sz);
+        switch (sz) {
+        case 1:
+            ret = (REG08(&tmp) == REG08(val));
+            break;
+        case 2:
+            ret = (REG16(&tmp) == REG16(val));
+            break;
+        case 4:
+            ret = (REG32(&tmp) == REG32(val));
+            break;
+        default:
+            INT3;
+            break;
+        }
+        if (ret) return ret;
+    }
+
+    locked = MEM_TRYLOCK;
+
+    MEM_DIRTY_SET3__TRY__LOCKED(addr);
 
     if (!phys && (!cache || cache->index == MEM_RESERVE)) {
         ret =
@@ -2767,14 +2884,14 @@ xboxkrnl_read(uint32_t addr, void *val, size_t sz) {
 
 static void
 xboxkrnl_path_resolve_insensitive(char *path) {
+    register DIR *d;
+    register struct dirent *e;
+    register char *name;
+    register char *buf;
+    register size_t len;
     register char *p;
     register char *t;
     register size_t l;
-    register DIR *d;
-    register struct dirent *e;
-    char *buf;
-    size_t len;
-    char *name;
 
     buf  = malloc(4);
     p    = buf;
@@ -2807,15 +2924,18 @@ xboxkrnl_path_resolve_insensitive(char *path) {
         }
         buf = realloc(buf, len + 1 + l + 1);
         buf[len++] = '/';
-        memcpy(&buf[len], (name) ? name : ((t) ? t : p), l);
+        xboxkrnl_memcpy(&buf[len], (name) ? name : ((t) ? t : p), l);
         len += l;
         buf[len] = 0;
         free(name);
         free(t);
     }
-
 //PRINT(XEXEC_DBG_ALL,"'%s'",&buf[2]);//XXX
-    if (buf[2]) strcpy(path, &buf[2]);
+    if (buf[2]) {
+        if (strlen(path) > len) INT3;
+        xboxkrnl_memcpy(path, &buf[2], len);
+        path[len] = 0;
+    }
     free(buf);
 }
 
@@ -2865,8 +2985,8 @@ xboxkrnl_path_winnt_to_unix(const char *path) {
         tmp[len] = 0;
         i = strlen(prefix);
         ret = malloc(i + len + 1);
-        memcpy(ret, prefix, i);
-        memcpy(&ret[i], tmp, len);
+        xboxkrnl_memcpy(ret, prefix, i);
+        xboxkrnl_memcpy(&ret[i], tmp, len);
         ret[i + len] = 0;
         free(tmp);
     } else {
@@ -2996,10 +3116,10 @@ xboxkrnl_AvSetDisplayMode( /* 003 (0x003) */
     if (Mode == /* AV_MODE_OFF */ 0x00000000) {
         Mode =
             /* AV_MODE_640x480_TO_NTSC_M_YC */ 0x04010101 |
-            /* AV_MODE_FLAGS_DACA_DISABLE */ 0x01000000 |
-            /* AV_MODE_FLAGS_DACB_DISABLE */ 0x02000000 |
-            /* AV_MODE_FLAGS_DACC_DISABLE */ 0x04000000 |
-            /* AV_MODE_FLAGS_DACD_DISABLE */ 0x08000000;
+            /* AV_MODE_FLAGS_DACA_DISABLE */   0x01000000 |
+            /* AV_MODE_FLAGS_DACB_DISABLE */   0x02000000 |
+            /* AV_MODE_FLAGS_DACC_DISABLE */   0x04000000 |
+            /* AV_MODE_FLAGS_DACD_DISABLE */   0x08000000;
     }
 #if 0
     switch (Format) {
@@ -3040,7 +3160,7 @@ xboxkrnl_AvSetDisplayMode( /* 003 (0x003) */
     nv2a_framebuffer_set(FrameBuffer);
 
     if (xboxkrnl_AvpCurrentMode == Mode) {
-        xboxkrnl_AvSendTVEncoderOption(RegisterBase, /* AV_OPTION_FLICKER_FILTER */ 11, 5, NULL);
+        xboxkrnl_AvSendTVEncoderOption(RegisterBase, /* AV_OPTION_FLICKER_FILTER */     11, 5, NULL);
         xboxkrnl_AvSendTVEncoderOption(RegisterBase, /* AV_OPTION_ENABLE_LUMA_FILTER */ 14, 0, NULL);
     } else {
         xboxkrnl_AvpCurrentMode = Mode;
@@ -5489,7 +5609,7 @@ xboxkrnl_NtCreateFile( /* 190 (0x0be) */
     STRDUMP(path);
     tmp = sizeof(f.path) - 1;
     f.path[tmp] = 0;
-    strncpy(f.path, path, tmp);
+    xboxkrnl_strncpy(f.path, path, tmp);
     free(path);
     path = f.path;
     rdonly = (path[0] == 'D' && path[1] == '/');
@@ -5785,7 +5905,7 @@ xboxkrnl_NtOpenFile( /* 202 (0x0ca) */
 
     if (OpenOptions & XBOXKRNL_FILE_OPEN_FOR_FREE_SPACE_QUERY /* 0x800000 */) {
         if (!(*FileHandle = xboxkrnl_calloc(1, sizeof(**FileHandle)))) INT3;
-        strncpy((*FileHandle)->path, path, sizeof((*FileHandle)->path) - 1);
+        xboxkrnl_strncpy((*FileHandle)->path, path, sizeof((*FileHandle)->path) - 1);
         (*FileHandle)->fd = -1;
         VARDUMP(DUMP, *FileHandle);
         STRDUMP((*FileHandle)->path);
@@ -5954,7 +6074,7 @@ xboxkrnl_NtQueryInformationFile( /* 211 (0x0d3) */
     if ((IoStatusBlock->Status = ret)) INT3;
     else {
         if (sz > Length) sz = Length;
-        memcpy(FileInformation, buf, sz);
+        xboxkrnl_memcpy(FileInformation, buf, sz);
         free(buf);
         IoStatusBlock->Information = sz;
     }
@@ -6120,7 +6240,7 @@ xboxkrnl_NtQueryVolumeInformationFile( /* 218 (0x0da) */
     case /* FileFsSizeInformation */ 3:
         {
             u.FileFsSizeInformation.SectorsPerAllocationUnit = 32;
-            u.FileFsSizeInformation.BytesPerSector = 512;
+            u.FileFsSizeInformation.BytesPerSector           = 512;
             VARDUMP(DUMP, u.FileFsSizeInformation.SectorsPerAllocationUnit);
             VARDUMP(DUMP, u.FileFsSizeInformation.BytesPerSector);
             sz  = sizeof(u.FileFsSizeInformation);
@@ -6135,7 +6255,7 @@ xboxkrnl_NtQueryVolumeInformationFile( /* 218 (0x0da) */
     if ((IoStatusBlock->Status = ret)) INT3;
     else {
         if (sz > Length) sz = Length;
-        memcpy(FsInformation, &u, sz);
+        xboxkrnl_memcpy(FsInformation, &u, sz);
         IoStatusBlock->Information = sz;
     }
 
@@ -6932,13 +7052,11 @@ xboxkrnl_RtlDowncaseUnicodeString() { /* 276 (0x114) */
 }
 static STDCALL void
 xboxkrnl_RtlEnterCriticalSection( /* 277 (0x115) */
-        /* in */ pthread_mutex_t **CriticalSection) {
+        /* in */ xboxkrnl_criticalsection *CriticalSection) {
     ENTER;
     VARDUMP(VAR_IN, CriticalSection);
-    VARDUMP(VAR_IN, *CriticalSection);
 
-    PRINT(XEXEC_DBG_VARDUMP, "/* FIXME: some locks are passed from the game code stack */", 0);//FIXME
-    pthread_mutex_lock(*CriticalSection);
+    pthread_mutex_lock(&CriticalSection->mutex);
 
     LEAVE;
 }
@@ -7070,9 +7188,9 @@ xboxkrnl_RtlInitAnsiString( /* 289 (0x121) */
     VARDUMP(VAR_IN,  SourceString);
     STRDUMP(SourceString);
 
-    DestinationString->Length = strlen(SourceString);
+    DestinationString->Length        = strlen(SourceString);
     DestinationString->MaximumLength = DestinationString->Length + 1;
-    DestinationString->Buffer = SourceString;
+    DestinationString->Buffer        = SourceString;
 
     VARDUMP(DUMP, DestinationString->Length);
     VARDUMP(DUMP, DestinationString->MaximumLength);
@@ -7091,15 +7209,16 @@ xboxkrnl_RtlInitUnicodeString() { /* 290 (0x122) */
 }
 static STDCALL void
 xboxkrnl_RtlInitializeCriticalSection( /* 291 (0x123) */
-        /* i/o */ pthread_mutex_t **CriticalSection) {
+        /* in */ xboxkrnl_criticalsection *CriticalSection) {
+    pthread_mutexattr_t mattr;
     ENTER;
-    VARDUMP(VAR_IN,  CriticalSection);
-    VARDUMP(VAR_OUT, *CriticalSection);
+    VARDUMP(VAR_IN, CriticalSection);
 
-    if (!(*CriticalSection = xboxkrnl_calloc(1, sizeof(**CriticalSection)))) INT3;
-    pthread_mutex_init(*CriticalSection, NULL);
+    pthread_mutexattr_init(&mattr);
+    pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&CriticalSection->mutex, &mattr);
+    pthread_mutexattr_destroy(&mattr);
 
-    VARDUMP(DUMP, *CriticalSection);
     LEAVE;
 }
 static STDCALL void
@@ -7122,13 +7241,11 @@ xboxkrnl_RtlIntegerToUnicodeString() { /* 293 (0x125) */
 }
 static STDCALL void
 xboxkrnl_RtlLeaveCriticalSection( /* 294 (0x126) */
-        /* in */ pthread_mutex_t **CriticalSection) {
+        /* in */ xboxkrnl_criticalsection *CriticalSection) {
     ENTER;
     VARDUMP(VAR_IN, CriticalSection);
-    VARDUMP(VAR_IN, *CriticalSection);
 
-    PRINT(XEXEC_DBG_VARDUMP, "/* FIXME: some locks are passed from the game code stack */", 0);//FIXME
-    pthread_mutex_unlock(*CriticalSection);
+    pthread_mutex_unlock(&CriticalSection->mutex);
 
     LEAVE;
 }
