@@ -1567,9 +1567,7 @@ PRINT(XEXEC_DBG_MEMORY,"3: find free range: ret=%p ; (ret+size=%p > n=%p) == con
             }
             break;
         }
-        if (ret == MAP_FAILED) {
-            errno = ENOMEM;
-        } else {
+        if (ret != MAP_FAILED) {
             if (t->index != MEM_EXEC) MEM_DIRTY_CREATE__LOCKED(ret, size);//XXX dirty page test
             errno = 0;
         }
