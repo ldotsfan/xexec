@@ -2810,23 +2810,23 @@ static int
 xboxkrnl_write(uint32_t addr, const void *val, size_t sz) {
     register int locked;
     register int phys;
-    uint32_t tmp;
+    uint32_t old;
     register int ret = 0;
 
     if ((phys = ((addr & 0xf8000000) == 0x80000000))) addr &= host->memreg_size - 1;
 
     if (phys || !xboxkrnl_address_validate_hw(addr)) {
         /* improve dirty page logic perf by comparing old dma value */
-        xboxkrnl_read_dma(addr, &tmp, sz);
+        xboxkrnl_read_dma(addr, &old, sz);
         switch (sz) {
         case 1:
-            ret = (REG08(&tmp) == REG08(val));
+            ret = (REG08(&old) == REG08(val));
             break;
         case 2:
-            ret = (REG16(&tmp) == REG16(val));
+            ret = (REG16(&old) == REG16(val));
             break;
         case 4:
-            ret = (REG32(&tmp) == REG32(val));
+            ret = (REG32(&old) == REG32(val));
             break;
         default:
             INT3;

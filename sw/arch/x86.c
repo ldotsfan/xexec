@@ -137,21 +137,24 @@ x86_iterate(ucontext_t *uc, int si_code) {
             sz   = 2;
             *ip += 1;
         }
+        if (REG08(*ip) == 0x67) {                                   /* address-size override prefix */
+            INT3; /* 16-bit addressing not implemented */
+        }
         do {
             if (REG08(*ip) == 0xf3) {                               // rep
 // rep movsd // F3 A5
                 if (REG08(*ip + 1) == 0xa5) {                       // rep movsd
 //break;//XXX turok dirty disc trigger
 //INT3;//XXX
-                    if (prefix) INT3;
-                    register uint32_t *c   = (void *)&uc->uc_mcontext.gregs[X86_ECX];
-                    register uint32_t *di  = (void *)&uc->uc_mcontext.gregs[X86_EDI];
-                    register uint32_t **si = (void *)&uc->uc_mcontext.gregs[X86_ESI];
-                    while (*c && xboxkrnl_write(REG32(di), *si, sz)) {
-//PRINT(XEXEC_DBG_ALL,"x86: rep movsd: c=%u di=%p si=%p (0x%.08x)",*c,*di,*si,**si);//XXX
+                    register uint32_t *c  = (void *)&uc->uc_mcontext.gregs[X86_ECX];
+                    register uint32_t *di = (void *)&uc->uc_mcontext.gregs[X86_EDI];
+                    bp                    = (void **)&uc->uc_mcontext.gregs[X86_ESI];
+                    while (*c && xboxkrnl_write(REG32(di), *bp, sz)) {
+//if (prefix) PRINTF(XEXEC_DBG_DMA,"rep movsd: fl->df=%u c=%u di=0x%.08x si=0x%.04hx (0x%.04hx)",fl->df,*c,*di,REG16(bp),REG16(*bp));//XXX
+//else PRINTF(XEXEC_DBG_DMA,"rep movsd: fl->df=%u c=%u di=0x%.08x si=0x%.08x (0x%.08x)",fl->df,*c,*di,REG32(bp),REG32(*bp));//XXX
                         --*c;
-                        if (fl->df) *di -= 4, *si -= 1;
-                        else        *di += 4, *si += 1;
+                        if (fl->df) *di -= sz, *bp -= sz;
+                        else        *di += sz, *bp += sz;
                     }
                     if (!*c) {
                         *ip += 2;                                   //   opcode: 0xf3 0xa5
@@ -161,14 +164,13 @@ x86_iterate(ucontext_t *uc, int si_code) {
                 }
 // rep stosd // F3 AB
                 if (REG08(*ip + 1) == 0xab) {                       // rep stosd
-                    if (prefix) INT3;
-                    register uint32_t *a  = (void *)&uc->uc_mcontext.gregs[X86_EAX];
                     register uint32_t *c  = (void *)&uc->uc_mcontext.gregs[X86_ECX];
                     register uint32_t *di = (void *)&uc->uc_mcontext.gregs[X86_EDI];
-                    while (*c && xboxkrnl_write(REG32(di), a, sz)) {
+                    bp                    = (void **)&uc->uc_mcontext.gregs[X86_EAX];
+                    while (*c && xboxkrnl_write(REG32(di), bp, sz)) {
                         --*c;
-                        if (fl->df) *di -= 4;
-                        else        *di += 4;
+                        if (fl->df) *di -= sz;
+                        else        *di += sz;
                     }
                     if (!*c) {
                         *ip += 2;                                   //   opcode: 0xf3 0xab
@@ -179,10 +181,9 @@ x86_iterate(ucontext_t *uc, int si_code) {
             }
 // stos   %ax,%es:(%edi) // 66 ab
             if (REG08(*ip) == 0xab) {                               // stos   %ax,%es:(%edi)
-                register uint32_t *a  = (void *)&uc->uc_mcontext.gregs[X86_EAX];
-                register uint32_t *es = (void *)&uc->uc_mcontext.gregs[X86_ES]; /* FIXME: where is this used? */
                 register uint32_t *di = (void *)&uc->uc_mcontext.gregs[X86_EDI];
-                if ((ret = xboxkrnl_write(REG32(di), a, sz))) {
+                bp                    = (void **)&uc->uc_mcontext.gregs[X86_EAX];
+                if ((ret = xboxkrnl_write(REG32(di), bp, sz))) {
                     if (fl->df) *di -= sz;
                     else        *di += sz;
                     *ip += 1;                                       //   opcode: 0xab
@@ -192,21 +193,22 @@ x86_iterate(ucontext_t *uc, int si_code) {
 // cmp     [esi+2100h], edi // 39 BE 00 21 00 00
             if (REG08(*ip) == 0x39) {                               // cmp
                 if (REG08(*ip + 1) == 0xbe) {                       // cmp     [esi+<1>], edi
-                    if (prefix) INT3;
                     REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_ESI]);
                     REG32(&i) += REGS32(*ip + 2);                   //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0x39 0xbe <1:dword>
-                        *ip   += 4;                                 // <1> size: dword
-                        bp     = (void **)&uc->uc_mcontext.gregs[X86_EDI];
-                        fl->zf = (REG32(&v) == REG32(bp));
-                        PRINT(XEXEC_DBG_DMA,
-                            "cmp: "
-                            "([0x%.08x] (0x%.08x) == "
-                            "edi (0x%.08x)) = %u",
-                            i, REG32(&v),                           // [esi+<1>]
-                            REG32(bp),                              // edi
-                            fl->zf);                                // zero flag
+                        *ip += 2;                                   //   opcode: 0x39 0xbe <1:dword>
+                        *ip += 4;                                   // <1> size: dword
+                        bp   = (void **)&uc->uc_mcontext.gregs[X86_EDI];
+                        if (prefix) fl->zf = (REG16(&v) == REG16(bp));
+                        else        fl->zf = (REG32(&v) == REG32(bp));
+                        if (prefix) PRINTF(
+                            XEXEC_DBG_DMA,
+                            "cmp: ([0x%.08x] (0x%.04hx) == di (0x%.04hx)) = %u",
+                            i, REG16(&v), REG16(bp), fl->zf);
+                        else PRINTF(
+                            XEXEC_DBG_DMA,
+                            "cmp: ([0x%.08x] (0x%.08x) == edi (0x%.08x)) = %u",
+                            i, REG32(&v), REG32(bp), fl->zf);
                     }
                     break;
                 }
@@ -231,20 +233,21 @@ x86_iterate(ucontext_t *uc, int si_code) {
                     break;
                 }
                 if (REG08(*ip + 1) == 0xbe) {                       // cmp     [esi+<1>], <2>
-                    if (prefix) INT3;
                     REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_ESI]);
                     REG32(&i) += REGS32(*ip + 2);                   //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0x83 0xbe <1:dword> <2:byte>
-                        *ip   += 4;                                 // <1> size: dword
-                        fl->zf = (REG32(&v) == REG08(*ip));
-                        PRINT(XEXEC_DBG_DMA,
-                            "cmp: "
-                            "([0x%.08x] (0x%.08x) == "
-                            "0x%.02hhx) = %u",
-                            i, REG32(&v),                           // [esi+<1>]
-                            REG08(*ip),                             // <2>
-                            fl->zf);                                // zero flag
+                        *ip += 2;                                   //   opcode: 0x83 0xbe <1:dword> <2:byte>
+                        *ip += 4;                                   // <1> size: dword
+                        if (prefix) fl->zf = (REG16(&v) == REG08(*ip));
+                        else        fl->zf = (REG32(&v) == REG08(*ip));
+                        if (prefix) PRINTF(
+                            XEXEC_DBG_DMA,
+                            "cmp: ([0x%.08x] (0x%.04hx) == 0x%.02hhx) = %u",
+                            i, REG16(&v), REG08(*ip), fl->zf);
+                        else PRINTF(
+                            XEXEC_DBG_DMA,
+                            "cmp: ([0x%.08x] (0x%.08x) == 0x%.02hhx) = %u",
+                            i, REG32(&v), REG08(*ip), fl->zf);
                         *ip += 1;                                   // <2>: value, <2> size: byte
                     }
                     break;
@@ -252,64 +255,67 @@ x86_iterate(ucontext_t *uc, int si_code) {
             }
 // cmp     eax, [ecx] // 3B 01
             if (REG08(*ip) == 0x3b) {                               // cmp
+#if 1 //TODO refactor: these 2 are identical, apart from offset
                 if (REG08(*ip + 1) == 0x01) {                       // cmp     eax, [ecx]
-                    if (prefix) INT3;
                     REG32(&i) = REG32(&uc->uc_mcontext.gregs[X86_ECX]);
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0x3b 0x01
-                        bp     = (void **)&uc->uc_mcontext.gregs[X86_EAX];
-                        fl->zf = (REG32(bp) == REG32(&v));
-                        PRINT(XEXEC_DBG_DMA,
-                            "cmp: "
-                            "(eax (0x%.08x) == "
-                            "[0x%.08x] (0x%.08x)) = %u",
-                            REG32(bp),                              // eax
-                            i, REG32(&v),                           // [ecx]
-                            fl->zf);                                // zero flag
+                        *ip += 2;                                   //   opcode: 0x3b 0x01
+                        bp   = (void **)&uc->uc_mcontext.gregs[X86_EAX];
+                        if (prefix) fl->zf = (REG16(bp) == REG16(&v));
+                        else        fl->zf = (REG32(bp) == REG32(&v));
+                        if (prefix) PRINTF(
+                            XEXEC_DBG_DMA,
+                            "cmp: (ax (0x%.04hx) == [0x%.08x] (0x%.04hx)) = %u",
+                            REG16(bp), i, REG16(&v), fl->zf);
+                        else PRINTF(
+                            XEXEC_DBG_DMA,
+                            "cmp: (eax (0x%.08x) == [0x%.08x] (0x%.08x)) = %u",
+                            REG32(bp), i, REG32(&v), fl->zf);
                     }
                     break;
                 }
 // cmp     eax, [ecx+400908h] // 3B 81 08 09 40 00
                 if (REG08(*ip + 1) == 0x81) {                       // cmp     eax, [ecx+<1>]
-                    if (prefix) INT3;
                     REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_ECX]);
                     REG32(&i) += REGS32(*ip + 2);                   //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0x3b 0x81 <1:dword>
-                        *ip   += 4;                                 // <1> size: dword
-                        bp     = (void **)&uc->uc_mcontext.gregs[X86_EAX];
-                        fl->zf = (REG32(bp) == REG32(&v));
-                        PRINT(
+                        *ip += 2;                                   //   opcode: 0x3b 0x81 <1:dword>
+                        *ip += 4;                                   // <1> size: dword
+                        bp   = (void **)&uc->uc_mcontext.gregs[X86_EAX];
+                        if (prefix) fl->zf = (REG16(bp) == REG16(&v));
+                        else        fl->zf = (REG32(bp) == REG32(&v));
+                        if (prefix) PRINTF(
                             XEXEC_DBG_DMA,
-                            "cmp: "
-                            "(eax (0x%.08x) == "
-                            "[0x%.08x] (0x%.08x)) = %u",
-                            REG32(bp),                              // eax
-                            i, REG32(&v),                           // [ecx+<1>]
-                            fl->zf);                                // zero flag
+                            "cmp: (ax (0x%.04hx) == [0x%.08x] (0x%.04hx)) = %u",
+                            REG16(bp), i, REG16(&v), fl->zf);
+                        else PRINTF(
+                            XEXEC_DBG_DMA,
+                            "cmp: (eax (0x%.08x) == [0x%.08x] (0x%.08x)) = %u",
+                            REG32(bp), i, REG32(&v), fl->zf);
                     }
                     break;
                 }
+#endif
 // cmp     eax, [esi+edi*4+400980h] // 3B 84 BE 80 09 40 00
                 if (REG08(*ip + 1) == 0x84) {
                     if (REG08(*ip + 2) == 0xbe) {                   // cmp     eax, [esi+edi*4+<1>]
-                        if (prefix) INT3;
                         REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_ESI]);
                         REG32(&i) += REGS32(&uc->uc_mcontext.gregs[X86_EDI]) * 4;
                         REG32(&i) += REGS32(*ip + 3);               //      <1>: offset
                         if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                            *ip   += 3;                             //   opcode: 0x3b 0x84 0xbe <1:dword>
-                            *ip   += 4;                             // <1> size: dword
-                            bp     = (void **)&uc->uc_mcontext.gregs[X86_EAX];
-                            fl->zf = (REG32(bp) == REG32(&v));
-                            PRINT(
+                            *ip += 3;                               //   opcode: 0x3b 0x84 0xbe <1:dword>
+                            *ip += 4;                               // <1> size: dword
+                            bp   = (void **)&uc->uc_mcontext.gregs[X86_EAX];
+                            if (prefix) fl->zf = (REG16(bp) == REG16(&v));
+                            else        fl->zf = (REG32(bp) == REG32(&v));
+                            if (prefix) PRINTF(
                                 XEXEC_DBG_DMA,
-                                "cmp: "
-                                "(eax (0x%.08x) == "
-                                "[0x%.08x] (0x%.08x)) = %u",
-                                REG32(bp),                          // eax
-                                i, REG32(&v),                       // [esi+edi*4+<1>]
-                                fl->zf);                            // zero flag
+                                "cmp: (ax (0x%.04hx) == [0x%.08x] (0x%.04hx)) = %u",
+                                REG16(bp), i, REG16(&v), fl->zf);
+                            else PRINTF(
+                                XEXEC_DBG_DMA,
+                                "cmp: (eax (0x%.08x) == [0x%.08x] (0x%.08x)) = %u",
+                                REG32(bp), i, REG32(&v), fl->zf);
                         }
                         break;
                     }
@@ -318,42 +324,42 @@ x86_iterate(ucontext_t *uc, int si_code) {
 // test    dword ptr [eax+100410h], 10000h // F7 80 10 04 10 00 00 00 01 00
             if (REG08(*ip) == 0xf7) {                               // test
                 if (REG08(*ip + 1) == 0x80) {                       // test    [eax+<1>], <2>
-                    if (prefix) INT3;
                     REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_EAX]);
                     REG32(&i) += REGS32(*ip + 2);                   //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0xf7 0x80 <1:dword> <2:dword>
-                        *ip   += 4;                                 // <1> size: dword
-                        fl->zf = !(REG32(&v) & REG32(*ip));
-                        PRINT(
+                        *ip += 2;                                   //   opcode: 0xf7 0x80 <1:dword> <2:dword>
+                        *ip += 4;                                   // <1> size: dword
+                        if (prefix) fl->zf = !(REG16(&v) & REG16(*ip));
+                        else        fl->zf = !(REG32(&v) & REG32(*ip));
+                        if (prefix) PRINTF(
                             XEXEC_DBG_DMA,
-                            "test: "
-                            "!([0x%.08x] (0x%.08x) & "
-                            "0x%.08x) = %u",
-                            i, REG32(&v),                           // [eax+<1>]
-                            REG32(*ip),                             // <2>
-                            fl->zf);                                // zero flag
+                            "test: !([0x%.08x] (0x%.04hx) & 0x%.04hx) = %u",
+                            i, REG16(&v), REG16(*ip), fl->zf);
+                        else PRINTF(
+                            XEXEC_DBG_DMA,
+                            "test: !([0x%.08x] (0x%.08x) & 0x%.08x) = %u",
+                            i, REG32(&v), REG32(*ip), fl->zf);
                         *ip += 4;                                   // <2>: value, <2> size: dword
                     }
                     break;
                 }
 // test    dword ptr [esi+100h], 1000000h // F7 86 00 01 00 00 00 00 00 01
                 if (REG08(*ip + 1) == 0x86) {                       // test    [esi+<1>], <2>
-                    if (prefix) INT3;
                     REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_ESI]);
                     REG32(&i) += REGS32(*ip + 2);                   //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0xf7 0x86 <1:dword> <2:dword>
-                        *ip   += 4;                                 // <1> size: dword
-                        fl->zf = !(REG32(&v) & REG32(*ip));
-                        PRINT(
+                        *ip += 2;                                   //   opcode: 0xf7 0x86 <1:dword> <2:dword>
+                        *ip += 4;                                   // <1> size: dword
+                        if (prefix) fl->zf = !(REG16(&v) & REG16(*ip));
+                        else        fl->zf = !(REG32(&v) & REG32(*ip));
+                        if (prefix) PRINTF(
                             XEXEC_DBG_DMA,
-                            "test: "
-                            "!([0x%.08x] (0x%.08x) & "
-                            "0x%.08x) = %u",
-                            i, REG32(&v),                           // [esi+<1>]
-                            REG32(*ip),                             // <2>
-                            fl->zf);                                // zero flag
+                            "test: !([0x%.08x] (0x%.04hx) & 0x%.04hx) = %u",
+                            i, REG16(&v), REG16(*ip), fl->zf);
+                        else PRINTF(
+                            XEXEC_DBG_DMA,
+                            "test: !([0x%.08x] (0x%.08x) & 0x%.08x) = %u",
+                            i, REG32(&v), REG32(*ip), fl->zf);
                         *ip += 4;                                   // <2>: value, <2> size: dword
                     }
                     break;
@@ -366,17 +372,13 @@ x86_iterate(ucontext_t *uc, int si_code) {
                     REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_ESI]);
                     REG32(&i) += REGS32(*ip + 2);                   //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0xf6 0x86 <1:dword> <2:byte>
-                        *ip   += 4;                                 // <1> size: dword
-                        fl->zf = !(REG08(&v) & REG08(*ip));
-                        PRINT(
+                        *ip    += 2;                                //   opcode: 0xf6 0x86 <1:dword> <2:byte>
+                        *ip    += 4;                                // <1> size: dword
+                        fl->zf  = !(REG08(&v) & REG08(*ip));
+                        PRINTF(
                             XEXEC_DBG_DMA,
-                            "test: "
-                            "!([0x%.08x] (0x%.02hhx) & "
-                            "0x%.02hhx) = %u",
-                            i, REG08(&v),                           // [esi+<1>]
-                            REG08(*ip),                             // <2>
-                            fl->zf);                                // zero flag
+                            "test: !([0x%.08x] (0x%.02hhx) & 0x%.02hhx) = %u",
+                            i, REG08(&v), REG08(*ip), fl->zf);
                         *ip += 1;                                   // <2>: value, <2> size: byte
                     }
                     break;
@@ -385,16 +387,12 @@ x86_iterate(ucontext_t *uc, int si_code) {
                 if (REG08(*ip + 1) == 0x00) {                       // test    [eax], <1>
                     REG32(&i) = REG32(&uc->uc_mcontext.gregs[X86_EAX]);
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0xf6 0x00 <1:byte>
-                        fl->zf = !(REG08(&v) & REG08(*ip));
-                        PRINT(
+                        *ip    += 2;                                //   opcode: 0xf6 0x00 <1:byte>
+                        fl->zf  = !(REG08(&v) & REG08(*ip));
+                        PRINTF(
                             XEXEC_DBG_DMA,
-                            "test: "
-                            "!([0x%.08x] (0x%.02hhx) & "
-                            "0x%.02hhx) = %u",
-                            i, REG08(&v),                           // [eax]
-                            REG08(*ip),                             // <1>
-                            fl->zf);                                // zero flag
+                            "test: !([0x%.08x] (0x%.02hhx) & 0x%.02hhx) = %u",
+                            i, REG08(&v), REG08(*ip), fl->zf);
                         *ip += 1;                                   // <1>: value, <1> size: byte
                     }
                     break;
@@ -403,17 +401,13 @@ x86_iterate(ucontext_t *uc, int si_code) {
                 if (REG08(*ip + 1) == 0x05) {                       // test    ds:<1>, <2>
                     REG32(&i) = REG32(*ip + 2);                     //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0xf6 0x05 <1:dword> <2:byte>
-                        *ip   += 4;                                 // <1> size: dword
-                        fl->zf = !(REG08(&v) & REG08(*ip));
-                        PRINT(
+                        *ip    += 2;                                //   opcode: 0xf6 0x05 <1:dword> <2:byte>
+                        *ip    += 4;                                // <1> size: dword
+                        fl->zf  = !(REG08(&v) & REG08(*ip));
+                        PRINTF(
                             XEXEC_DBG_DMA,
-                            "test: "
-                            "!([0x%.08x] (0x%.02hhx) & "
-                            "0x%.02hhx) = %u",
-                            i, REG08(&v),                           // <1>
-                            REG08(*ip),                             // <2>
-                            fl->zf);                                // zero flag
+                            "test: !([0x%.08x] (0x%.02hhx) & 0x%.02hhx) = %u",
+                            i, REG08(&v), REG08(*ip), fl->zf);
                         *ip += 1;                                   // <2>: value, <2> size: byte
                     }
                     break;
@@ -423,17 +417,13 @@ x86_iterate(ucontext_t *uc, int si_code) {
                     REG32(&i)  = REG32(&uc->uc_mcontext.gregs[X86_EAX]);
                     REG32(&i) += REGS32(*ip + 2);                   //      <1>: offset
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0xf6 0x80 <1:dword> <2:byte>
-                        *ip   += 4;                                 // <1> size: dword
-                        fl->zf = !(REG08(&v) & REG08(*ip));
-                        PRINT(
+                        *ip    += 2;                                //   opcode: 0xf6 0x80 <1:dword> <2:byte>
+                        *ip    += 4;                                // <1> size: dword
+                        fl->zf  = !(REG08(&v) & REG08(*ip));
+                        PRINTF(
                             XEXEC_DBG_DMA,
-                            "test: "
-                            "!([0x%.08x] (0x%.02hhx) & "
-                            "0x%.02hhx) = %u",
-                            i, REG08(&v),                           // [eax+<1>]
-                            REG08(*ip),                             // <2>
-                            fl->zf);                                // zero flag
+                            "test: !([0x%.08x] (0x%.02hhx) & 0x%.02hhx) = %u",
+                            i, REG08(&v), REG08(*ip), fl->zf);
                         *ip += 1;                                   // <2>: value, <2> size: byte
                     }
                     break;
@@ -442,21 +432,21 @@ x86_iterate(ucontext_t *uc, int si_code) {
             if (REG08(*ip) == 0x85) {                               // test
 // test    ds:0FEC00130h, esi // 85 35 30 01 C0 FE
                 if (REG08(*ip + 1) == 0x35) {                       // test    ds:<1>, esi
-                    if (prefix) INT3;
                     REG32(&i) = REG32(*ip + 2);                     //      <1>: offset
                     bp        = (void **)&uc->uc_mcontext.gregs[X86_ESI];
                     if ((ret = xboxkrnl_read(REG32(&i), &v, sz))) {
-                        *ip   += 2;                                 //   opcode: 0x85 0x35 <1:dword>
-                        *ip   += 4;                                 // <1> size: dword
-                        fl->zf = !(REG32(&v) & REG32(bp));
-                        PRINT(
+                        *ip += 2;                                   //   opcode: 0x85 0x35 <1:dword>
+                        *ip += 4;                                   // <1> size: dword
+                        if (prefix) fl->zf = !(REG16(&v) & REG16(bp));
+                        else        fl->zf = !(REG32(&v) & REG32(bp));
+                        if (prefix) PRINTF(
                             XEXEC_DBG_DMA,
-                            "test: "
-                            "!([0x%.08x] (0x%.08x) & "
-                            "0x%.08x) = %u",
-                            i, REG32(&v),                           // <1>
-                            REG32(bp),                              // esi
-                            fl->zf);                                // zero flag
+                            "test: !([0x%.08x] (0x%.04hx) & 0x%.04hx) = %u",
+                            i, REG16(&v), REG16(bp), fl->zf);
+                        else PRINTF(
+                            XEXEC_DBG_DMA,
+                            "test: !([0x%.08x] (0x%.08x) & 0x%.08x) = %u",
+                            i, REG32(&v), REG32(bp), fl->zf);
                     }
                     break;
                 }
