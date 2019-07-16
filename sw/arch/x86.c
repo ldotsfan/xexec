@@ -90,7 +90,7 @@ typedef struct {
     uint32_t r5   : 10; /* 22 - reserved */
 } x86_flags;
 
-static const char *const x86_eflags_name[] = {
+static const char *const x86_flags_name[] = {
     NAMEB(0,  carry),
     NAMEB(2,  parity),
     NAMEB(4,  adjust),
@@ -138,7 +138,8 @@ x86_iterate(ucontext_t *uc, int si_code) {
             *ip += 1;
         }
         if (REG08(*ip) == 0x67) {                                   /* address-size override prefix */
-            INT3; /* 16-bit addressing not implemented */
+            /* 16-bit addressing not implemented */
+            INT3;
         }
         do {
             if (REG08(*ip) == 0xf3) {                               // rep
@@ -180,7 +181,7 @@ x86_iterate(ucontext_t *uc, int si_code) {
                 }
             }
 // stos   %ax,%es:(%edi) // 66 ab
-            if (REG08(*ip) == 0xab) {                               // stos   %ax,%es:(%edi)
+            if (REG08(*ip) == 0xab) {                               // stos   %eax,%es:(%edi)
                 register uint32_t *di = (void *)&uc->uc_mcontext.gregs[X86_EDI];
                 bp                    = (void **)&uc->uc_mcontext.gregs[X86_EAX];
                 if ((ret = xboxkrnl_write(REG32(di), bp, sz))) {
@@ -2261,7 +2262,7 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
     PRINT(XEXEC_DBG_ALL, "/* x86 register dump */", 0);
 
     for (i = 0; i < ARRAY_SIZE(x86_greg_name); ++i) {
-        if (i == X86_EFL) VARDUMPN3(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i], x86_eflags_name);
+        if (i == X86_EFL) VARDUMPN3(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i], x86_flags_name);
         else VARDUMPN(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i]);
     }
 

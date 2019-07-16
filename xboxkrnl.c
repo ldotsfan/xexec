@@ -474,11 +474,11 @@ xboxkrnl_tsc(uint32_t *lo, uint32_t *hi, uint64_t *v, int xbox) {
 }
 
 void
-xboxkrnl_clock_local(struct timeval *tv) {
+xboxkrnl_clock(struct timespec *tp) {
     TSC_LOCK;
 
     if (xboxkrnl_entry) xboxkrnl_tsc_on();
-    gettimeofday(tv, NULL);
+    clock_gettime(CLOCK_MONOTONIC_RAW, tp);
     if (xboxkrnl_entry) xboxkrnl_tsc_off();
 
     TSC_UNLOCK;
@@ -489,7 +489,7 @@ xboxkrnl_clock_wall(struct timespec *tp) {
     TSC_LOCK;
 
     if (xboxkrnl_entry) xboxkrnl_tsc_on();
-    clock_gettime(CLOCK_MONOTONIC, tp);
+    clock_gettime(CLOCK_REALTIME, tp);
     if (xboxkrnl_entry) xboxkrnl_tsc_off();
 
     TSC_UNLOCK;

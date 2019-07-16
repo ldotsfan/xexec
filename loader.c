@@ -68,7 +68,7 @@ static xexec_dbg_t xexec_debug = XEXEC_DBG_ERROR;
 
 int xboxkrnl_tsc_on(void);
 int xboxkrnl_tsc_off(void);
-void xboxkrnl_clock_local(struct timeval *tv);
+void xboxkrnl_clock(struct timespec *tp);
 void xboxkrnl_clock_wall(struct timespec *tp);
 
 void
@@ -79,8 +79,8 @@ debug(xexec_dbg_t level, int8_t stack, const char *format, ...) {
     char buf[4096];
     char spc[0x3f * 4 + 1];
     char time[32];
-    struct timeval tv;
-    register struct tm *tm;
+    struct timespec tp;
+    struct tm tm;
     register ssize_t n = 0;
 
     if (!(*(debug = &xexec_debug) & level) && level != XEXEC_DBG_ALL) return;
@@ -102,18 +102,18 @@ debug(xexec_dbg_t level, int8_t stack, const char *format, ...) {
 
     pthread_mutex_lock(&mutex);
 
-    xboxkrnl_clock_local(&tv);
-    if ((tm = localtime(&tv.tv_sec)) && strftime(time, sizeof(time), "%T", tm) > 0) {
-#ifndef ANDROID
-        fprintf(stderr, "%s.%06lu: %s%s\n", time, tv.tv_usec, spc, buf);
+    xboxkrnl_clock_wall(&tp);
+    if (localtime_r(&tp.tv_sec, &tm) && strftime(time, sizeof(time), "%T", &tm) > 0) {
+#ifdef ANDROID
+        __android_log_print(ANDROID_LOG_VERBOSE, XEXEC_LIBNAME, "%s.%06lu: %s%s", time, tp.tv_nsec / 1000, spc, buf);
 #else
-        __android_log_print(ANDROID_LOG_VERBOSE, XEXEC_LIBNAME, "%s.%06lu: %s%s", time, tv.tv_usec, spc, buf);
+        fprintf(stderr, "%s.%06lu: %s%s\n", time, tp.tv_nsec / 1000, spc, buf);
 #endif
     } else {
-#ifndef ANDROID
-        fprintf(stderr, "%lu.%06lu: %s%s\n", tv.tv_sec, tv.tv_usec, spc, buf);
+#ifdef ANDROID
+        __android_log_print(ANDROID_LOG_VERBOSE, XEXEC_LIBNAME, "%lu.%06lu: %s%s", tp.tv_sec, tp.tv_nsec / 1000, spc, buf);
 #else
-        __android_log_print(ANDROID_LOG_VERBOSE, XEXEC_LIBNAME, "%lu.%06lu: %s%s", tv.tv_sec, tv.tv_usec, spc, buf);
+        fprintf(stderr, "%lu.%06lu: %s%s\n", tp.tv_sec, tp.tv_nsec / 1000, spc, buf);
 #endif
     }
 
