@@ -87,9 +87,10 @@
 #define VARDUMP5(x,y,z,l,f,r) xboxkrnl_vardump(xboxkrnl_stack,x,(uint64_t)y,#y,z,l,f,r)
 
 /* mmx/sse extensionless routines for x86 emulation */
-void *                      xboxkrnl_memcpy(void *dest, const void *src, size_t n);
-void                        xboxkrnl_memset(void *s, int c, size_t n);
-char *                      xboxkrnl_strncpy(char *dest, const char *src, size_t n);
+void *                      xboxkrnl_memcpy(void *dest, const void *src, int32_t n);
+#define                     xboxkrnl_memmove xboxkrnl_memcpy
+void                        xboxkrnl_memset(void *s, int32_t c, int32_t n);
+char *                      xboxkrnl_strncpy(char *dest, const char *src, int32_t n);
 
 enum XBOXKRNL_VARDUMP_TYPE {
     VAR_IN,
@@ -762,22 +763,44 @@ static void *               xboxkrnl_gpuinstmem = NULL;//TODO find use case
 static size_t               xboxkrnl_gpuinstsz = 0;
 
 void *
-xboxkrnl_memcpy(void *dest, const void *src, size_t n) {
-    register size_t i;
+xboxkrnl_memcpy(void *dest, const void *src, int32_t n) {
+    register typeof(n) i;
 
-    for (i = 0; i < n;) {
-        if (i + 8 <= n) {
-            REG64(dest + i) = REG64(src + i);
-            i += 8;
-        } else if (i + 4 <= n) {
-            REG32(dest + i) = REG32(src + i);
-            i += 4;
-        } else if (i + 2 <= n) {
-            REG16(dest + i) = REG16(src + i);
-            i += 2;
-        } else {
-            REG08(dest + i) = REG08(src + i);
-            i += 1;
+    if (dest == src) n = 0;
+
+    if (dest <= src) {
+        /* copy forwards from the beginning */
+        for (i = 0; i < n;) {
+            if (i + 8 <= n) {
+                REG64(dest + i) = REG64(src + i);
+                i += 8;
+            } else if (i + 4 <= n) {
+                REG32(dest + i) = REG32(src + i);
+                i += 4;
+            } else if (i + 2 <= n) {
+                REG16(dest + i) = REG16(src + i);
+                i += 2;
+            } else {
+                REG08(dest + i) = REG08(src + i);
+                i += 1;
+            }
+        }
+    } else {
+        /* copy backwards from the end */
+        for (i = n; i > 0;) {
+            if (i - 8 >= 0) {
+                i -= 8;
+                REG64(dest + i) = REG64(src + i);
+            } else if (i - 4 >= 0) {
+                i -= 4;
+                REG32(dest + i) = REG32(src + i);
+            } else if (i - 2 >= 0) {
+                i -= 2;
+                REG16(dest + i) = REG16(src + i);
+            } else {
+                i -= 1;
+                REG08(dest + i) = REG08(src + i);
+            }
         }
     }
 
@@ -785,11 +808,11 @@ xboxkrnl_memcpy(void *dest, const void *src, size_t n) {
 }
 
 void
-xboxkrnl_memset(void *s, int c, size_t n) {
-    char buf[8];
-    register size_t i;
+xboxkrnl_memset(void *s, int32_t c, int32_t n) {
+    uint8_t buf[8];
+    register typeof(n) i;
 
-    for (i = 0; i < sizeof(buf); buf[i] = c, ++i);
+    if (n > 0) for (i = 0; i < 8; buf[i] = c, ++i);
     for (i = 0; i < n;) {
         if (i + 8 <= n) {
             REG64(s + i) = REG64(buf);
@@ -808,9 +831,9 @@ xboxkrnl_memset(void *s, int c, size_t n) {
 }
 
 char *
-xboxkrnl_strncpy(char *dest, const char *src, size_t n) {
-    register size_t i;
-    register size_t j;
+xboxkrnl_strncpy(char *dest, const char *src, int32_t n) {
+    register typeof(n) i;
+    register typeof(n) j;
 
     for (i = 0; i < n;) {
         for (j = 0; j < 8 && src[j]; ++j);
@@ -1155,7 +1178,7 @@ xboxkrnl_mem_push(int index, const xboxkrnl_mem *in, int locked) {
             if (m->BaseAddress == in->BaseAddress) INT3;
             if (m->BaseAddress > in->BaseAddress) {
                 ++i;
-                if (i < t->sz) memmove(m + 1, m, sizeof(*m) * (t->sz - i));
+                if (i < t->sz) xboxkrnl_memmove(m + 1, m, sizeof(*m) * (t->sz - i));
                 ret = m;
                 break;
             }
@@ -1191,7 +1214,7 @@ xboxkrnl_mem_pop(int index, void *addr, int locked) {
         if ((m = &t->mem[i])->BaseAddress == addr) {
             mem = *m;
             ++i;
-            if (i < t->sz) memmove(m, m + 1, sizeof(*m) * (t->sz - i));
+            if (i < t->sz) xboxkrnl_memmove(m, m + 1, sizeof(*m) * (t->sz - i));
             if (!--t->sz) {
                 free(t->mem);
                 t->mem = NULL;
@@ -2953,7 +2976,7 @@ xboxkrnl_path_winnt_to_unix(const char *path) {
 #define TRIM(x) \
     while ((ret = strstr(tmp, (x)))) { \
         i = (typeof(i))(ret - tmp); \
-        memmove(&tmp[i], &tmp[i + (sizeof((x)) - 1)], len - (sizeof((x)) - 1)); \
+        xboxkrnl_memmove(&tmp[i], &tmp[i + (sizeof((x)) - 1)], len - (sizeof((x)) - 1)); \
         len -= sizeof((x)) - 1; \
         tmp[len] = 0; \
     }
@@ -2979,7 +3002,7 @@ xboxkrnl_path_winnt_to_unix(const char *path) {
 
     if (prefix) {
         len -= i;
-        memmove(tmp, &tmp[i], len);
+        xboxkrnl_memmove(tmp, &tmp[i], len);
         tmp[len] = 0;
         i = strlen(prefix);
         ret = malloc(i + len + 1);
