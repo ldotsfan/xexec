@@ -2975,9 +2975,9 @@ xboxkrnl_path_winnt_to_unix(const char *path) {
 
 #define TRIM(x) \
     while ((ret = strstr(tmp, (x)))) { \
-        i = (typeof(i))(ret - tmp); \
-        xboxkrnl_memmove(&tmp[i], &tmp[i + (sizeof((x)) - 1)], len - (sizeof((x)) - 1)); \
+        i    = (typeof(i))(ret - tmp); \
         len -= sizeof((x)) - 1; \
+        xboxkrnl_memmove(&tmp[i], &tmp[i + (sizeof((x)) - 1)], len); \
         tmp[len] = 0; \
     }
     TRIM("/..");
@@ -3013,6 +3013,7 @@ xboxkrnl_path_winnt_to_unix(const char *path) {
     } else {
         ret = tmp;
     }
+
     xboxkrnl_path_resolve_insensitive(ret);
 
     return ret;
