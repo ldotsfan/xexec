@@ -108,16 +108,121 @@ static const char *const x86_flags_name[] = {
     NAMEB(20, virq_pending),
     NAMEB(21, cpuid),
 };
-#if 0
+
 typedef struct {
     //TODO
 } x86_context;
 
 void
-x86_push_callback(ucontext_t *uc) {
+x86_push(ucontext_t *uc, uint32_t sz, void *val) {
+    register void **sp  = (void **)&uc->uc_mcontext.gregs[X86_ESP];
+    register void **usp = (void **)&uc->uc_mcontext.gregs[X86_UESP];
 
+    REG32(sp)  -= sz;
+    REG32(usp) -= sz;
+    switch (sz) {
+    case 1:
+        REG08(*sp) = REG08(val);
+        break;
+    case 2:
+        REG16(*sp) = REG16(val);
+        break;
+    case 4:
+        REG32(*sp) = REG32(val);
+        break;
+    default:
+        INT3;
+        break;
+    }
 }
-#endif
+
+void
+x86_pop(ucontext_t *uc, uint32_t sz, void *val) {
+    register void **sp  = (void **)&uc->uc_mcontext.gregs[X86_ESP];
+    register void **usp = (void **)&uc->uc_mcontext.gregs[X86_UESP];
+
+    switch (sz) {
+    case 1:
+        REG08(val) = REG08(*sp);
+        break;
+    case 2:
+        REG16(val) = REG16(*sp);
+        break;
+    case 4:
+        REG32(val) = REG32(*sp);
+        break;
+    default:
+        INT3;
+        break;
+    }
+    REG32(sp)  += sz;
+    REG32(usp) += sz;
+}
+
+void
+x86_pusha(ucontext_t *uc, uint32_t sz) {
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EAX]);
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_ECX]);
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EDX]);
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EBX]);
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_ESP]);
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EBP]);
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_ESI]);
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EDI]);
+}
+
+void
+x86_popa(ucontext_t *uc, uint32_t sz) {
+    register void **sp  = (void **)&uc->uc_mcontext.gregs[X86_ESP];
+    register void **usp = (void **)&uc->uc_mcontext.gregs[X86_UESP];
+
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EDI]);
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_ESI]);
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EBP]);
+    REG32(sp)  += sz;
+    REG32(usp) += sz;
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EBX]);
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EDX]);
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_ECX]);
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EAX]);
+}
+
+void
+x86_pushf(ucontext_t *uc, uint32_t sz) {
+    x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EFL]);
+}
+
+void
+x86_popf(ucontext_t *uc, uint32_t sz) {
+    x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EFL]);
+}
+
+void
+x86_call_near(ucontext_t *uc, int prefix, void *offset) {
+    register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
+
+    x86_push(uc, (prefix) ? 2 : 4, ip);
+    REG32(ip) += (prefix) ? REGS16(offset) : REGS32(offset);
+}
+
+void
+x86_trampoline_prologue(ucontext_t *uc, void (STDCALL *func)(void *arg), void *arg) {
+    register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
+
+    x86_pusha(uc, 4);
+    x86_pushf(uc, 4);
+    x86_push(uc, 4, &arg);
+    x86_push(uc, 4, ip);
+    REG08(*ip) = 0xcc; /* TODO: x86_trampoline_epilogue() callback */
+    REG32(ip)  = REG32(&func);
+}
+
+void
+x86_trampoline_epilogue(ucontext_t *uc) {
+    x86_popf(uc, 4);
+    x86_popa(uc, 4);
+}
+
 int
 x86_iterate(ucontext_t *uc, int si_code) {
     register void **bp;
@@ -2115,6 +2220,7 @@ _exit(0);//XXX
             }
 
             /* patches sorted by length in descending order */
+            /* TODO: keep track of patching */
 
             EIP_PATCH(*ip,                              // SetLastError() / GetLastError()
                 "\x64\x0f\xb6\x05\x24\x00\x00\x00",     // 1: movzx   eax, large byte ptr fs:24h
@@ -2227,8 +2333,9 @@ static const char *const siginfo_si_code_name[] = {
 static void
 x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
     register ucontext_t *uc = ptr;
-    register void **bp;
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
+    register void **bp;
+    register void **sp;
     register uint32_t i = (typeof(i))info->si_addr;
 
     xboxkrnl_interrupted = 1;
@@ -2251,6 +2358,10 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
     xexec_debug = XEXEC_DBG_ALL;
 
     ENTER;
+//x86_pusha(uc, 4);//XXX testing
+//x86_popa(uc, 4);//XXX testing
+//PRINT(XEXEC_DBG_ALL,"0x%.08x 0x%.08x %zu 0x%.08x",(uint32_t)x86_signal_segv,*(uint32_t *)x86_signal_segv,sizeof(x86_signal_segv),*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing
+//x86_trampoline_prologue(uc, (void *)&x86_signal_segv, (void *)0xdeadbeef);//XXX testing
     PRINT(XEXEC_DBG_ALL, "/* Segmentation Fault! */", 0);
 
     VARDUMPN(DUMP,  "si_signo", signum);
@@ -2266,9 +2377,11 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
         else VARDUMPN(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i]);
     }
 
+    PRINT(XEXEC_DBG_ALL, "/* x86 instruction pointer dump */", 0);
+
     HEXDUMPN(*ip, 15); /* x86/x86-64 maximum instruction length */
 
-    PRINT(XEXEC_DBG_ALL, "/* stack trace */", 0);
+    PRINT(XEXEC_DBG_ALL, "/* x86 stack trace */", 0);
 
     for (ip = (void **)&uc->uc_mcontext.gregs[X86_EIP],
         bp = (void **)uc->uc_mcontext.gregs[X86_EBP],
@@ -2280,6 +2393,12 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
         PRINT(XEXEC_DBG_ALL, "%.02i: bp = 0x%.08x, ip = 0x%.08x%s", i, bp, *ip, (i == 1) ? " <- SEGV" : "");
         if (!bp) break;
     }
+
+    PRINT(XEXEC_DBG_ALL, "/* x86 stack dump */", 0);
+
+    sp = (void **)&uc->uc_mcontext.gregs[X86_ESP];
+    bp = (void **)&uc->uc_mcontext.gregs[X86_EBP];
+    if (*bp > *sp) HEXDUMPN(*sp, *bp - *sp);
 
     LEAVE;
     INT3;
