@@ -68,29 +68,32 @@ static const char *const x86_greg_name[] = {
 typedef int32_t     x86_greg_t;
 typedef x86_greg_t  x86_gregset_t[X86_MAX];
 
-typedef struct {
-    x86_greg_t cf   : 1;  /*  0 - carry flag */
-    x86_greg_t r1   : 1;  /*  1 - reserved */
-    x86_greg_t pf   : 1;  /*  2 - parity flag */
-    x86_greg_t r2   : 1;  /*  3 - reserved */
-    x86_greg_t af   : 1;  /*  4 - adjust flag */
-    x86_greg_t r3   : 1;  /*  5 - reserved */
-    x86_greg_t zf   : 1;  /*  6 - zero flag */
-    x86_greg_t sf   : 1;  /*  7 - sign flag */
-    x86_greg_t tf   : 1;  /*  8 - trap flag */
-    x86_greg_t ief  : 1;  /*  9 - interrupt enable flag */
-    x86_greg_t df   : 1;  /* 10 - direction flag */
-    x86_greg_t of   : 1;  /* 11 - overflow flag */
-    x86_greg_t iopl : 2;  /* 12 - i/o privilege level */
-    x86_greg_t nt   : 1;  /* 14 - nested task flag */
-    x86_greg_t r4   : 1;  /* 15 - reserved */
-    x86_greg_t rf   : 1;  /* 16 - resume flag */
-    x86_greg_t vm   : 1;  /* 17 - virtual 8086 mode flag */
-    x86_greg_t ac   : 1;  /* 18 - alignment check flag */
-    x86_greg_t vif  : 1;  /* 19 - virtual interrupt flag */
-    x86_greg_t vip  : 1;  /* 20 - virtual interrupt pending flag */
-    x86_greg_t id   : 1;  /* 21 - cpuid instruction permission flag */
-    x86_greg_t r5   : 10; /* 22 - reserved */
+typedef union {
+    x86_greg_t     field;
+    struct {
+        x86_greg_t cf   : 1;  /*  0 - carry flag */
+        x86_greg_t r1   : 1;  /*  1 - reserved */
+        x86_greg_t pf   : 1;  /*  2 - parity flag */
+        x86_greg_t r2   : 1;  /*  3 - reserved */
+        x86_greg_t af   : 1;  /*  4 - adjust flag */
+        x86_greg_t r3   : 1;  /*  5 - reserved */
+        x86_greg_t zf   : 1;  /*  6 - zero flag */
+        x86_greg_t sf   : 1;  /*  7 - sign flag */
+        x86_greg_t tf   : 1;  /*  8 - trap flag */
+        x86_greg_t ief  : 1;  /*  9 - interrupt enable flag */
+        x86_greg_t df   : 1;  /* 10 - direction flag */
+        x86_greg_t of   : 1;  /* 11 - overflow flag */
+        x86_greg_t iopl : 2;  /* 12 - i/o privilege level */
+        x86_greg_t nt   : 1;  /* 14 - nested task flag */
+        x86_greg_t r4   : 1;  /* 15 - reserved */
+        x86_greg_t rf   : 1;  /* 16 - resume flag */
+        x86_greg_t vm   : 1;  /* 17 - virtual 8086 mode flag */
+        x86_greg_t ac   : 1;  /* 18 - alignment check flag */
+        x86_greg_t vif  : 1;  /* 19 - virtual interrupt flag */
+        x86_greg_t vip  : 1;  /* 20 - virtual interrupt pending flag */
+        x86_greg_t id   : 1;  /* 21 - cpuid instruction permission flag */
+        x86_greg_t r5   : 10; /* 22 - reserved */
+    };
 } x86_greg_flags_t;
 
 static const char *const x86_greg_flags_name[] = {
@@ -215,6 +218,42 @@ x86_popa(x86_ucontext_t *uc, uint32_t sz) {
     x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EDI]);
     x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_ESI]);
     x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EBP]);
+    /* detect stack corruption */
+    switch (sz) {
+    case 1:
+        if (REG08(sp) != REG08(*sp)) {
+            PRINTF(
+                XEXEC_DBG_ALL,
+                "FATAL: stack pointer is not the expected value; corrupted stack? (sp=0x%.02hhx != *sp=0x%.02hhx)",
+                REG08(sp),
+                REG08(*sp));
+            INT3;
+        }
+        break;
+    case 2:
+        if (REG16(sp) != REG16(*sp)) {
+            PRINTF(
+                XEXEC_DBG_ALL,
+                "FATAL: stack pointer is not the expected value; corrupted stack? (sp=0x%.04hx != *sp=0x%.04hx)",
+                REG16(sp),
+                REG16(*sp));
+            INT3;
+        }
+        break;
+    case 4:
+        if (REG32(sp) != REG32(*sp)) {
+            PRINTF(
+                XEXEC_DBG_ALL,
+                "FATAL: stack pointer is not the expected value; corrupted stack? (sp=0x%.08x != *sp=0x%.08x)",
+                REG32(sp),
+                REG32(*sp));
+            INT3;
+        }
+        break;
+    default:
+        INT3;
+        break;
+    }
     REG32(sp)  += sz;
     REG32(usp) += sz;
     x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EBX]);
@@ -245,8 +284,8 @@ void
 x86_trampoline_prologue(x86_ucontext_t *uc, void (STDCALL *func)(void *arg), void *arg) {
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
-    x86_pusha(uc, 4);
     x86_pushf(uc, 4);
+    x86_pusha(uc, 4);
     x86_push(uc, 4, &arg);
     x86_push(uc, 4, ip);
     REG08(*ip) = 0xcc; /* TODO: x86_trampoline_epilogue() callback */
@@ -255,8 +294,42 @@ x86_trampoline_prologue(x86_ucontext_t *uc, void (STDCALL *func)(void *arg), voi
 
 void
 x86_trampoline_epilogue(x86_ucontext_t *uc) {
-    x86_popf(uc, 4);
     x86_popa(uc, 4);
+    x86_popf(uc, 4);
+}
+
+void STDCALL
+x86_trampoline_func(void *arg) {
+    register struct {
+        x86_greg_t       eip; /* esp +  0 */
+        void *           arg; /* esp +  4 */
+        x86_greg_t       edi; /* esp +  8 */
+        x86_greg_t       esi; /* esp + 12 */
+        x86_greg_t       ebp; /* esp + 16 */
+        x86_greg_t       esp; /* esp + 20 */
+        x86_greg_t       ebx; /* esp + 24 */
+        x86_greg_t       edx; /* esp + 28 */
+        x86_greg_t       ecx; /* esp + 32 */
+        x86_greg_t       eax; /* esp + 36 */
+        x86_greg_flags_t efl; /* esp + 40 */
+    } *greg = (void *)&arg - 4;
+    ENTER;
+    VARDUMP(VAR_IN, arg);
+    VARDUMP(DUMP,   greg->eip);
+    VARDUMP(DUMP,   greg->edi);
+    VARDUMP(DUMP,   greg->esi);
+    VARDUMP(DUMP,   greg->ebp);
+    VARDUMP(DUMP,   greg->esp);
+    VARDUMP(DUMP,   greg->ebx);
+    VARDUMP(DUMP,   greg->edx);
+    VARDUMP(DUMP,   greg->ecx);
+    VARDUMP(DUMP,   greg->eax);
+    VARDUMP3(DUMP,  greg->efl.field, x86_greg_flags_name);
+
+    /* do stuff */
+//    INT3;
+
+    LEAVE;
 }
 
 int
@@ -2390,14 +2463,13 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
         }
         break;
     }
-
+//PRINT(XEXEC_DBG_ALL,"0x%.08x 0x%.08x %zu 0x%.08x",(uint32_t)x86_trampoline_func,*(uint32_t *)x86_trampoline_func,sizeof(x86_trampoline_func),*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing trampoline
+//static int tmp = 0;//XXX working trampoline
+//if(!tmp){tmp=1,x86_trampoline_prologue(uc, (void *)&x86_trampoline_func, (void *)0xdeadbeef),xboxkrnl_interrupted = 0;return;}//XXX working trampoline
+//x86_trampoline_epilogue(uc);//TODO
     xexec_debug = XEXEC_DBG_ALL;
 
     ENTER;
-//x86_pusha(uc, 4);//XXX testing
-//x86_popa(uc, 4);//XXX testing
-//PRINT(XEXEC_DBG_ALL,"0x%.08x 0x%.08x %zu 0x%.08x",(uint32_t)x86_signal_segv,*(uint32_t *)x86_signal_segv,sizeof(x86_signal_segv),*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing
-//x86_trampoline_prologue(uc, (void *)&x86_signal_segv, (void *)0xdeadbeef);//XXX testing
     PRINT(XEXEC_DBG_ALL, "/* Segmentation Fault! */", 0);
 
     VARDUMPN(DUMP,  "si_signo", signum);
