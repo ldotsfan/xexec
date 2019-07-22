@@ -19,28 +19,28 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-/* same as in ucontext.h */
+/* same as in ucontext.h x86 ABI */
 enum {
-    X86_GS = 0,
-    X86_FS,
-    X86_ES,
-    X86_DS,
-    X86_EDI,
-    X86_ESI,
-    X86_EBP,
-    X86_ESP,
-    X86_EBX,
-    X86_EDX,
-    X86_ECX,
-    X86_EAX,
-    X86_TRAPNO,
-    X86_ERR,
-    X86_EIP,
-    X86_CS,
-    X86_EFL,
-    X86_UESP,
-    X86_SS,
-    X86_MAX
+    X86_GS       =  0,
+    X86_FS,     /*  1 */
+    X86_ES,     /*  2 */
+    X86_DS,     /*  3 */
+    X86_EDI,    /*  4 */
+    X86_ESI,    /*  5 */
+    X86_EBP,    /*  6 */
+    X86_ESP,    /*  7 */
+    X86_EBX,    /*  8 */
+    X86_EDX,    /*  9 */
+    X86_ECX,    /* 10 */
+    X86_EAX,    /* 11 */
+    X86_TRAPNO, /* 12 */
+    X86_ERR,    /* 13 */
+    X86_EIP,    /* 14 */
+    X86_CS,     /* 15 */
+    X86_EFL,    /* 16 */
+    X86_UESP,   /* 17 */
+    X86_SS,     /* 18 */
+    X86_MAX     /* 19 */
 };
 
 static const char *const x86_greg_name[] = {
@@ -65,32 +65,35 @@ static const char *const x86_greg_name[] = {
     [X86_SS]     = " ss",
 };
 
-typedef struct {
-    uint32_t cf   : 1;  /*  0 - carry flag */
-    uint32_t r1   : 1;  /*  1 - reserved */
-    uint32_t pf   : 1;  /*  2 - parity flag */
-    uint32_t r2   : 1;  /*  3 - reserved */
-    uint32_t af   : 1;  /*  4 - adjust flag */
-    uint32_t r3   : 1;  /*  5 - reserved */
-    uint32_t zf   : 1;  /*  6 - zero flag */
-    uint32_t sf   : 1;  /*  7 - sign flag */
-    uint32_t tf   : 1;  /*  8 - trap flag */
-    uint32_t ief  : 1;  /*  9 - interrupt enable flag */
-    uint32_t df   : 1;  /* 10 - direction flag */
-    uint32_t of   : 1;  /* 11 - overflow flag */
-    uint32_t iopl : 2;  /* 12 - i/o privilege level */
-    uint32_t nt   : 1;  /* 14 - nested task flag */
-    uint32_t r4   : 1;  /* 15 - reserved */
-    uint32_t rf   : 1;  /* 16 - resume flag */
-    uint32_t vm   : 1;  /* 17 - virtual 8086 mode flag */
-    uint32_t ac   : 1;  /* 18 - alignment check flag */
-    uint32_t vif  : 1;  /* 19 - virtual interrupt flag */
-    uint32_t vip  : 1;  /* 20 - virtual interrupt pending flag */
-    uint32_t id   : 1;  /* 21 - cpuid instruction permission flag */
-    uint32_t r5   : 10; /* 22 - reserved */
-} x86_flags;
+typedef int32_t     x86_greg_t;
+typedef x86_greg_t  x86_gregset_t[X86_MAX];
 
-static const char *const x86_flags_name[] = {
+typedef struct {
+    x86_greg_t cf   : 1;  /*  0 - carry flag */
+    x86_greg_t r1   : 1;  /*  1 - reserved */
+    x86_greg_t pf   : 1;  /*  2 - parity flag */
+    x86_greg_t r2   : 1;  /*  3 - reserved */
+    x86_greg_t af   : 1;  /*  4 - adjust flag */
+    x86_greg_t r3   : 1;  /*  5 - reserved */
+    x86_greg_t zf   : 1;  /*  6 - zero flag */
+    x86_greg_t sf   : 1;  /*  7 - sign flag */
+    x86_greg_t tf   : 1;  /*  8 - trap flag */
+    x86_greg_t ief  : 1;  /*  9 - interrupt enable flag */
+    x86_greg_t df   : 1;  /* 10 - direction flag */
+    x86_greg_t of   : 1;  /* 11 - overflow flag */
+    x86_greg_t iopl : 2;  /* 12 - i/o privilege level */
+    x86_greg_t nt   : 1;  /* 14 - nested task flag */
+    x86_greg_t r4   : 1;  /* 15 - reserved */
+    x86_greg_t rf   : 1;  /* 16 - resume flag */
+    x86_greg_t vm   : 1;  /* 17 - virtual 8086 mode flag */
+    x86_greg_t ac   : 1;  /* 18 - alignment check flag */
+    x86_greg_t vif  : 1;  /* 19 - virtual interrupt flag */
+    x86_greg_t vip  : 1;  /* 20 - virtual interrupt pending flag */
+    x86_greg_t id   : 1;  /* 21 - cpuid instruction permission flag */
+    x86_greg_t r5   : 10; /* 22 - reserved */
+} x86_greg_flags_t;
+
+static const char *const x86_greg_flags_name[] = {
     NAMEB(0,  carry),
     NAMEB(2,  parity),
     NAMEB(4,  adjust),
@@ -110,11 +113,44 @@ static const char *const x86_flags_name[] = {
 };
 
 typedef struct {
-    //TODO
-} x86_context;
+    uint16_t        significand[4];
+    uint16_t        exponent;
+} x86_fpreg_t;
+
+typedef struct {
+    uint32_t        cw;
+    uint32_t        sw;
+    uint32_t        tag;
+    uint32_t        ipoff;
+    uint32_t        cssel;
+    uint32_t        dataoff;
+    uint32_t        datasel;
+    x86_fpreg_t     st[8];
+    uint32_t        status;
+} x86_fpstate_t;
+
+typedef x86_fpstate_t *x86_fpregset_t;
+
+typedef struct {
+    x86_gregset_t   gregs;
+    x86_fpregset_t  fpregs;
+    uint32_t        oldmask;
+    uint32_t        cr2;
+} x86_mcontext_t;
+
+typedef struct x86_ucontext_t x86_ucontext_t;
+
+struct x86_ucontext_t {
+    uint32_t        uc_flags;
+    x86_ucontext_t *uc_link;
+    stack_t         uc_stack;
+    x86_mcontext_t  uc_mcontext;
+    sigset_t        uc_sigmask;
+    x86_fpstate_t   fpregs_mem;
+};
 
 void
-x86_push(ucontext_t *uc, uint32_t sz, void *val) {
+x86_push(x86_ucontext_t *uc, uint32_t sz, void *val) {
     register void **sp  = (void **)&uc->uc_mcontext.gregs[X86_ESP];
     register void **usp = (void **)&uc->uc_mcontext.gregs[X86_UESP];
 
@@ -137,7 +173,7 @@ x86_push(ucontext_t *uc, uint32_t sz, void *val) {
 }
 
 void
-x86_pop(ucontext_t *uc, uint32_t sz, void *val) {
+x86_pop(x86_ucontext_t *uc, uint32_t sz, void *val) {
     register void **sp  = (void **)&uc->uc_mcontext.gregs[X86_ESP];
     register void **usp = (void **)&uc->uc_mcontext.gregs[X86_UESP];
 
@@ -160,7 +196,7 @@ x86_pop(ucontext_t *uc, uint32_t sz, void *val) {
 }
 
 void
-x86_pusha(ucontext_t *uc, uint32_t sz) {
+x86_pusha(x86_ucontext_t *uc, uint32_t sz) {
     x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EAX]);
     x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_ECX]);
     x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EDX]);
@@ -172,7 +208,7 @@ x86_pusha(ucontext_t *uc, uint32_t sz) {
 }
 
 void
-x86_popa(ucontext_t *uc, uint32_t sz) {
+x86_popa(x86_ucontext_t *uc, uint32_t sz) {
     register void **sp  = (void **)&uc->uc_mcontext.gregs[X86_ESP];
     register void **usp = (void **)&uc->uc_mcontext.gregs[X86_UESP];
 
@@ -188,17 +224,17 @@ x86_popa(ucontext_t *uc, uint32_t sz) {
 }
 
 void
-x86_pushf(ucontext_t *uc, uint32_t sz) {
+x86_pushf(x86_ucontext_t *uc, uint32_t sz) {
     x86_push(uc, sz, &uc->uc_mcontext.gregs[X86_EFL]);
 }
 
 void
-x86_popf(ucontext_t *uc, uint32_t sz) {
+x86_popf(x86_ucontext_t *uc, uint32_t sz) {
     x86_pop(uc, sz, &uc->uc_mcontext.gregs[X86_EFL]);
 }
 
 void
-x86_call_near(ucontext_t *uc, int prefix, void *offset) {
+x86_call_near(x86_ucontext_t *uc, int prefix, void *offset) {
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
     x86_push(uc, (prefix) ? 2 : 4, ip);
@@ -206,7 +242,7 @@ x86_call_near(ucontext_t *uc, int prefix, void *offset) {
 }
 
 void
-x86_trampoline_prologue(ucontext_t *uc, void (STDCALL *func)(void *arg), void *arg) {
+x86_trampoline_prologue(x86_ucontext_t *uc, void (STDCALL *func)(void *arg), void *arg) {
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
     x86_pusha(uc, 4);
@@ -218,16 +254,16 @@ x86_trampoline_prologue(ucontext_t *uc, void (STDCALL *func)(void *arg), void *a
 }
 
 void
-x86_trampoline_epilogue(ucontext_t *uc) {
+x86_trampoline_epilogue(x86_ucontext_t *uc) {
     x86_popf(uc, 4);
     x86_popa(uc, 4);
 }
 
 int
-x86_iterate(ucontext_t *uc, int si_code) {
+x86_iterate(x86_ucontext_t *uc, int si_code) {
     register void **bp;
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
-    register x86_flags *fl = (void *)&uc->uc_mcontext.gregs[X86_EFL];
+    register x86_greg_flags_t *fl = (void *)&uc->uc_mcontext.gregs[X86_EFL];
     int prefix = 0;
     uint32_t sz = 4;
     uint32_t i;
@@ -2332,7 +2368,7 @@ static const char *const siginfo_si_code_name[] = {
 
 static void
 x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
-    register ucontext_t *uc = ptr;
+    register x86_ucontext_t *uc = ptr;
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
     register void **bp;
     register void **sp;
@@ -2373,7 +2409,7 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
     PRINT(XEXEC_DBG_ALL, "/* x86 register dump */", 0);
 
     for (i = 0; i < ARRAY_SIZE(x86_greg_name); ++i) {
-        if (i == X86_EFL) VARDUMPN3(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i], x86_flags_name);
+        if (i == X86_EFL) VARDUMPN3(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i], x86_greg_flags_name);
         else VARDUMPN(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i]);
     }
 
