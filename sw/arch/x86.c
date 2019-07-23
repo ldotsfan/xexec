@@ -182,13 +182,13 @@ x86_pop(x86_ucontext_t *uc, uint32_t sz, void *val) {
 
     switch (sz) {
     case 1:
-        REG08(val) = REG08(*sp);
+        if (val) REG08(val) = REG08(*sp);
         break;
     case 2:
-        REG16(val) = REG16(*sp);
+        if (val) REG16(val) = REG16(*sp);
         break;
     case 4:
-        REG32(val) = REG32(*sp);
+        if (val) REG32(val) = REG32(*sp);
         break;
     default:
         INT3;
@@ -280,16 +280,55 @@ x86_call_near(x86_ucontext_t *uc, int prefix, void *offset) {
     REG32(ip) += (prefix) ? REGS16(offset) : REGS32(offset);
 }
 
+typedef struct {
+    x86_greg_t       eip;  /* esp +  0 */
+    void *           func; /* esp +  4 */
+    void *           arg;  /* esp +  8 */
+    x86_greg_t       edi;  /* esp + 12 */
+    x86_greg_t       esi;  /* esp + 16 */
+    x86_greg_t       ebp;  /* esp + 20 */
+    x86_greg_t       esp;  /* esp + 24 */
+    x86_greg_t       ebx;  /* esp + 28 */
+    x86_greg_t       edx;  /* esp + 32 */
+    x86_greg_t       ecx;  /* esp + 36 */
+    x86_greg_t       eax;  /* esp + 40 */
+    x86_greg_flags_t efl;  /* esp + 44 */
+} x86_trampoline_gregset_t;
+
+static STDCALL void
+x86_trampoline(void (*func)(x86_trampoline_gregset_t *, void *), void *arg) {
+    register x86_trampoline_gregset_t *greg = (void *)&func - 4;
+    ENTER;
+    VARDUMP(VAR_IN, func);
+    VARDUMP(VAR_IN, arg);
+    VARDUMP(DUMP,   greg);
+    VARDUMP(DUMP,   greg->eip);
+    VARDUMP(DUMP,   greg->edi);
+    VARDUMP(DUMP,   greg->esi);
+    VARDUMP(DUMP,   greg->ebp);
+    VARDUMP(DUMP,   greg->esp); /* original stack pointer is: greg->esp + 24 */
+    VARDUMP(DUMP,   greg->ebx);
+    VARDUMP(DUMP,   greg->edx);
+    VARDUMP(DUMP,   greg->ecx);
+    VARDUMP(DUMP,   greg->eax);
+    VARDUMP3(DUMP,  greg->efl.field, x86_greg_flags_name);
+
+    func(greg, arg);
+
+    LEAVE;
+}
+
 void
-x86_trampoline_prologue(x86_ucontext_t *uc, void (STDCALL *func)(void *arg), void *arg) {
+x86_trampoline_prologue(x86_ucontext_t *uc, void (*func)(x86_trampoline_gregset_t *, void *), void *arg) {
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
     x86_pushf(uc, 4);
     x86_pusha(uc, 4);
     x86_push(uc, 4, &arg);
+    x86_push(uc, 4, &func);
     x86_push(uc, 4, ip);
-    REG08(*ip) = 0xcc; /* TODO: x86_trampoline_epilogue() callback */
-    REG32(ip)  = REG32(&func);
+    REG08(*ip) = 0xcc; /* TODO: x86_trampoline_epilogue() callback; include in patch system */
+    REG32(ip)  = (uint32_t)x86_trampoline;
 }
 
 void
@@ -298,44 +337,10 @@ x86_trampoline_epilogue(x86_ucontext_t *uc) {
     x86_popf(uc, 4);
 }
 
-void STDCALL
-x86_trampoline_func(void *arg) {
-    register struct {
-        x86_greg_t       eip; /* esp +  0 */
-        void *           arg; /* esp +  4 */
-        x86_greg_t       edi; /* esp +  8 */
-        x86_greg_t       esi; /* esp + 12 */
-        x86_greg_t       ebp; /* esp + 16 */
-        x86_greg_t       esp; /* esp + 20 */
-        x86_greg_t       ebx; /* esp + 24 */
-        x86_greg_t       edx; /* esp + 28 */
-        x86_greg_t       ecx; /* esp + 32 */
-        x86_greg_t       eax; /* esp + 36 */
-        x86_greg_flags_t efl; /* esp + 40 */
-    } *greg = (void *)&arg - 4;
-    ENTER;
-    VARDUMP(VAR_IN, arg);
-    VARDUMP(DUMP,   greg->eip);
-    VARDUMP(DUMP,   greg->edi);
-    VARDUMP(DUMP,   greg->esi);
-    VARDUMP(DUMP,   greg->ebp);
-    VARDUMP(DUMP,   greg->esp);
-    VARDUMP(DUMP,   greg->ebx);
-    VARDUMP(DUMP,   greg->edx);
-    VARDUMP(DUMP,   greg->ecx);
-    VARDUMP(DUMP,   greg->eax);
-    VARDUMP3(DUMP,  greg->efl.field, x86_greg_flags_name);
-
-    /* do stuff */
-//    INT3;
-
-    LEAVE;
-}
-
 int
 x86_iterate(x86_ucontext_t *uc, int si_code) {
-    register void **bp;
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
+    register void **bp;
     register x86_greg_flags_t *fl = (void *)&uc->uc_mcontext.gregs[X86_EFL];
     int prefix = 0;
     uint32_t sz = 4;
@@ -2439,6 +2444,15 @@ static const char *const siginfo_si_code_name[] = {
     "SEGV_PKUERR",      /* (since Linux 4.6) Access was denied by memory protection keys. */
 };
 
+void
+trampoline_test(x86_trampoline_gregset_t *greg, void *arg) {
+    ENTER;
+    VARDUMP(VAR_IN, greg);
+    VARDUMP(VAR_IN, arg);
+
+    LEAVE;
+}
+
 static void
 x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
     register x86_ucontext_t *uc = ptr;
@@ -2463,9 +2477,11 @@ x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
         }
         break;
     }
-//PRINT(XEXEC_DBG_ALL,"0x%.08x 0x%.08x %zu 0x%.08x",(uint32_t)x86_trampoline_func,*(uint32_t *)x86_trampoline_func,sizeof(x86_trampoline_func),*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing trampoline
+//TODO: include trampoline in patch system
+//PRINT(XEXEC_DBG_ALL,"trampoline_test: 0x%.08x 0x%.08x",(uint32_t)trampoline_test,*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing trampoline
+//PRINT(XEXEC_DBG_ALL,"x86_trampoline: 0x%.08x 0x%.08x",(uint32_t)x86_trampoline,*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing trampoline
 //static int tmp = 0;//XXX working trampoline
-//if(!tmp){tmp=1,x86_trampoline_prologue(uc, (void *)&x86_trampoline_func, (void *)0xdeadbeef),xboxkrnl_interrupted = 0;return;}//XXX working trampoline
+//if(!tmp){tmp=1,x86_trampoline_prologue(uc, trampoline_test, (void *)0xdeadbeef),xboxkrnl_interrupted = 0;return;}//XXX working trampoline
 //x86_trampoline_epilogue(uc);//TODO
     xexec_debug = XEXEC_DBG_ALL;
 
