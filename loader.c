@@ -33,17 +33,22 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
-#include <ucontext.h>
 #include <time.h>
 #include <sys/mman.h>
 #include <sys/time.h>
+#include <sys/utsname.h>
 #include <getopt.h>
 #include <errno.h>
 
 #include <pthread.h>
 
 #define XEXEC_LIBNAME "libxexec"
-#define XEXEC_VERSION "'FIXME: unknown git version'" //FIXME
+#ifndef XEXEC_VERSION
+# define XEXEC_VERSION "unknown git version"
+#endif
+#define XEXEC_VERSION_STRING \
+        XEXEC_LIBNAME " version: '" XEXEC_VERSION "' " \
+        "(compile localtime: '" __DATE__ " @ " __TIME__ "')"
 
 typedef enum {
     XEXEC_DBG_NONE    = 0 << 0,     /* 0x0 */
@@ -61,6 +66,8 @@ typedef enum {
     XEXEC_DBG_IRQ     = 1 << 11,    /* 0x800 */
     XEXEC_DBG_REG     = 1 << 12,    /* 0x1000 */
     XEXEC_DBG_DMA     = 1 << 13,    /* 0x2000 */
+    XEXEC_DBG_CPU     = 1 << 14,    /* 0x4000 */ //TODO
+    XEXEC_DBG_GPU     = 1 << 15,    /* 0x8000 */ //TODO
     XEXEC_DBG_ALL     = 0xffffffff
 } xexec_dbg_t;
 
@@ -149,8 +156,10 @@ fhexdump(FILE *stream, const void *in, size_t inlen) {
     }
 }
 
-#define PACKED   __attribute__((__packed__))
-#define PAGESIZE 0x1000
+#define PACKED __attribute__((__packed__))
+
+#define PAGESIZE  0x00001000 /* 4 KiB (4096 bytes) */
+#define STACKSIZE 0x00100000 /* 1 MiB (1048576 bytes) */
 
 #include "sw/xbe.h"
 #include "hw/common.h"
@@ -172,9 +181,11 @@ extern const hw_ops_t aci_op;
 #include "sw/arch/x86.c"
 
 static const struct option long_options[] = {
-    { "debug", required_argument, 0,  0  },
-    { "gdb",   no_argument,       0, 'g' },
-    { "help",  no_argument,       0, 'h' },
+    { "version", no_argument,       0, 'V' },
+    { "debug",   required_argument, 0,  0  },
+    { "gdb",     no_argument,       0, 'g' },
+    { "help",    no_argument,       0, 'h' },
+    { "mode",    required_argument, 0, 'm' },
     { }
 };
 
@@ -184,36 +195,57 @@ static void __attribute__((noreturn))
 usage(int argc, char **argv) {
     (void)argc;
     fprintf(stderr,
+        XEXEC_VERSION_STRING "\n"
         "usage: %s [options] <xbox executable>.xbe\n"
         "options:\n"
+        "  -V, --version              print version string\n"
         "  -d                         increase debug level verbosity, dumped to standard error\n"
         "      --debug=BITMASK        set debug level verbosity, dumped to standard error\n"
         "  -g, --gdb                  trigger breakpoint for GDB before creating entry thread\n"
-        "  -h, --help                 display this help text\n",
-        basename(argv[0]));
+        "  -h, --help                 display this help text\n"
+        "  -m, --mode=EXEC            execution mode: EXEC value may be:\n"
+#ifdef __i386__
+        "                              \"de\"  - direct execution (i686/x86_64 hosts only) (default)\n"
+        "                              \"x86\" - x86 CPU emulation\n"
+#else
+        "                              \"x86\" - x86 CPU emulation (default)\n"
+#endif
+        , basename(argv[0]));
     _exit(1);
 }
 
 int
 main(int argc, char **argv) {
+#ifdef __i386__
     struct sigaction s = {
-        .sa_sigaction = x86_signal_segv,
+        .sa_sigaction = x86_sigaction,
         .sa_flags     = SA_SIGINFO,
     };
+#endif
+    struct utsname un;
     pthread_t entry;
     XbeHeader *xbeh;
     char *path = NULL;
     int dbg    = 0;
     int gdb    = 0;
+    int de     = 1;
     int fd     = -1;
     int i;
-    int ret;
+    int ret    = 1;
 
     setbuf(stdout, NULL);
 
-    fprintf(stderr, "xexec XBE loader & emulator; " XEXEC_LIBNAME " version: " XEXEC_VERSION "\n");
+    if (uname(&un) < 0) {
+        fprintf(stderr, "error: uname(): '%s'\n", strerror(errno));
+        return ret;
+    }
 
-    while ((ret = getopt_long(argc, argv, "dgh", long_options, &i)) >= 0) {
+    fprintf(stderr,
+        "xexec - XBE loader & emulator - https://github.com/haxar/xexec\n"
+        "running on host architecture: '%s'\n",
+        un.machine);
+
+    while ((ret = getopt_long(argc, argv, "Vdgh", long_options, &i)) >= 0) {
         switch (ret) {
         case 0:
             if (!strcmp(long_options[i].name, "debug")) {
@@ -224,6 +256,10 @@ main(int argc, char **argv) {
                 }
             }
             break;
+        case 'V':
+            fputs(XEXEC_VERSION_STRING, stdout);
+            fputc('\n', stdout);
+            return 0;
         case 'd':
             switch (++dbg) {
             case 1:
@@ -240,6 +276,13 @@ main(int argc, char **argv) {
         case 'g':
             gdb = 1;
             break;
+        case 'm':
+            if (!strcmp(optarg, "de")) {
+                de = 1;
+            } else if (!strcmp(optarg, "x86")) {
+                de = 0;
+            }
+            break;
         case 'h':
         case '?':
         default:
@@ -251,6 +294,8 @@ main(int argc, char **argv) {
 //    if (argc - optind > 1) gdb = 1;
     path = argv[optind];
 
+    fprintf(stderr, XEXEC_VERSION_STRING "\n");
+
     ret = 1;
     do {
         if (xboxkrnl_init()) {
@@ -259,10 +304,6 @@ main(int argc, char **argv) {
         }
         if ((fd = open(path, O_RDONLY)) < 0) {
             PRINT(XEXEC_DBG_ERROR, "error: open('%s'): '%s'", path, strerror(errno));
-            break;
-        }
-        if (sigaction(SIGSEGV, &s, NULL) < 0) {
-            PRINT(XEXEC_DBG_ERROR, "error: sigaction(): '%s'", strerror(errno));
             break;
         }
     } while ((ret = 0));
@@ -301,15 +342,15 @@ main(int argc, char **argv) {
         memset(&xbeh->dwInitFlags, 0, sizeof(xbeh->dwInitFlags));//TODO catch flag cases
 
         xbeh->dwEntryAddr ^=
-            ((xbeh->dwEntryAddr ^ XBE_XOR_EP_RETAIL) > 0x1000000)
+            ((xbeh->dwEntryAddr ^ XBE_XOR_EP_RETAIL) > 0x01000000)
                 ? XBE_XOR_EP_DEBUG
                 : XBE_XOR_EP_RETAIL;
         xbeh->dwKernelImageThunkAddr ^=
-            ((xbeh->dwKernelImageThunkAddr ^ XBE_XOR_KT_RETAIL) > 0x1000000)
+            ((xbeh->dwKernelImageThunkAddr ^ XBE_XOR_KT_RETAIL) > 0x01000000)
                 ? XBE_XOR_KT_DEBUG
                 : XBE_XOR_KT_RETAIL;
 
-        PRINT(XEXEC_DBG_INFO, "XBE entry: 0x%.08x | thunk table: 0x%.08x", xbeh->dwEntryAddr, xbeh->dwKernelImageThunkAddr);
+        PRINT(XEXEC_DBG_INFO, "/* XBE entry point: 0x%.08x | xboxkrnl thunk table: 0x%.08x */", xbeh->dwEntryAddr, xbeh->dwKernelImageThunkAddr);
 
         if (!xbeh->dwSections) {
             PRINT(XEXEC_DBG_ERROR, "error: XBE has no sections to map: '%s'", path);
@@ -323,15 +364,21 @@ main(int argc, char **argv) {
         raddr  = ALIGN(PAGESIZE, raddr);
         vsize  = raddr - vaddr;
 
-        xboxkrnl_mem_contiguous = (void *)raddr;
+        if (!strcmp(un.machine, "i686")) {
+            //FIXME using sbrk(0) here on i686 linux (xbox-linux) is a hack to avoid overlap
+            xboxkrnl_mem_contiguous = sbrk(0);
+        } else {
+            //TODO avoid process memory overlap
+            xboxkrnl_mem_contiguous = (void *)raddr;
+        }
 
         PRINT(
             XEXEC_DBG_MEMORY,
-            "total XBE section map: "
-            "start: 0x%.08x | "
-            "end: 0x%.08x | "
-            "size: 0x%.08x",
-            vaddr, raddr, vsize);
+            "/* total XBE section map: [0x%.08x-0x%.08x] (0x%.08x / %u) */",
+            vaddr,
+            raddr,
+            vsize,
+            vsize);
 
         if (MEM_ALLOC_EXEC((void *)vaddr, vsize) != (void *)vaddr) {
             PRINT(XEXEC_DBG_ERROR, "error: failed to map XBE sections @ 0x%.08x: mmap(): '%s'", vaddr, strerror(errno));
@@ -347,11 +394,22 @@ main(int argc, char **argv) {
 
             PRINT(
                 XEXEC_DBG_MEMORY,
-                "section %2u | "
-                "name %10s | "
-                "virtual: address 0x%.08x size 0x%.08x | "
-                "raw: address 0x%.08x size 0x%.08x",
-                i, sname, vaddr, vsize, raddr, rsize);
+                "/* "
+                "section: %2u | "
+                "name: '%10s' | "
+                "virtual: [0x%.08x-0x%.08x] (0x%.08x / %u) | "
+                "raw: [0x%.08x-0x%.08x] (0x%.08x / %u)"
+                " */",
+                i,
+                sname,
+                vaddr,
+                vaddr + vsize,
+                vsize,
+                vsize,
+                raddr,
+                raddr + rsize,
+                rsize,
+                rsize);
 
             if (lseek(fd, raddr, SEEK_SET) != (ssize_t)raddr) {
                 PRINT(XEXEC_DBG_ERROR, "error: lseek('%s'): '%s'", path, strerror(errno));
@@ -361,9 +419,7 @@ main(int argc, char **argv) {
                 PRINT(XEXEC_DBG_ERROR, "error: read('%s'): '%s'", path, (rd >= 0) ? "short read" : strerror(errno));
                 break;
             }
-            if (!strncmp(sname, ".text", sizeof(".text"))) {
-                xbeh->dwEntryAddr = vaddr;//FIXME
-            }
+            if (!strncmp(sname, ".text", sizeof(".text"))) xbeh->dwEntryAddr = vaddr;//FIXME using post-initialization entry point
         }
     } while ((ret = 0));
 
@@ -374,6 +430,7 @@ main(int argc, char **argv) {
 
         {
             char cat[32];
+
             snprintf(cat, sizeof(cat), "cat /proc/%hu/maps", getpid());
             system(cat);
         }
@@ -384,8 +441,22 @@ main(int argc, char **argv) {
 
         if (gdb) INT3;
 
-        entry = THREAD_PUSH(xboxkrnl_entry_thread, (void *)xbeh->dwEntryAddr, "entry")->id;
-        pthread_join(entry, NULL);
+#ifdef __i386__
+        if (de) {
+            if (sigaction(SIGSEGV, &s, NULL) < 0 ||
+                sigaction(SIGTRAP, &s, NULL) < 0) {
+                PRINT(XEXEC_DBG_ERROR, "error: sigaction(): '%s'", strerror(errno));
+                ret = 1;
+            } else {
+                entry = THREAD_PUSH(xboxkrnl_entry_de, (void *)xbeh->dwEntryAddr, "entry")->id;
+                pthread_join(entry, NULL);
+            }
+        } else if (!de)
+#endif
+        {
+            //TODO: x86.c CPU emulation
+            INT3;
+        }
 
         /* TODO: do other stuff */
     }

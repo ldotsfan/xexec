@@ -27,8 +27,10 @@
 #ifdef DEBUG_ACI
 # if DEBUG_ACI == 1
 #  define PRINT_ACI         PRINT
-# elif DEBUG_ACI == 2
+#  define PRINTF_ACI        PRINTF
+# elif DEBUG_ACI >= 2
 #  define PRINT_ACI         PRINT
+#  define PRINTF_ACI        PRINTF
 #  define VARDUMP_ACI       VARDUMP
 #  define VARDUMP2_ACI      VARDUMP2
 #  define VARDUMP3_ACI      VARDUMP3
@@ -37,6 +39,7 @@
 #  define ENTER_ACI         ENTER
 #  define LEAVE_ACI         LEAVE
 #  define PRINT_ACI         PRINT
+#  define PRINTF_ACI        PRINTF
 #  define VARDUMP_ACI       VARDUMP
 #  define VARDUMP2_ACI      VARDUMP2
 #  define VARDUMP3_ACI      VARDUMP3
@@ -51,6 +54,9 @@
 #endif
 #ifndef PRINT_ACI
 # define PRINT_ACI(...)
+#endif
+#ifndef PRINTF_ACI
+# define PRINTF_ACI(...)
 #endif
 #ifndef VARDUMP_ACI
 # define VARDUMP_ACI(...)
@@ -257,7 +263,6 @@ aci_nabm_reset(const uint32_t *index) {
 static int
 aci_write(uint32_t addr, const void *val, size_t sz) {
     register const hw_block_t *b;
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -272,7 +277,6 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
     }
 
     b = aci_block_lookup(addr, &reg);
-    n = aci->name;
     p = aci->memreg;
     r = addr - b->offset;
 
@@ -288,14 +292,11 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_ACI(
+        PRINTF_ACI(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -311,14 +312,11 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_ACI(
+        PRINTF_ACI(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -334,14 +332,11 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_ACI(
+        PRINTF_ACI(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -522,7 +517,6 @@ aci_write(uint32_t addr, const void *val, size_t sz) {
 static int
 aci_read(uint32_t addr, void *val, size_t sz) {
     register const hw_block_t *b;
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -536,7 +530,6 @@ aci_read(uint32_t addr, void *val, size_t sz) {
     }
 
     b = aci_block_lookup(addr, &reg);
-    n = aci->name;
     p = aci->memreg;
     r = addr - b->offset;
     v = REG32(p + addr);
@@ -582,14 +575,11 @@ aci_read(uint32_t addr, void *val, size_t sz) {
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_ACI(
+        PRINTF_ACI(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
+            " [0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,
@@ -603,14 +593,11 @@ aci_read(uint32_t addr, void *val, size_t sz) {
         break;
     case 2:
         v &= 0xffff;
-        PRINT_ACI(
+        PRINTF_ACI(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
+            " [0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,
@@ -623,14 +610,11 @@ aci_read(uint32_t addr, void *val, size_t sz) {
         ret = 1;
         break;
     case 4:
-        PRINT_ACI(
+        PRINTF_ACI(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.08x | "
+            " [0x%.08x+0x%.08x]              -> 0x%.08x | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,

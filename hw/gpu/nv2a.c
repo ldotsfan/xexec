@@ -28,7 +28,7 @@
 #define DEBUG_NV2A 2
 
 #ifdef DEBUG_NV2A
-# if DEBUG_NV2A >= 1
+# if DEBUG_NV2A == 1
 #  define PRINT_NV2A        PRINT
 #  define PRINTF_NV2A       PRINTF
 # elif DEBUG_NV2A >= 2
@@ -473,7 +473,6 @@ nv2a_irq_raise(int mask) {
 
 static int
 nv2a_irq(void) {
-    register const char *n;
     register void *p;
     register uint32_t enabled;
     register uint32_t pending;
@@ -490,51 +489,43 @@ nv2a_irq(void) {
         return ret;
     }
 
-    n = nv2a->name;
-
     /* PFIFO */
     enabled = NV2A_REG32(p, NV_PFIFO, INTR_EN_0);
     pending = NV2A_REG32(p, NV_PFIFO, INTR_0);
-    PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PFIFO: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
     VARDUMP3_NV2A(DUMP, enabled, nv2a_pfifo_intr_name);
     VARDUMP3_NV2A(DUMP, pending, nv2a_pfifo_intr_name);
+    PRINTF_NV2A(XEXEC_DBG_IRQ, "PFIFO:  %spending", !(pending & enabled) ? "not " : "");
     if (pending & enabled) {
-        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PFIFO pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PFIFO, PENDING);
     } else {
-        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PFIFO not pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PFIFO, NOT_PENDING);
     }
     /* PCRTC */
     enabled = NV2A_REG32(p, NV_PCRTC, INTR_EN_0);
     pending = NV2A_REG32(p, NV_PCRTC, INTR_0);
-    PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PCRTC: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
     VARDUMP3_NV2A(DUMP, enabled, nv2a_pcrtc_intr_name);
     VARDUMP3_NV2A(DUMP, pending, nv2a_pcrtc_intr_name);
+    PRINTF_NV2A(XEXEC_DBG_IRQ, "PCRTC:  %spending", !(pending & enabled) ? "not " : "");
     if (pending & enabled) {
-        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PCRTC pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PCRTC, PENDING);
     } else {
-        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PCRTC not pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PCRTC, NOT_PENDING);
     }
     /* PGRAPH */
     enabled = NV2A_REG32(p, NV_PGRAPH, INTR_EN);
     pending = NV2A_REG32(p, NV_PGRAPH, INTR);
-    PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PGRAPH: enabled 0x%.08x, pending 0x%.08x", n, enabled, pending);
     VARDUMP3_NV2A(DUMP, enabled, nv2a_pgraph_intr_name);
     VARDUMP3_NV2A(DUMP, pending, nv2a_pgraph_intr_name);
+    PRINTF_NV2A(XEXEC_DBG_IRQ, "PGRAPH: %spending", !(pending & enabled) ? "not " : "");
     if (pending & enabled) {
-        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PGRAPH pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PGRAPH, PENDING);
     } else {
-        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: PGRAPH not pending", n);
         NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PMC, INTR_0, PGRAPH, NOT_PENDING);
     }
 
     if (NV2A_REG32(p, NV_PMC, INTR_0) &&
         NV2A_REG32(p, NV_PMC, INTR_EN_0)) {
-        PRINT_NV2A(XEXEC_DBG_IRQ, "%s: IRQ: raised!", n);
+        PRINTF_NV2A(XEXEC_DBG_IRQ, "raised!", 0);
         nv2a->irq_level = 1;
         ret = 1;
     }
@@ -672,7 +663,7 @@ nv2a_texture_binding_upload(nv2a_texture_binding_t *b, nv2a_texture_t *t) {
 
     switch (gl_target) {
     case GL_TEXTURE_1D:
-        PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: 1d texture not supported */", 0);
+        PRINTF_NV2A(XEXEC_DBG_ALL, "/* FIXME: 1d texture not supported */", 0);
         INT3;
         break;
     case GL_TEXTURE_RECTANGLE:
@@ -742,7 +733,7 @@ nv2a_texture_binding_upload(nv2a_texture_binding_t *b, nv2a_texture_t *t) {
                 d      /= 2;
             }
         } else {
-            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: compressed 3d texture not supported yet */", 0);
+            PRINTF_NV2A(XEXEC_DBG_ALL, "/* FIXME: compressed 3d texture not supported yet */", 0);
             INT3;
         }
         break;
@@ -1976,7 +1967,7 @@ attribute->converted_elements -> a->converted_count
         CASE(SET_VERTEX4F,  0, 2);
         CASEF(SET_VERTEX4F, 0, 3);
 #define CASE2V \
-            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */", 0); \
+            PRINTF_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */", 0); \
             a->inline_value[2] = 0.f; \
             a->inline_value[3] = 1.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[2])); \
@@ -2081,15 +2072,15 @@ attribute->converted_elements -> a->converted_count
 #undef CASEV
         /* z = used as y here */
 #define CASEV(z) \
-            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: Untested! */", 0); \
-            INT3; \
-            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Is mapping to [-1,+1] correct? */", 0); \
+            PRINTF_NV2A(XEXEC_DBG_ALL, "/* FIXME: Untested! */", 0); \
+            INT3; /* FIXME */ \
+            PRINTF_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Is mapping to [-1,+1] correct? */", 0); \
             a->inline_value[0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
             a->inline_value[1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[0])); \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[1]));
 #define CASE2V \
-            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */", 0); \
+            PRINTF_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Should these really be set to 0.0 and 1.0 ? Conditions? */", 0); \
             a->inline_value[2] = 0.f; \
             a->inline_value[3] = 1.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[2])); \
@@ -2140,9 +2131,9 @@ attribute->converted_elements -> a->converted_count
         CASE(SET_VERTEX_DATA4UB, 15, 15);
 #undef CASEV
 #define CASEV(z) \
-            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: Untested! */", 0); \
-            INT3; \
-            PRINT_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Is mapping to [-1,+1] correct? */", 0); \
+            PRINTF_NV2A(XEXEC_DBG_ALL, "/* FIXME: Untested! */", 0); \
+            INT3; /* FIXME */ \
+            PRINTF_NV2A(XEXEC_DBG_VARDUMP, "/* FIXME: Is mapping to [-1,+1] correct? */", 0); \
             a->inline_value[z * 2 + 0] = ((int16_t)((c->param >>  0) & 0xffff) * 2.f + 1) / 65535.f; \
             a->inline_value[z * 2 + 1] = ((int16_t)((c->param >> 16) & 0xffff) * 2.f + 1) / 65535.f; \
             VARDUMP_NV2A(FLOAT, REG32(&a->inline_value[z * 2 + 0])); \
@@ -2888,11 +2879,11 @@ nv2a_pfifo_pusher(void *p) {
     v = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_PUSH1, CHID);
     /* TODO: PIO not supported */
     if (!(NV2A_REG32(p, NV_PFIFO, MODE) & (1 << v))) {
-        PRINT_NV2A(XEXEC_DBG_ALL, "pb error: channel %u is not in DMA mode", v);
+        PRINTF_NV2A(XEXEC_DBG_ALL, "error: channel %u is not in DMA mode", v);
         INT3;
     }
     if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_PUSH1, MODE, PIO)) {
-        PRINT_NV2A(XEXEC_DBG_ALL, "pb error: PIO not supported", 0);
+        PRINTF_NV2A(XEXEC_DBG_ALL, "error: PIO not supported", 0);
         INT3;
     }
 
@@ -2909,12 +2900,11 @@ nv2a_pfifo_pusher(void *p) {
     c      = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_STATE);
     d      = NV2A_REGADDR(p, NV_PFIFO, CACHE1_DMA_DCOUNT);
 
-    PRINT_NV2A(
+    PRINTF_NV2A(
         XEXEC_DBG_VARDUMP,
-        "pb DMA pusher: "
         "begin: "
-        "limit: 0x%.08x | "
-        "get: 0x%.08x < put: 0x%.08x",
+        "limit=0x%.08x | "
+        "get=0x%.08x < put=0x%.08x",
         dma.limit,
         *get,
         *put);
@@ -2946,12 +2936,12 @@ nv2a_pfifo_pusher(void *p) {
                 /* old jump */
                 NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PFIFO, CACHE1_DMA_GET_JMP_SHADOW, OFFSET, *get);
                 *get = NV2A_MASK_GET(word, 0x1ffffffc);
-                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb OLD_JMP 0x%.08x", *get);
+                PRINTF_NV2A(XEXEC_DBG_VARDUMP, "OLD_JMP 0x%.08x", *get);
             } else if ((word & 3) == 1) {
                 /* jump */
                 NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PFIFO, CACHE1_DMA_GET_JMP_SHADOW, OFFSET, *get);
                 *get = NV2A_MASK_BITSHIFT_GET(word, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
-                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb JMP 0x%.08x", *get);
+                PRINTF_NV2A(XEXEC_DBG_VARDUMP, "JMP 0x%.08x", *get);
             } else if ((word & 3) == 2) {
                 /* call */
                 if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, ACTIVE)) {
@@ -2961,7 +2951,7 @@ nv2a_pfifo_pusher(void *p) {
                 NV2A_REG32_MASK_BITSHIFT_SET_VAL(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, RETURN_OFFSET, *get);
                 NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, ACTIVE);
                 *get = NV2A_MASK_BITSHIFT_GET(word, NV_PFIFO_CACHE1_DMA_GET_JMP_SHADOW_OFFSET);
-                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb CALL 0x%.08x", *get);
+                PRINTF_NV2A(XEXEC_DBG_VARDUMP, "CALL 0x%.08x", *get);
             } else if (word == 0x00020000) {
                 /* return */
                 if (NV2A_REG32_MASK_BITSHIFT_TEST(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, INACTIVE)) {
@@ -2970,7 +2960,7 @@ nv2a_pfifo_pusher(void *p) {
                 }
                 *get = NV2A_REG32_MASK_BITSHIFT_GET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, RETURN_OFFSET);
                 NV2A_REG32_MASK_BITSHIFT_SET(p, NV_PFIFO, CACHE1_DMA_SUBROUTINE, STATE, INACTIVE);
-                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb RET 0x%.08x", *get);
+                PRINTF_NV2A(XEXEC_DBG_VARDUMP, "RET 0x%.08x", *get);
             } else if (!(word & 0xe0030003)) {
                 /* increasing methods */
                 c->field   = word;
@@ -2984,19 +2974,18 @@ nv2a_pfifo_pusher(void *p) {
                 c->error   = 0;
                 *d         = 0;
             } else {
-                PRINT_NV2A(XEXEC_DBG_VARDUMP, "pb RESERVED_CMD 0x%.08x, word 0x%.08x", *get, word);
+                PRINTF_NV2A(XEXEC_DBG_VARDUMP, "RESERVED_CMD 0x%.08x, word 0x%.08x", *get, word);
                 c->error = NV_PFIFO_CACHE1_DMA_STATE_ERROR_RESERVED_CMD;
                 break;
             }
         }
     }
 
-    PRINT_NV2A(
+    PRINTF_NV2A(
         XEXEC_DBG_VARDUMP,
-        "pb DMA pusher: "
         "  end: "
-        "limit: 0x%.08x | "
-        "get: 0x%.08x < put: 0x%.08x",
+        "limit=0x%.08x | "
+        "get=0x%.08x < put=0x%.08x",
         dma.limit,
         *get,
         *put);
@@ -3026,7 +3015,6 @@ nv2a_framebuffer_set(uint32_t addr) {
 static int
 nv2a_write(uint32_t addr, const void *val, size_t sz) {
     register const hw_block_t *b;
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -3041,7 +3029,6 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
     }
 
     b = nv2a_block_lookup(addr, &reg);
-    n = nv2a->name;
     p = nv2a->memreg;
     r = addr - b->offset;
 
@@ -3049,14 +3036,11 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_NV2A(
+        PRINTF_NV2A(
             (b->index == NV_PRAMIN) ? XEXEC_DBG_DMA : XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -3072,14 +3056,11 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_NV2A(
+        PRINTF_NV2A(
             (b->index == NV_PRAMIN) ? XEXEC_DBG_DMA : XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -3095,14 +3076,11 @@ nv2a_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_NV2A(
+        PRINTF_NV2A(
             (b->index == NV_PRAMIN) ? XEXEC_DBG_DMA : XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -3258,7 +3236,7 @@ INT3;//XXX make sure this works
             }
         } else {
             /* pio */
-            PRINT_NV2A(XEXEC_DBG_ALL, "/* FIXME: pio not supported */", 0);
+            PRINTF_NV2A(XEXEC_DBG_ALL, "/* FIXME: pio not supported */", 0);
             INT3;
         }
         break;
@@ -3271,7 +3249,6 @@ INT3;//XXX make sure this works
 static int
 nv2a_read(uint32_t addr, void *val, size_t sz) {
     register const hw_block_t *b;
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -3285,7 +3262,6 @@ nv2a_read(uint32_t addr, void *val, size_t sz) {
     }
 
     b = nv2a_block_lookup(addr, &reg);
-    n = nv2a->name;
     p = nv2a->memreg;
     r = addr - b->offset;
     v = REG32(p + addr);
@@ -3463,14 +3439,11 @@ static uint64_t ptimer_get_clock(NV2AState *d)
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_NV2A(
+        PRINTF_NV2A(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
+            " [0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,
@@ -3484,14 +3457,11 @@ static uint64_t ptimer_get_clock(NV2AState *d)
         break;
     case 2:
         v &= 0xffff;
-        PRINT_NV2A(
+        PRINTF_NV2A(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
+            " [0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,
@@ -3504,14 +3474,11 @@ static uint64_t ptimer_get_clock(NV2AState *d)
         ret = 1;
         break;
     case 4:
-        PRINT_NV2A(
+        PRINTF_NV2A(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.08x | "
+            " [0x%.08x+0x%.08x]              -> 0x%.08x | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,

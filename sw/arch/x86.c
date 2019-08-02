@@ -1,6 +1,8 @@
 /*
  *  xexec - XBE x86 direct execution LLE & XBOX kernel POSIX translation HLE
  *
+ *  x86 direct execution & CPU emulation (ucontext.h x86 ABI coroutine backend hook)
+ *
  *  Copyright (c) 2017-2019 Michael Saga
  *  All rights reserved.
  *
@@ -19,138 +21,68 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-/* same as in ucontext.h x86 ABI */
-enum {
-    X86_GS       =  0,
-    X86_FS,     /*  1 */
-    X86_ES,     /*  2 */
-    X86_DS,     /*  3 */
-    X86_EDI,    /*  4 */
-    X86_ESI,    /*  5 */
-    X86_EBP,    /*  6 */
-    X86_ESP,    /*  7 */
-    X86_EBX,    /*  8 */
-    X86_EDX,    /*  9 */
-    X86_ECX,    /* 10 */
-    X86_EAX,    /* 11 */
-    X86_TRAPNO, /* 12 */
-    X86_ERR,    /* 13 */
-    X86_EIP,    /* 14 */
-    X86_CS,     /* 15 */
-    X86_EFL,    /* 16 */
-    X86_UESP,   /* 17 */
-    X86_SS,     /* 18 */
-    X86_MAX     /* 19 */
-};
+#include "x86.h"
 
-static const char *const x86_greg_name[] = {
-    [X86_GS]     = " gs",
-    [X86_FS]     = " fs",
-    [X86_ES]     = " es",
-    [X86_DS]     = " ds",
-    [X86_EDI]    = "edi",
-    [X86_ESI]    = "esi",
-    [X86_EBP]    = "ebp",
-    [X86_ESP]    = "esp",
-    [X86_EBX]    = "ebx",
-    [X86_EDX]    = "edx",
-    [X86_ECX]    = "ecx",
-    [X86_EAX]    = "eax",
-    [X86_TRAPNO] = "tno",
-    [X86_ERR]    = "err",
-    [X86_EIP]    = "eip",
-    [X86_CS]     = " cs",
-    [X86_EFL]    = "efl",
-    [X86_UESP]   = "esp",
-    [X86_SS]     = " ss",
-};
+static int x86_iterate(x86_ucontext_t *uc, int si_code);
 
-typedef int32_t     x86_greg_t;
-typedef x86_greg_t  x86_gregset_t[X86_MAX];
+void
+x86_ucontext_dump(x86_ucontext_t *uc) {
+    register void **ip;
+    register void **bp;
+    register void **sp;
+    register uint32_t i;
 
-typedef union {
-    x86_greg_t     field;
-    struct {
-        x86_greg_t cf   : 1;  /*  0 - carry flag */
-        x86_greg_t r1   : 1;  /*  1 - reserved */
-        x86_greg_t pf   : 1;  /*  2 - parity flag */
-        x86_greg_t r2   : 1;  /*  3 - reserved */
-        x86_greg_t af   : 1;  /*  4 - adjust flag */
-        x86_greg_t r3   : 1;  /*  5 - reserved */
-        x86_greg_t zf   : 1;  /*  6 - zero flag */
-        x86_greg_t sf   : 1;  /*  7 - sign flag */
-        x86_greg_t tf   : 1;  /*  8 - trap flag */
-        x86_greg_t ief  : 1;  /*  9 - interrupt enable flag */
-        x86_greg_t df   : 1;  /* 10 - direction flag */
-        x86_greg_t of   : 1;  /* 11 - overflow flag */
-        x86_greg_t iopl : 2;  /* 12 - i/o privilege level */
-        x86_greg_t nt   : 1;  /* 14 - nested task flag */
-        x86_greg_t r4   : 1;  /* 15 - reserved */
-        x86_greg_t rf   : 1;  /* 16 - resume flag */
-        x86_greg_t vm   : 1;  /* 17 - virtual 8086 mode flag */
-        x86_greg_t ac   : 1;  /* 18 - alignment check flag */
-        x86_greg_t vif  : 1;  /* 19 - virtual interrupt flag */
-        x86_greg_t vip  : 1;  /* 20 - virtual interrupt pending flag */
-        x86_greg_t id   : 1;  /* 21 - cpuid instruction permission flag */
-        x86_greg_t r5   : 10; /* 22 - reserved */
-    };
-} x86_greg_flags_t;
+    if (!(xexec_debug & XEXEC_DBG_CPU) || !uc) return;
 
-static const char *const x86_greg_flags_name[] = {
-    NAMEB(0,  carry),
-    NAMEB(2,  parity),
-    NAMEB(4,  adjust),
-    NAMEB(6,  zero),
-    NAMEB(7,  sign),
-    NAMEB(8,  trap),
-    NAMEB(9,  irq_enable),
-    NAMEB(10, direction),
-    NAMEB(11, overflow),
-    NAMEB(14, nested),
-    NAMEB(16, resume),
-    NAMEB(17, vm86),
-    NAMEB(18, align),
-    NAMEB(19, virq),
-    NAMEB(20, virq_pending),
-    NAMEB(21, cpuid),
-};
+    VARDUMP(DUMP, uc);
 
-typedef struct {
-    uint16_t        significand[4];
-    uint16_t        exponent;
-} x86_fpreg_t;
+    PRINT(XEXEC_DBG_CPU, "/* x86 register dump */", 0);
 
-typedef struct {
-    uint32_t        cw;
-    uint32_t        sw;
-    uint32_t        tag;
-    uint32_t        ipoff;
-    uint32_t        cssel;
-    uint32_t        dataoff;
-    uint32_t        datasel;
-    x86_fpreg_t     st[8];
-    uint32_t        status;
-} x86_fpstate_t;
+    for (i = 0; i < ARRAY_SIZE(x86_greg_name); ++i) {
+        if (i == X86_EFL) VARDUMPN3(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i], x86_greg_flags_name);
+        else VARDUMPN(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i]);
+    }
 
-typedef x86_fpstate_t *x86_fpregset_t;
+    PRINT(XEXEC_DBG_CPU, "/* x86 instruction pointer dump */", 0);
 
-typedef struct {
-    x86_gregset_t   gregs;
-    x86_fpregset_t  fpregs;
-    uint32_t        oldmask;
-    uint32_t        cr2;
-} x86_mcontext_t;
+    ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
-typedef struct x86_ucontext_t x86_ucontext_t;
+    HEXDUMPN(*ip, 15); /* x86/x86-64 maximum instruction length */
 
-struct x86_ucontext_t {
-    uint32_t        uc_flags;
-    x86_ucontext_t *uc_link;
-    stack_t         uc_stack;
-    x86_mcontext_t  uc_mcontext;
-    sigset_t        uc_sigmask;
-    x86_fpstate_t   fpregs_mem;
-};
+    PRINT(XEXEC_DBG_CPU, "/* x86 stack trace */", 0);
+
+    bp = (void **)uc->uc_mcontext.gregs[X86_EBP];
+
+    for (i = 1; *ip; ip = (void **)&bp[1], bp = (void **)bp[0], ++i) {
+        PRINT(XEXEC_DBG_CPU, "%.02u: bp = 0x%.08x, ip = 0x%.08x%s", i, bp, *ip, (i == 1) ? " <- SEGV" : "");
+        if (!bp) break;
+    }
+
+    PRINT(XEXEC_DBG_CPU, "/* x86 stack dump */", 0);
+
+    sp = (void **)&uc->uc_mcontext.gregs[X86_ESP];
+    bp = (void **)&uc->uc_mcontext.gregs[X86_EBP];
+
+    if (*bp > *sp) HEXDUMPN(*sp, *bp - *sp);
+}
+
+void
+x86_ucontext_reset(x86_ucontext_t *uc) {
+    //TODO: reset registers
+}
+
+int
+x86_ucontext_iterate(x86_ucontext_t *uc) {
+    register int ret;
+
+    if (!(ret = x86_iterate(uc, 0))) {
+        xexec_debug = XEXEC_DBG_ALL;
+        x86_ucontext_dump(uc);
+        INT3; /* instruction not implemented? */
+    }
+
+    return ret;
+}
 
 void
 x86_push(x86_ucontext_t *uc, uint32_t sz, void *val) {
@@ -280,25 +212,20 @@ x86_call_near(x86_ucontext_t *uc, int prefix, void *offset) {
     REG32(ip) += (prefix) ? REGS16(offset) : REGS32(offset);
 }
 
-typedef struct {
-    x86_greg_t       eip;  /* esp +  0 */
-    void *           func; /* esp +  4 */
-    void *           arg;  /* esp +  8 */
-    x86_greg_t       edi;  /* esp + 12 */
-    x86_greg_t       esi;  /* esp + 16 */
-    x86_greg_t       ebp;  /* esp + 20 */
-    x86_greg_t       esp;  /* esp + 24 */
-    x86_greg_t       ebx;  /* esp + 28 */
-    x86_greg_t       edx;  /* esp + 32 */
-    x86_greg_t       ecx;  /* esp + 36 */
-    x86_greg_t       eax;  /* esp + 40 */
-    x86_greg_flags_t efl;  /* esp + 44 */
-} x86_trampoline_gregset_t;
+void
+x86_call_func(x86_ucontext_t *uc, void **func) {
+    register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
-static STDCALL void
-x86_trampoline(void (*func)(x86_trampoline_gregset_t *, void *), void *arg) {
+    x86_push(uc, 4, ip);
+    REG32(ip) = REG32(func);
+}
+
+static STDCALL int
+x86_trampoline(x86_ucontext_t *uc, int (*func)(x86_ucontext_t *, x86_trampoline_gregset_t *, void *), void *arg) {
     register x86_trampoline_gregset_t *greg = (void *)&func - 4;
+    register int ret;
     ENTER;
+    VARDUMP(VAR_IN, uc);
     VARDUMP(VAR_IN, func);
     VARDUMP(VAR_IN, arg);
     VARDUMP(DUMP,   greg);
@@ -313,19 +240,22 @@ x86_trampoline(void (*func)(x86_trampoline_gregset_t *, void *), void *arg) {
     VARDUMP(DUMP,   greg->eax);
     VARDUMP3(DUMP,  greg->efl.field, x86_greg_flags_name);
 
-    func(greg, arg);
+    ret = func(uc, greg, arg);
 
+    VARDUMP(DUMP, ret);
     LEAVE;
+    return ret;
 }
 
 void
-x86_trampoline_prologue(x86_ucontext_t *uc, void (*func)(x86_trampoline_gregset_t *, void *), void *arg) {
+x86_trampoline_prologue(x86_ucontext_t *uc, int (*func)(x86_ucontext_t *, x86_trampoline_gregset_t *, void *), void *arg) {
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
     x86_pushf(uc, 4);
     x86_pusha(uc, 4);
     x86_push(uc, 4, &arg);
     x86_push(uc, 4, &func);
+    x86_push(uc, 4, &uc);
     x86_push(uc, 4, ip);
     REG08(*ip) = 0xcc; /* TODO: x86_trampoline_epilogue() callback; include in patch system */
     REG32(ip)  = (uint32_t)x86_trampoline;
@@ -337,7 +267,7 @@ x86_trampoline_epilogue(x86_ucontext_t *uc) {
     x86_popf(uc, 4);
 }
 
-int
+static int
 x86_iterate(x86_ucontext_t *uc, int si_code) {
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
     register void **bp;
@@ -2436,96 +2366,86 @@ _exit(0);//XXX
     return ret;
 }
 
-static const char *const siginfo_si_code_name[] = {
-    NULL,
-    "SEGV_MAPERR",      /* Address not mapped to object. */
-    "SEGV_ACCERR",      /* Invalid permissions for mapped object. */
-    "SEGV_BNDERR",      /* (since Linux 3.19) Failed address bound checks. */
-    "SEGV_PKUERR",      /* (since Linux 4.6) Access was denied by memory protection keys. */
-};
-
-void
-trampoline_test(x86_trampoline_gregset_t *greg, void *arg) {
+int
+trampoline_test(x86_ucontext_t *uc, x86_trampoline_gregset_t *greg, void *arg) {
     ENTER;
+    VARDUMP(VAR_IN, uc);
     VARDUMP(VAR_IN, greg);
     VARDUMP(VAR_IN, arg);
 
     LEAVE;
+    return 2;
 }
 
-static void
-x86_signal_segv(int signum, siginfo_t *info, void *ptr) {
+#ifdef __i386__
+void
+x86_sigaction(int signum, siginfo_t *info, void *ptr) {
     register x86_ucontext_t *uc = ptr;
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
     register void **bp;
     register void **sp;
-    register uint32_t i = (typeof(i))info->si_addr;
+    register uint32_t i;
 
     xboxkrnl_interrupted = 1;
 
+    switch (signum) {
+    case SIGSEGV:
 //if (i != 0x8001030) //XXX
 //if (0) //XXX
-    switch (info->si_code) {
-    case SEGV_MAPERR /* 1 */:
-    case SEGV_ACCERR /* 2 */:
-        if (!xboxkrnl_address_validate(i)) break;
-        /* fall through */
-    case 128:
-        if (x86_iterate(uc, info->si_code)) {
-            xboxkrnl_interrupted = 0;
-            return;
+        switch (info->si_code) {
+        case SEGV_MAPERR /* 1 */:
+        case SEGV_ACCERR /* 2 */:
+            if (!xboxkrnl_address_validate((uint32_t)info->si_addr)) break;
+            /* fall through */
+        case 128:
+            if (x86_iterate(uc, info->si_code)) {
+                xboxkrnl_interrupted = 0;
+                return;
+            }
+            break;
+        }
+        break;
+    case SIGTRAP:
+        if (REG08(*ip - 1) == 0xcc) {
+            --(*ip);
+            PRINTF(XEXEC_DBG_ALL, "/* TODO: do epilogue if trampoline returned or prologue when not executed, part of patch system */", 0);
+            PRINTF(XEXEC_DBG_ALL, "/* TODO: x86_iterate() once over patched instruction if trampoline returned & persists */", 0);
+            PRINTF(XEXEC_DBG_ALL, "/* TODO: determine trampoline state from patch system */", 0);
+            register void **a = (void **)&uc->uc_mcontext.gregs[X86_EAX]; /* x86_trampoline() return value */
+            VARDUMPN(DUMP, "x86_trampoline()", REGS32(a));
         }
         break;
     }
+
 //TODO: include trampoline in patch system
 //PRINT(XEXEC_DBG_ALL,"trampoline_test: 0x%.08x 0x%.08x",(uint32_t)trampoline_test,*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing trampoline
 //PRINT(XEXEC_DBG_ALL,"x86_trampoline: 0x%.08x 0x%.08x",(uint32_t)x86_trampoline,*(uint32_t *)(uc->uc_mcontext.gregs[X86_ESP]+4));//XXX testing trampoline
 //static int tmp = 0;//XXX working trampoline
-//if(!tmp){tmp=1,x86_trampoline_prologue(uc, trampoline_test, (void *)0xdeadbeef),xboxkrnl_interrupted = 0;return;}//XXX working trampoline
-//x86_trampoline_epilogue(uc);//TODO
+//if (!tmp)          {tmp=1,x86_trampoline_prologue(uc, trampoline_test, (void *)0xdeadbeef),xboxkrnl_interrupted = 0;return;}//XXX working trampoline
+//else if (tmp == 1) {tmp=0,x86_trampoline_epilogue(uc),xboxkrnl_interrupted = 0;}//XXX working trampoline
+
     xexec_debug = XEXEC_DBG_ALL;
 
     ENTER;
-    PRINT(XEXEC_DBG_ALL, "/* Segmentation Fault! */", 0);
 
-    VARDUMPN(DUMP,  "si_signo", signum);
-    VARDUMPN(DUMP,  "si_errno", info->si_errno);
+    if (signum == SIGSEGV) {
+        PRINT(XEXEC_DBG_ALL, "/* Segmentation Fault! */", 0);
+    } else if (signum == SIGTRAP) {
+        PRINT(XEXEC_DBG_ALL, "/* Breakpoint Trap! */", 0);
+    }
+
+    VARDUMP(DUMP, info);
+    VARDUMPN2(DUMP, "si_signo",  signum, siginfo_si_signo_name);
+    VARDUMPN(DUMP,  "si_errno",  info->si_errno);
     if (info->si_errno) STRDUMP(strerror(info->si_errno));
-    VARDUMPN2(DUMP, "si_code",  info->si_code, siginfo_si_code_name);
-    VARDUMPN(DUMP,  "si_addr",  info->si_addr);
+    VARDUMPN2(DUMP, "si_code",   info->si_code, siginfo_si_code_name);
+    VARDUMPN(DUMP,  "si_addr",   info->si_addr);
 
-    PRINT(XEXEC_DBG_ALL, "/* x86 register dump */", 0);
-
-    for (i = 0; i < ARRAY_SIZE(x86_greg_name); ++i) {
-        if (i == X86_EFL) VARDUMPN3(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i], x86_greg_flags_name);
-        else VARDUMPN(DUMP, x86_greg_name[i], uc->uc_mcontext.gregs[i]);
-    }
-
-    PRINT(XEXEC_DBG_ALL, "/* x86 instruction pointer dump */", 0);
-
-    HEXDUMPN(*ip, 15); /* x86/x86-64 maximum instruction length */
-
-    PRINT(XEXEC_DBG_ALL, "/* x86 stack trace */", 0);
-
-    for (ip = (void **)&uc->uc_mcontext.gregs[X86_EIP],
-        bp = (void **)uc->uc_mcontext.gregs[X86_EBP],
-        i = 1;
-        *ip;
-        ip = (void **)&bp[1],
-        bp = (void **)bp[0],
-        ++i) {
-        PRINT(XEXEC_DBG_ALL, "%.02i: bp = 0x%.08x, ip = 0x%.08x%s", i, bp, *ip, (i == 1) ? " <- SEGV" : "");
-        if (!bp) break;
-    }
-
-    PRINT(XEXEC_DBG_ALL, "/* x86 stack dump */", 0);
-
-    sp = (void **)&uc->uc_mcontext.gregs[X86_ESP];
-    bp = (void **)&uc->uc_mcontext.gregs[X86_EBP];
-    if (*bp > *sp) HEXDUMPN(*sp, *bp - *sp);
+    x86_ucontext_dump(uc);
 
     LEAVE;
     INT3;
     _exit(-1);
 }
+#endif
 

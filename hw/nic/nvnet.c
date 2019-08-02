@@ -26,8 +26,10 @@
 #ifdef DEBUG_NVNET
 # if DEBUG_NVNET == 1
 #  define PRINT_NVNET       PRINT
-# elif DEBUG_NVNET == 2
+#  define PRINTF_NVNET      PRINTF
+# elif DEBUG_NVNET >= 2
 #  define PRINT_NVNET       PRINT
+#  define PRINTF_NVNET      PRINTF
 #  define VARDUMP_NVNET     VARDUMP
 #  define VARDUMP2_NVNET    VARDUMP2
 #  define VARDUMP3_NVNET    VARDUMP3
@@ -36,6 +38,7 @@
 #  define ENTER_NVNET       ENTER
 #  define LEAVE_NVNET       LEAVE
 #  define PRINT_NVNET       PRINT
+#  define PRINTF_NVNET      PRINTF
 #  define VARDUMP_NVNET     VARDUMP
 #  define VARDUMP2_NVNET    VARDUMP2
 #  define VARDUMP3_NVNET    VARDUMP3
@@ -50,6 +53,9 @@
 #endif
 #ifndef PRINT_NVNET
 # define PRINT_NVNET(...)
+#endif
+#ifndef PRINTF_NVNET
+# define PRINTF_NVNET(...)
 #endif
 #ifndef VARDUMP_NVNET
 # define VARDUMP_NVNET(...)
@@ -75,7 +81,6 @@ nvnet_offset(register uint32_t *addr) {
 
 static int
 nvnet_write(uint32_t addr, const void *val, size_t sz) {
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -88,7 +93,6 @@ nvnet_write(uint32_t addr, const void *val, size_t sz) {
         return ret;
     }
 
-    n = nvnet->name;
     p = nvnet->memreg;
     r = addr;
 
@@ -96,13 +100,10 @@ nvnet_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_NVNET(
+        PRINTF_NVNET(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "reg: 0x%x",
-            n,
             p,
             addr,
             o,
@@ -114,13 +115,10 @@ nvnet_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_NVNET(
+        PRINTF_NVNET(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "reg: 0x%x",
-            n,
             p,
             addr,
             o,
@@ -132,13 +130,10 @@ nvnet_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_NVNET(
+        PRINTF_NVNET(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "reg: 0x%x",
-            n,
             p,
             addr,
             o,
@@ -160,7 +155,6 @@ nvnet_write(uint32_t addr, const void *val, size_t sz) {
 
 static int
 nvnet_read(uint32_t addr, void *val, size_t sz) {
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -172,7 +166,6 @@ nvnet_read(uint32_t addr, void *val, size_t sz) {
         return ret;
     }
 
-    n = nvnet->name;
     p = nvnet->memreg;
     r = addr;
     v = REG32(p + addr);
@@ -182,13 +175,10 @@ nvnet_read(uint32_t addr, void *val, size_t sz) {
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_NVNET(
+        PRINTF_NVNET(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
+            " [0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "reg: 0x%x",
-            n,
             p,
             addr,
             v,
@@ -198,13 +188,10 @@ nvnet_read(uint32_t addr, void *val, size_t sz) {
         break;
     case 2:
         v &= 0xffff;
-        PRINT_NVNET(
+        PRINTF_NVNET(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
+            " [0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "reg: 0x%x",
-            n,
             p,
             addr,
             v,
@@ -213,13 +200,10 @@ nvnet_read(uint32_t addr, void *val, size_t sz) {
         ret = 1;
         break;
     case 4:
-        PRINT_NVNET(
+        PRINTF_NVNET(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.08x | "
+            " [0x%.08x+0x%.08x]              -> 0x%.08x | "
             "reg: 0x%x",
-            n,
             p,
             addr,
             v,

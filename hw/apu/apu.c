@@ -26,8 +26,10 @@
 #ifdef DEBUG_APU
 # if DEBUG_APU == 1
 #  define PRINT_APU         PRINT
-# elif DEBUG_APU == 2
+#  define PRINTF_APU        PRINTF
+# elif DEBUG_APU >= 2
 #  define PRINT_APU         PRINT
+#  define PRINTF_APU        PRINTF
 #  define VARDUMP_APU       VARDUMP
 #  define VARDUMP2_APU      VARDUMP2
 #  define VARDUMP3_APU      VARDUMP3
@@ -36,6 +38,7 @@
 #  define ENTER_APU         ENTER
 #  define LEAVE_APU         LEAVE
 #  define PRINT_APU         PRINT
+#  define PRINTF_APU        PRINTF
 #  define VARDUMP_APU       VARDUMP
 #  define VARDUMP2_APU      VARDUMP2
 #  define VARDUMP3_APU      VARDUMP3
@@ -50,6 +53,9 @@
 #endif
 #ifndef PRINT_APU
 # define PRINT_APU(...)
+#endif
+#ifndef PRINTF_APU
+# define PRINTF_APU(...)
 #endif
 #ifndef VARDUMP_APU
 # define VARDUMP_APU(...)
@@ -127,7 +133,6 @@ apu_block_lookup(register uint32_t addr, register const char **reg) {
 static int
 apu_write(uint32_t addr, const void *val, size_t sz) {
     register const hw_block_t *b;
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -142,7 +147,6 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     }
 
     b = apu_block_lookup(addr, &reg);
-    n = apu->name;
     p = apu->memreg;
     r = addr - b->offset;
 
@@ -150,14 +154,11 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     case 1:
         v = REG08(val);
         o = REG08(p + addr);
-        PRINT_APU(
+        PRINTF_APU(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.02hhx)       <- 0x%.02hhx       | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -173,14 +174,11 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     case 2:
         v = REG16(val);
         o = REG16(p + addr);
-        PRINT_APU(
+        PRINTF_APU(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.04hx)     <- 0x%.04hx     | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -196,14 +194,11 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
     case 4:
         v = REG32(val);
         o = REG32(p + addr);
-        PRINT_APU(
+        PRINTF_APU(
             XEXEC_DBG_REG,
-            "%s: "
-            "write: "
             "[0x%.08x+0x%.08x] (0x%.08x) <- 0x%.08x | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             o,
@@ -253,7 +248,6 @@ apu_write(uint32_t addr, const void *val, size_t sz) {
 static int
 apu_read(uint32_t addr, void *val, size_t sz) {
     register const hw_block_t *b;
-    register const char *n;
     register void *p;
     register uint32_t r;
     register uint32_t v;
@@ -267,7 +261,6 @@ apu_read(uint32_t addr, void *val, size_t sz) {
     }
 
     b = apu_block_lookup(addr, &reg);
-    n = apu->name;
     p = apu->memreg;
     r = addr - b->offset;
     v = REG32(p + addr);
@@ -297,14 +290,11 @@ apu_read(uint32_t addr, void *val, size_t sz) {
     switch (sz) {
     case 1:
         v &= 0xff;
-        PRINT_APU(
+        PRINTF_APU(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
+            " [0x%.08x+0x%.08x]              -> 0x%.02hhx       | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,
@@ -318,14 +308,11 @@ apu_read(uint32_t addr, void *val, size_t sz) {
         break;
     case 2:
         v &= 0xffff;
-        PRINT_APU(
+        PRINTF_APU(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.04hx     | "
+            " [0x%.08x+0x%.08x]              -> 0x%.04hx     | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,
@@ -338,14 +325,11 @@ apu_read(uint32_t addr, void *val, size_t sz) {
         ret = 1;
         break;
     case 4:
-        PRINT_APU(
+        PRINTF_APU(
             XEXEC_DBG_REG,
-            "%s: "
-            " read: "
-            "[0x%.08x+0x%.08x]              -> 0x%.08x | "
+            " [0x%.08x+0x%.08x]              -> 0x%.08x | "
             "block: '%s' | "
             "reg: 0x%x%s%s%s",
-            n,
             p,
             addr,
             v,

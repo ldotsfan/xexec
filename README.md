@@ -76,11 +76,8 @@ Upon execution in the terminal with debugging enabled, you will see the very hel
 16:23:44.248172:     var: stub: *NewIrql = 0x00000000 (0)
 16:23:44.248180: leave: [0x001b2042] <-- xboxkrnl_KfLowerIrql()
 ```
-You can save a full non-DMA dump, via:
-* `$ ./xexec -dd D/default.xbe 2>&1 | tee "$(date +%Y%m%d-%H%M%S)"-xexec.log`
-
-Or, as a XZ compressed dump (preferred), via:
-* `$ ./xexec -dd D/default.xbe 2>&1 | tee /proc/self/fd/2 | xz -c - > "$(date +%Y%m%d-%H%M%S)"-xexec.log.xz`
-* Use `xzcat` to decompress the dump.
+You can save a full non-DMA debug log, via:
+* `$ log="$(date +%Y%m%d-%H%M%S)"-xexec.log ; ./xexec -dd D/default.xbe 2>&1 | tee $log`
+* XZ compressed debug log (useful for bug reporting): `$ xz -kv $log`
 
 No framebuffer to see yet. There is no user support at this time.
