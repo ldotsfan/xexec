@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 
 .DUMMY: gdb wait
 
