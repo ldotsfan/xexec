@@ -226,6 +226,8 @@ static const char *const siginfo_si_code_name[] = {
 
 void x86_ucontext_dump(x86_ucontext_t *uc);
 void x86_ucontext_reset(x86_ucontext_t *uc);
+int  x86_ucontext_stack_set(x86_ucontext_t *uc, void *sp, size_t sz);
+int  x86_ucontext_stack_get(x86_ucontext_t *uc, void **sp, size_t *sz);
 int  x86_ucontext_iterate(x86_ucontext_t *uc);
 
 void x86_push(x86_ucontext_t *uc, uint32_t sz, void *val);
@@ -236,7 +238,7 @@ void x86_pushf(x86_ucontext_t *uc, uint32_t sz);
 void x86_popf(x86_ucontext_t *uc, uint32_t sz);
 
 void x86_call_near(x86_ucontext_t *uc, int prefix, void *offset);
-void x86_call_func(x86_ucontext_t *uc, void **func);
+void x86_call_func(x86_ucontext_t *uc, void *func);
 
 void x86_trampoline_prologue(
         x86_ucontext_t *uc,

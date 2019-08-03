@@ -45,7 +45,7 @@
 #define INT3 \
         do { \
             PRINTF(XEXEC_DBG_ALL, \
-                "INT3: breakpoint triggered at line %i of file \"%s\"; " XEXEC_VERSION_STRING, \
+                "INT3: breakpoint triggered at line %i of file: '%s'; " XEXEC_VERSION_STRING, \
                 __LINE__, \
                 __FILE__); \
             X86_INT3; \
@@ -109,8 +109,10 @@
 #define VARDUMP4(x,y,z)     VARDUMP5(x,y,z,ARRAY_SIZE(z),0,4)
 #define VARDUMP5(x,y,z,l,f,r) xboxkrnl_vardump(xboxkrnl_stack,x,(uint64_t)y,#y,z,l,f,r)
 
-static int8_t               xboxkrnl_stack          = 0;
-static void                 (*xboxkrnl_entry)(void) = NULL;
+static int                  xboxkrnl_initialized    = 0;    /* initialization via xboxkrnl_init() */
+static int                  xboxkrnl_de             = 0;    /* direct execution flag */
+static int8_t               xboxkrnl_stack          = 0;    /* stack level */
+static void                 (*xboxkrnl_entry)(void) = NULL; /* XBE entry point */
 
 void *                      xboxkrnl_mmap(void *addr, size_t size, int prot, int flags, int fd, off_t offset);
 int                         xboxkrnl_munmap(void *addr, size_t size);
@@ -830,7 +832,6 @@ xboxkrnl_mmap(void *addr, size_t size, int prot, int flags, int fd, off_t offset
 int
 xboxkrnl_munmap(void *addr, size_t size) {
     (void)size;
-
     return xboxkrnl_mem_free(MEM_MAP, addr, 0);
 }
 
@@ -1875,13 +1876,13 @@ xboxkrnl_clock_wall(struct timespec *tp) {
 #ifdef __i386__
 void *
 xboxkrnl_entry_de(void *arg) {
-    if (xboxkrnl_entry || !arg) INT3;
+    if (!xboxkrnl_de || xboxkrnl_entry || !arg) INT3;
 
     xboxkrnl_entry = arg;
     xboxkrnl_tsc_off();
     xboxkrnl_entry();
 
-    //FIXME: pop from thread stack
+    //FIXME: pop from thread list
     pthread_detach(pthread_self());
     pthread_exit(NULL);
     return NULL;
@@ -1893,16 +1894,21 @@ xboxkrnl_entry_de(void *arg) {
 void *
 xboxkrnl_entry_x86(void *arg) {
     x86_ucontext_t uc;
+    void *sp;
 
-    if (xboxkrnl_entry || !arg) INT3;
+    if (xboxkrnl_de || xboxkrnl_entry || !arg) INT3;
 
     xboxkrnl_entry = arg;
-    //TODO: x86.c CPU emulation logic
-//    x86_ucontext_reset(&uc);//TODO
-//    while (x86_ucontext_iterate(&uc)) {
-//    }
+    x86_ucontext_reset(&uc);
+    if (!(sp = MEM_ALLOC_STACK())) INT3;
+    if (x86_ucontext_stack_set(&uc, sp, STACKSIZE)) INT3;
+    x86_call_func(&uc, xboxkrnl_entry);
 
-    //TODO: pop from thread stack
+    while (x86_ucontext_iterate(&uc));
+
+    MEM_FREE_STACK(sp);
+
+    //FIXME: pop from thread list
     pthread_detach(pthread_self());
     pthread_exit(NULL);
     return NULL;
@@ -1948,8 +1954,8 @@ typedef struct {
     void *                  SystemArgument2;
 } PACKED xboxkrnl_dpc;
 
-static xboxkrnl_dpc **      xboxkrnl_dpc_list = NULL;
-static size_t               xboxkrnl_dpc_list_sz = 0;
+static xboxkrnl_dpc **      xboxkrnl_dpc_list       = NULL;
+static size_t               xboxkrnl_dpc_list_sz    = 0;
 static pthread_mutex_t      xboxkrnl_dpc_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define DPC_LIST_LOCK       pthread_mutex_lock(&xboxkrnl_dpc_list_mutex)
 #define DPC_LIST_UNLOCK     pthread_mutex_unlock(&xboxkrnl_dpc_list_mutex)
@@ -2641,6 +2647,7 @@ typedef struct {
     pthread_t               id;
     pthread_attr_t          attr;
     void *                  sp;
+    size_t                  spsz;
     sem_t                   sem;
     int                     raised;
     int8_t                  stack;
@@ -2675,9 +2682,7 @@ void
 xboxkrnl_thread_wait(xboxkrnl_thread *t) {
     while (!t->raised) {
         PRINTF(XEXEC_DBG_MUTEX, "/* '%s' semaphore: waiting */", t->name);
-
         if (sem_wait(&t->sem) && errno != EINTR) INT3;
-
         if (t->raised) PRINTF(XEXEC_DBG_MUTEX, "/* '%s' semaphore: resume */", t->name);
     }
     t->raised = 0;
@@ -2686,7 +2691,6 @@ xboxkrnl_thread_wait(xboxkrnl_thread *t) {
 void
 xboxkrnl_thread_post(xboxkrnl_thread *t) {
     PRINTF(XEXEC_DBG_MUTEX, "/* '%s' semaphore: raised */", t->name);
-
     t->raised = 1;
     if (sem_post(&t->sem)) INT3;
 }
@@ -2694,6 +2698,7 @@ xboxkrnl_thread_post(xboxkrnl_thread *t) {
 static xboxkrnl_thread *
 xboxkrnl_thread_push(void *(*routine)(void *), void *arg, void *context, const char *name, int locked) {
     register xboxkrnl_thread *t;
+    register void *sp;
     register size_t i;
     register int err;
 
@@ -2709,8 +2714,10 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, void *context, const c
 
     ZERO(*t);
     pthread_attr_init(&t->attr);
-    if (!(t->sp = MEM_ALLOC_STACK())) INT3;
-    if (pthread_attr_setstack(&t->attr, t->sp, STACKSIZE)) INT3;
+    if (xboxkrnl_de) {
+        if (!(sp = MEM_ALLOC_STACK())) INT3;
+        if (pthread_attr_setstack(&t->attr, sp, STACKSIZE)) INT3;
+    }
     if (sem_init(&t->sem, 0, 0)) INT3;
     t->routine = routine;
     t->arg     = arg;
@@ -2722,8 +2729,9 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, void *context, const c
     }
     if (name && *name) xboxkrnl_strncpy(t->name, name, sizeof(t->name) - 1);
     else snprintf(t->name, sizeof(t->name) - 1, "0x%.08zx", (size_t)t->id);
-    pthread_setname_np(t->id, t->name);
-    pthread_getattr_np(t->id, &t->attr);
+    if (pthread_setname_np(t->id, t->name)) INT3;
+    if (pthread_getattr_np(t->id, &t->attr)) INT3;
+    if (pthread_attr_getstack(&t->attr, &t->sp, &t->spsz)) INT3;
 
     PRINTF(
         XEXEC_DBG_THREAD,
@@ -2731,7 +2739,9 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, void *context, const c
         t->name,
         (size_t)t->id,
         t->sp,
-        t->sp + STACKSIZE);
+        t->sp + t->spsz);
+
+    if (xboxkrnl_de && t->sp != sp) INT3;
 
     if (!locked) THREAD_UNLOCK;
 
@@ -2962,43 +2972,50 @@ void
 xboxkrnl_destroy(void/* *x*/) {
     ENTER;
 
-    /* TODO: destroy worker threads */
-    xboxkrnl_destroy_var();
-    /* TODO: xboxkrnl_destroy_hw(); */
-    if (xboxkrnl_c_wc != (iconv_t)-1) {
-        iconv_close(xboxkrnl_c_wc);
-        xboxkrnl_c_wc = (iconv_t)-1;
-    }
-    if (xboxkrnl_wc_c != (iconv_t)-1) {
-        iconv_close(xboxkrnl_wc_c);
-        xboxkrnl_wc_c = (iconv_t)-1;
+    if (xboxkrnl_initialized) {
+        /* TODO: destroy worker threads */
+        xboxkrnl_destroy_var();
+        /* TODO: xboxkrnl_destroy_hw(); */
+        if (xboxkrnl_c_wc != (iconv_t)-1) {
+            iconv_close(xboxkrnl_c_wc);
+            xboxkrnl_c_wc = (iconv_t)-1;
+        }
+        if (xboxkrnl_wc_c != (iconv_t)-1) {
+            iconv_close(xboxkrnl_wc_c);
+            xboxkrnl_wc_c = (iconv_t)-1;
+        }
+        xboxkrnl_initialized = 0;
     }
 
     LEAVE;
 }
 
 int
-xboxkrnl_init(void/* **x*/) {
+xboxkrnl_init(int de) {
     register int ret = 1;
     ENTER;
 
-    do {
-        if ((xboxkrnl_wc_c = iconv_open("UTF-8", "UTF-16LE")) == (iconv_t)-1 ||
-            (xboxkrnl_c_wc = iconv_open("UTF-16LE", "UTF-8")) == (iconv_t)-1) {
-            PRINT(
-                XEXEC_DBG_ERROR,
-                "error: failed to allocate descriptor for character set conversion: "
-                "iconv_open(): '%s'",
-                strerror(errno));
-            break;
-        }
-        xboxkrnl_tsc_init();
-        if (xboxkrnl_init_hw() ||
-            xboxkrnl_init_var()) break;
-        xboxkrnl_worker(0);
-    } while ((ret = 0));
+    if (!xboxkrnl_initialized) {
+        do {
+            xboxkrnl_de = !!de;
+            if ((xboxkrnl_wc_c = iconv_open("UTF-8", "UTF-16LE")) == (iconv_t)-1 ||
+                (xboxkrnl_c_wc = iconv_open("UTF-16LE", "UTF-8")) == (iconv_t)-1) {
+                PRINT(
+                    XEXEC_DBG_ERROR,
+                    "error: failed to allocate descriptor for character set conversion: "
+                    "iconv_open(): '%s'",
+                    strerror(errno));
+                break;
+            }
+            xboxkrnl_tsc_init();
+            if (xboxkrnl_init_hw() ||
+                xboxkrnl_init_var()) break;
+            xboxkrnl_worker(0);
+        } while ((ret = 0));
 
-    if (ret) xboxkrnl_destroy();
+        if (ret) xboxkrnl_destroy();
+        else xboxkrnl_initialized = 1;
+    }
 
     VARDUMP(DUMP, ret);
     LEAVE;
@@ -3371,6 +3388,7 @@ xboxkrnl_path_winnt_to_unix(const char *in, char *out, size_t *outlen) {
         PREFIX("/Device/CdRom0",               "D");
         PREFIX("/Device/Harddisk0/partition0", "");
         PREFIX("/Device/Harddisk0/partition1", "E");
+//        PREFIX("/Device/Harddisk0/partition2", "C"); // FIXME not tested
         PREFIX("/\?\?/D:",                     "D");
         PREFIX("/\?\?/T:",                     "T");
         PREFIX("/\?\?/U:",                     "U");
@@ -7456,7 +7474,8 @@ xboxkrnl_RtlEnterCriticalSection( /* 277 (0x115) */
     ENTER;
     VARDUMP(VAR_IN, CriticalSection);
 
-    pthread_mutex_lock(&CriticalSection->mutex);
+    //FIXME: some critialsections passed here may not be initialized with RtlInitializeCriticalSection()
+//    pthread_mutex_lock(&CriticalSection->mutex);
 
     LEAVE;
 }
@@ -7645,7 +7664,7 @@ xboxkrnl_RtlLeaveCriticalSection( /* 294 (0x126) */
     ENTER;
     VARDUMP(VAR_IN, CriticalSection);
 
-    pthread_mutex_unlock(&CriticalSection->mutex);
+//    pthread_mutex_unlock(&CriticalSection->mutex);
 
     LEAVE;
 }

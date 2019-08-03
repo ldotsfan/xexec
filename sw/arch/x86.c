@@ -21,6 +21,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <string.h>
+
 #include "x86.h"
 
 static int x86_iterate(x86_ucontext_t *uc, int si_code);
@@ -31,9 +33,8 @@ x86_ucontext_dump(x86_ucontext_t *uc) {
     register void **bp;
     register void **sp;
     register uint32_t i;
-
     if (!(xexec_debug & XEXEC_DBG_CPU) || !uc) return;
-
+    ENTER;
     VARDUMP(DUMP, uc);
 
     PRINT(XEXEC_DBG_CPU, "/* x86 register dump */", 0);
@@ -47,14 +48,14 @@ x86_ucontext_dump(x86_ucontext_t *uc) {
 
     ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
-    HEXDUMPN(*ip, 15); /* x86/x86-64 maximum instruction length */
+    if (*ip) HEXDUMPN(*ip, 15); /* x86/x86-64 maximum instruction length */
 
     PRINT(XEXEC_DBG_CPU, "/* x86 stack trace */", 0);
 
     bp = (void **)uc->uc_mcontext.gregs[X86_EBP];
 
     for (i = 1; *ip; ip = (void **)&bp[1], bp = (void **)bp[0], ++i) {
-        PRINT(XEXEC_DBG_CPU, "%.02u: bp = 0x%.08x, ip = 0x%.08x%s", i, bp, *ip, (i == 1) ? " <- SEGV" : "");
+        PRINT(XEXEC_DBG_CPU, "%.02u: bp = 0x%.08x, ip = 0x%.08x", i, bp, *ip);
         if (!bp) break;
     }
 
@@ -63,12 +64,50 @@ x86_ucontext_dump(x86_ucontext_t *uc) {
     sp = (void **)&uc->uc_mcontext.gregs[X86_ESP];
     bp = (void **)&uc->uc_mcontext.gregs[X86_EBP];
 
-    if (*bp > *sp) HEXDUMPN(*sp, *bp - *sp);
+    if (*sp && *bp > *sp) HEXDUMPN(*sp, *bp - *sp);
+
+    LEAVE;
 }
 
 void
 x86_ucontext_reset(x86_ucontext_t *uc) {
-    //TODO: reset registers
+    uc->uc_flags = 0;
+    uc->uc_link  = NULL;
+    memset(&uc->uc_mcontext, 0, sizeof(uc->uc_mcontext));
+    memset(&uc->uc_sigmask, 0, sizeof(uc->uc_sigmask));
+    memset(&uc->fpregs_mem, 0, sizeof(uc->fpregs_mem));
+    uc->uc_mcontext.fpregs = &uc->fpregs_mem;
+}
+
+int
+x86_ucontext_stack_set(x86_ucontext_t *uc, void *sp, size_t sz) {
+    register int ret = 1;
+
+    do {
+        if (!uc || !sp || !sz || sz < STACKSIZE) break;
+        uc->uc_stack.ss_sp    = sp;
+        uc->uc_stack.ss_flags = 0;
+        uc->uc_stack.ss_size  = sz;
+        sp += sz - 8;
+        uc->uc_mcontext.gregs[X86_EBP]  = REG32(&sp);
+        uc->uc_mcontext.gregs[X86_ESP]  = REG32(&sp);
+        uc->uc_mcontext.gregs[X86_UESP] = REG32(&sp);
+    } while ((ret = 0));
+
+    return ret;
+}
+
+int
+x86_ucontext_stack_get(x86_ucontext_t *uc, void **sp, size_t *sz) {
+    register int ret = 1;
+
+    do {
+        if (!uc || !sp || !sz) break;
+        *sp = uc->uc_stack.ss_sp;
+        *sz = uc->uc_stack.ss_size;
+    } while ((ret = 0));
+
+    return ret;
 }
 
 int
@@ -78,7 +117,8 @@ x86_ucontext_iterate(x86_ucontext_t *uc) {
     if (!(ret = x86_iterate(uc, 0))) {
         xexec_debug = XEXEC_DBG_ALL;
         x86_ucontext_dump(uc);
-        INT3; /* instruction not implemented? */
+        PRINTF(XEXEC_DBG_ALL, "/* FIXME: x86 instruction not implemented? */", 0);
+        INT3;
     }
 
     return ret;
@@ -213,11 +253,11 @@ x86_call_near(x86_ucontext_t *uc, int prefix, void *offset) {
 }
 
 void
-x86_call_func(x86_ucontext_t *uc, void **func) {
+x86_call_func(x86_ucontext_t *uc, void *func) {
     register void **ip = (void **)&uc->uc_mcontext.gregs[X86_EIP];
 
     x86_push(uc, 4, ip);
-    REG32(ip) = REG32(func);
+    REG32(ip) = REG32(&func);
 }
 
 static STDCALL int
@@ -2377,7 +2417,7 @@ trampoline_test(x86_ucontext_t *uc, x86_trampoline_gregset_t *greg, void *arg) {
     return 2;
 }
 
-#ifdef __i386__
+#ifdef __i386__ /* i686-only direct execution */
 void
 x86_sigaction(int signum, siginfo_t *info, void *ptr) {
     register x86_ucontext_t *uc = ptr;

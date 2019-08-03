@@ -44,7 +44,7 @@
 
 #define XEXEC_LIBNAME "libxexec"
 #ifndef XEXEC_VERSION
-# define XEXEC_VERSION "unknown git version"
+# define XEXEC_VERSION "unknown git revision"
 #endif
 #define XEXEC_VERSION_STRING \
         XEXEC_LIBNAME " version: '" XEXEC_VERSION "' " \
@@ -240,12 +240,7 @@ main(int argc, char **argv) {
         return ret;
     }
 
-    fprintf(stderr,
-        "xexec - XBE loader & emulator - https://github.com/haxar/xexec\n"
-        "running on host architecture: '%s'\n",
-        un.machine);
-
-    while ((ret = getopt_long(argc, argv, "Vdgh", long_options, &i)) >= 0) {
+    while ((ret = getopt_long(argc, argv, "Vdghm:", long_options, &i)) >= 0) {
         switch (ret) {
         case 0:
             if (!strcmp(long_options[i].name, "debug")) {
@@ -281,6 +276,8 @@ main(int argc, char **argv) {
                 de = 1;
             } else if (!strcmp(optarg, "x86")) {
                 de = 0;
+            } else {
+                USAGE();
             }
             break;
         case 'h':
@@ -294,11 +291,15 @@ main(int argc, char **argv) {
 //    if (argc - optind > 1) gdb = 1;
     path = argv[optind];
 
-    fprintf(stderr, XEXEC_VERSION_STRING "\n");
+    fprintf(stderr,
+        "xexec - XBE loader & emulator - https://github.com/haxar/xexec\n"
+        "running on host architecture: '%s'\n"
+        XEXEC_VERSION_STRING "\n",
+        un.machine);
 
     ret = 1;
     do {
-        if (xboxkrnl_init()) {
+        if (xboxkrnl_init(de)) {
             fprintf(stderr, "error: xboxkrnl initialization failed\n");
             break;
         }
@@ -437,7 +438,7 @@ main(int argc, char **argv) {
 
         xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
 
-        PRINT(XEXEC_DBG_THREAD, "/* creating entry thread with entry point @ 0x%.08x */", xbeh->dwEntryAddr);
+        PRINT(XEXEC_DBG_THREAD, "/* creating entry thread w/ entry point @ 0x%.08x */", xbeh->dwEntryAddr);
 
         if (gdb) INT3;
 
@@ -451,11 +452,11 @@ main(int argc, char **argv) {
                 entry = THREAD_PUSH(xboxkrnl_entry_de, (void *)xbeh->dwEntryAddr, "entry")->id;
                 pthread_join(entry, NULL);
             }
-        } else if (!de)
+        } else
 #endif
         {
-            //TODO: x86.c CPU emulation
-            INT3;
+            entry = THREAD_PUSH(xboxkrnl_entry_x86, (void *)xbeh->dwEntryAddr, "entry")->id;
+            pthread_join(entry, NULL);
         }
 
         /* TODO: do other stuff */
