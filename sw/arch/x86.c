@@ -118,6 +118,7 @@ x86_ucontext_iterate(x86_ucontext_t *uc) {
         xexec_debug = XEXEC_DBG_ALL;
         x86_ucontext_dump(uc);
         PRINTF(XEXEC_DBG_ALL, "/* FIXME: x86 instruction not implemented? */", 0);
+        errno = ENOTSUP;
         INT3;
     }
 
@@ -2488,4 +2489,93 @@ x86_sigaction(int signum, siginfo_t *info, void *ptr) {
     _exit(-1);
 }
 #endif
+
+/* x86 CPU emulation */
+typedef struct {
+    int              index;
+    xboxkrnl_thread *x86;
+} x86_cpu_t;
+
+static x86_cpu_t x86_cpu[XBOXKRNL_MAX_CPUS] = {
+#define X86_CPU(i) { .index = i }
+    X86_CPU(0), /* non-SMP! */
+#undef X86_CPU
+};
+
+#define X86_CPU_0_START(ip)    x86_cpu_start(0,(void *)ip,"CPU0:"#ip"()")
+#define X86_CPU_0_START2(ip,n) x86_cpu_start(0,(void *)ip,n)
+#define X86_CPU_0_JOIN()       x86_cpu_join(0,NULL)
+#define X86_CPU_0_JOIN2(ret)   x86_cpu_join(0,ret)
+
+static void *
+x86_cpu_pthread(void *arg) {
+    const pthread_t self = pthread_self();
+    register x86_cpu_t *c = arg;
+    register xboxkrnl_thread *t;
+    x86_ucontext_t uc; //TODO switch between contexts in xboxkrnl_thread_list[]
+    void *sp;
+    size_t spsz;
+
+    if (xboxkrnl_de) INT3;
+
+    //TODO: find a context to execute, otherwise wait for one
+
+//    xboxkrnl_entry = arg;//xboxkrnl_entry_x86()
+
+    if (!(t = THREAD_RET(self))) INT3;
+
+    x86_ucontext_reset(&uc);
+    if (!(sp = MEM_ALLOC_STACK())) INT3;
+    spsz = STACKSIZE;
+    if (x86_ucontext_stack_set(&uc, sp, spsz)) INT3;
+//    uc.uc_mcontext.gregs[X86_EIP] = ; //TODO set epilogue cleanup func?
+    x86_call_func(&uc, t->context);
+
+    PRINTF(
+        XEXEC_DBG_THREAD,
+        "/* created x86 context '%s' [0x%.08zx] w/ stack @ [0x%.08x-0x%.08x] */",
+        t->name,
+        (size_t)t->context,
+        sp,
+        sp + spsz);
+
+    //TODO: context switching & yielding
+    while (x86_ucontext_iterate(&uc)); //TODO switch between contexts in xboxkrnl_thread_list[]
+
+    MEM_FREE_STACK(sp);
+
+    //FIXME: pop from thread list
+    pthread_detach(self);
+    pthread_exit(NULL);
+    return NULL;
+}
+
+int
+x86_cpu_start(int index, void *ip, const char *name) {
+    register x86_cpu_t *c = &x86_cpu[index];
+    register xboxkrnl_thread *t;
+    register int ret = 1;
+
+    if (xboxkrnl_de) INT3;
+
+    if (!c->x86 || (c->x86 && !(t = THREAD_RET(c->x86->id)))) {
+        c->x86 = THREAD_PUSH3(x86_cpu_pthread, c, ip, name);
+        ret = 0;
+    }
+
+    return ret;
+}
+
+int
+x86_cpu_join(int index, void **retval) {
+    register x86_cpu_t *c = &x86_cpu[index];
+    register int ret;
+
+    if (xboxkrnl_de) INT3;
+
+    if (!c->x86) INT3;
+    ret = pthread_join(c->x86->id, retval);
+
+    return ret;
+}
 

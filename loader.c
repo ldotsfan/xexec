@@ -223,7 +223,7 @@ main(int argc, char **argv) {
     };
 #endif
     struct utsname un;
-    pthread_t entry;
+    xboxkrnl_thread *entry;
     XbeHeader *xbeh;
     char *path = NULL;
     int dbg    = 0;
@@ -336,6 +336,7 @@ main(int argc, char **argv) {
         }
         if (xbeh->dwMagic != REG32(XBE_MAGIC)) {
             PRINT(XEXEC_DBG_ERROR, "error: invalid XBE file: '%s'", path);
+            errno = ENOEXEC;
             break;
         }
         XbeHeader_dump(xbeh);
@@ -426,41 +427,43 @@ main(int argc, char **argv) {
 
     close(fd);
 
-    if (!ret) {
-        XbeTLS_dump((void *)xbeh->dwTLSAddr);
+    if (ret) INT3;
 
-        {
-            char cat[32];
+    XbeTLS_dump((void *)xbeh->dwTLSAddr);
 
-            snprintf(cat, sizeof(cat), "cat /proc/%hu/maps", getpid());
-            system(cat);
-        }
+    {
+        char cat[32];
 
-        xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
-
-        PRINT(XEXEC_DBG_THREAD, "/* creating entry thread w/ entry point @ 0x%.08x */", xbeh->dwEntryAddr);
-
-        if (gdb) INT3;
-
-#ifdef __i386__
-        if (de) {
-            if (sigaction(SIGSEGV, &s, NULL) < 0 ||
-                sigaction(SIGTRAP, &s, NULL) < 0) {
-                PRINT(XEXEC_DBG_ERROR, "error: sigaction(): '%s'", strerror(errno));
-                ret = 1;
-            } else {
-                entry = THREAD_PUSH(xboxkrnl_entry_de, (void *)xbeh->dwEntryAddr, "entry")->id;
-                pthread_join(entry, NULL);
-            }
-        } else
-#endif
-        {
-            entry = THREAD_PUSH(xboxkrnl_entry_x86, (void *)xbeh->dwEntryAddr, "entry")->id;
-            pthread_join(entry, NULL);
-        }
-
-        /* TODO: do other stuff */
+        snprintf(cat, sizeof(cat), "cat /proc/%hu/maps", getpid());
+        system(cat);
     }
+
+    xboxkrnl_thunk_resolve((void *)xbeh->dwKernelImageThunkAddr);
+
+    PRINT(XEXEC_DBG_THREAD, "/* creating entry thread w/ entry point @ 0x%.08x */", xbeh->dwEntryAddr);
+
+    if (gdb) INT3;
+
+#ifdef __i386__ /* i686-only direct execution */
+    if (de) {
+        if (sigaction(SIGSEGV, &s, NULL) < 0 ||
+            sigaction(SIGTRAP, &s, NULL) < 0) {
+            PRINT(XEXEC_DBG_ERROR, "error: sigaction(): '%s'", strerror(errno));
+            ret = 1;
+        } else {
+            if (!(entry = THREAD_PUSH(xboxkrnl_entry_pthread, xbeh->dwEntryAddr))) INT3;
+            if (THREAD_JOIN(entry)) INT3;
+        }
+    } else
+#else
+    de = 0;
+#endif
+    {
+        if (X86_CPU_0_START(xbeh->dwEntryAddr)) INT3;
+        if (X86_CPU_0_JOIN()) INT3;
+    }
+
+    /* TODO: do other stuff */
 
     return ret;
 }

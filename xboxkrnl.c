@@ -33,6 +33,7 @@
 #include "sw/int128.h"
 #include "hw/common.h"
 
+#define XBOXKRNL_MAX_CPUS    1          /* non-SMP! */
 #define XBOXKRNL_MAX_PATH    4096
 #define XBOXKRNL_MAX_THREADS 16
 #define XBOXKRNL_MAX_VRAM    0x08000000 /* 128 MiB (134217728 bytes) */
@@ -44,10 +45,16 @@
 #endif
 #define INT3 \
         do { \
-            PRINTF(XEXEC_DBG_ALL, \
-                "INT3: breakpoint triggered at line %i of file: '%s'; " XEXEC_VERSION_STRING, \
+            PRINTF( \
+                XEXEC_DBG_ALL, \
+                "INT3:\n" \
+                "breakpoint triggered at line %i of file: '%s'\n" \
+                "last errno: '%s' (%i)\n" \
+                XEXEC_VERSION_STRING, \
                 __LINE__, \
-                __FILE__); \
+                __FILE__, \
+                strerror(errno), \
+                errno); \
             X86_INT3; \
         } while (0)
 
@@ -1715,29 +1722,33 @@ xboxkrnl_strnrev(char *s, size_t n) {
     return s;
 }
 
-/* timestamp counter */
-static pthread_mutex_t      xboxkrnl_tsc_mutex     = PTHREAD_MUTEX_INITIALIZER;
-static int                  xboxkrnl_tsc_intercept = 0;
-static int                  xboxkrnl_tsc_overflow  = 0;
-static uint128_t            xboxkrnl_tsc_hz        = uint128_0;
-static uint128_t            xboxkrnl_tsc_scaler    = uint128_0;
+/* timestamp counter hook (i686-only host) */
+static pthread_mutex_t      xboxkrnl_tsc_mutex    = PTHREAD_MUTEX_INITIALIZER;
+static int                  xboxkrnl_tsc_hook     = 0;
+static int                  xboxkrnl_tsc_overflow = 0;
+static uint128_t            xboxkrnl_tsc_hz       = uint128_0;
+static uint128_t            xboxkrnl_tsc_scaler   = uint128_0;
 #define TSC_LOCK            pthread_mutex_lock(&xboxkrnl_tsc_mutex)
 #define TSC_UNLOCK          pthread_mutex_unlock(&xboxkrnl_tsc_mutex)
 
 int
 xboxkrnl_tsc_on(void) {
-#if defined(__i386__) || defined(__x86_64__)
-    return (xboxkrnl_tsc_intercept) ? prctl(PR_SET_TSC, PR_TSC_ENABLE) : -1;
+#if defined(__i386__) /* i686-only host */
+    return (xboxkrnl_tsc_hook) ? prctl(PR_SET_TSC, PR_TSC_ENABLE) : -1;
 #else
+    errno = ENOTSUP;
+
     return -1;
 #endif
 }
 
 int
 xboxkrnl_tsc_off(void) {
-#if defined(__i386__) || defined(__x86_64__)
-    return (xboxkrnl_tsc_intercept) ? prctl(PR_SET_TSC, PR_TSC_SIGSEGV) : -1;
+#if defined(__i386__) /* i686-only host */
+    return (xboxkrnl_tsc_hook) ? prctl(PR_SET_TSC, PR_TSC_SIGSEGV) : -1;
 #else
+    errno = ENOTSUP;
+
     return -1;
 #endif
 }
@@ -1758,9 +1769,9 @@ xboxkrnl_tsc_init(void) {
     ENTER;
 
     do {
-        xboxkrnl_tsc_intercept = 1;
+        xboxkrnl_tsc_hook = 1;
         if (xboxkrnl_tsc_off() < 0) {
-            PRINTF(XEXEC_DBG_ERROR, "warning: failed to intercept TSC register: prctl(): '%s'", strerror(errno));
+            PRINTF(XEXEC_DBG_ERROR, "warning: failed to hook TSC register: prctl(): '%s'", strerror(errno));
             break;
         }
         xboxkrnl_tsc_on();
@@ -1790,13 +1801,13 @@ xboxkrnl_tsc_init(void) {
     if (fd >= 0) close(fd);
 
     if (ret) {
-        xboxkrnl_tsc_intercept = 0;
+        xboxkrnl_tsc_hook = 0;
         PRINT(XEXEC_DBG_INFO, "/* TSC scaling is disabled */", 0);
     } else {
-        xboxkrnl_tsc_intercept = 1;
+        xboxkrnl_tsc_hook = 1;
         PRINT(XEXEC_DBG_INFO, "/* TSC scaling is enabled */", 0);
         uint128_set(host, 1000000000);
-        uint128_set(freq, 733333333);
+        uint128_set(freq,  733333333);
         host = uint128_mul(&host, &xboxkrnl_tsc_hz);
         uint128_divmod(&host, &freq, &xboxkrnl_tsc_scaler, NULL);
         PRINT(XEXEC_DBG_INFO, "/* TSC scaling factor: %llu.%.09llu per 733 MHz tick */",
@@ -1873,9 +1884,11 @@ xboxkrnl_clock_wall(struct timespec *tp) {
     TSC_UNLOCK;
 }
 
-#ifdef __i386__
+#include "sw/arch/x86.h"
+
+#ifdef __i386__ /* i686-only direct execution */
 void *
-xboxkrnl_entry_de(void *arg) {
+xboxkrnl_entry_pthread(void *arg) {
     if (!xboxkrnl_de || xboxkrnl_entry || !arg) INT3;
 
     xboxkrnl_entry = arg;
@@ -1888,31 +1901,6 @@ xboxkrnl_entry_de(void *arg) {
     return NULL;
 }
 #endif
-
-#include "sw/arch/x86.h"
-
-void *
-xboxkrnl_entry_x86(void *arg) {
-    x86_ucontext_t uc;
-    void *sp;
-
-    if (xboxkrnl_de || xboxkrnl_entry || !arg) INT3;
-
-    xboxkrnl_entry = arg;
-    x86_ucontext_reset(&uc);
-    if (!(sp = MEM_ALLOC_STACK())) INT3;
-    if (x86_ucontext_stack_set(&uc, sp, STACKSIZE)) INT3;
-    x86_call_func(&uc, xboxkrnl_entry);
-
-    while (x86_ucontext_iterate(&uc));
-
-    MEM_FREE_STACK(sp);
-
-    //FIXME: pop from thread list
-    pthread_detach(pthread_self());
-    pthread_exit(NULL);
-    return NULL;
-}
 
 /* winnt */
 typedef struct _listentry {
@@ -2646,27 +2634,30 @@ static volatile int                     xboxkrnl_interrupted = 0;
 typedef struct {
     pthread_t               id;
     pthread_attr_t          attr;
+    sem_t                   sem;
     void *                  sp;
     size_t                  spsz;
-    sem_t                   sem;
-    int                     raised;
     int8_t                  stack;
+    int                     raised;
     int                     detached;
     void *                  (*routine)(void *);
     void *                  arg;
     void *                  context;
     char                    name[64];
+    x86_ucontext_t          uc;
 } xboxkrnl_thread;
 
 static xboxkrnl_thread                  xboxkrnl_thread_list[XBOXKRNL_MAX_THREADS] = { };
-static ssize_t                          xboxkrnl_thread_count = 0;
-static pthread_mutex_t                  xboxkrnl_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
+static ssize_t                          xboxkrnl_thread_list_sz                    = 0;
+static pthread_mutex_t                  xboxkrnl_thread_mutex                      = PTHREAD_MUTEX_INITIALIZER;
 #define THREAD_LOCK                     (void)pthread_mutex_lock(&xboxkrnl_thread_mutex)
 #define THREAD_UNLOCK                   (void)pthread_mutex_unlock(&xboxkrnl_thread_mutex)
-#define THREAD_PUSH(r,a,n)              xboxkrnl_thread_push(r,(void *)(a),NULL,n,0)
-#define THREAD_PUSH__LOCKED(r,a,n)      xboxkrnl_thread_push(r,(void *)(a),NULL,n,1)
-#define THREAD_PUSH2(r,a,c,n)           xboxkrnl_thread_push(r,(void *)(a),(void *)(c),n,0)
-#define THREAD_PUSH2__LOCKED(r,a,c,n)   xboxkrnl_thread_push(r,(void *)(a),(void *)(c),n,1)
+#define THREAD_PUSH(r,a)                xboxkrnl_thread_push(r,(void *)(a),NULL,#r"()",0)
+#define THREAD_PUSH__LOCKED(r,a)        xboxkrnl_thread_push(r,(void *)(a),NULL,#r"()",1)
+#define THREAD_PUSH2(r,a,c)             xboxkrnl_thread_push(r,(void *)(a),(void *)(c),#r"()",0)
+#define THREAD_PUSH2__LOCKED(r,a,c)     xboxkrnl_thread_push(r,(void *)(a),(void *)(c),#r"()",1)
+#define THREAD_PUSH3(r,a,c,n)           xboxkrnl_thread_push(r,(void *)(a),(void *)(c),n,0)
+#define THREAD_PUSH3__LOCKED(r,a,c,n)   xboxkrnl_thread_push(r,(void *)(a),(void *)(c),n,1)
 #define THREAD_POP(i)                   xboxkrnl_thread_pop(i,0)
 #define THREAD_POP__LOCKED(i)           xboxkrnl_thread_pop(i,1)
 #define THREAD_RET(i)                   xboxkrnl_thread_ret(i,NULL,0)
@@ -2675,8 +2666,15 @@ static pthread_mutex_t                  xboxkrnl_thread_mutex = PTHREAD_MUTEX_IN
 #define THREAD_RET2__LOCKED(c)          xboxkrnl_thread_ret(0,c,1)
 #define THREAD_ENTER(t)                 xboxkrnl_enter((*(t)->name) ? &(t)->stack : &xboxkrnl_stack, __func__, (t)->name)
 #define THREAD_LEAVE(t)                 xboxkrnl_leave((*(t)->name) ? &(t)->stack : &xboxkrnl_stack, __func__, (t)->name)
+#define THREAD_JOIN(t)                  xboxkrnl_thread_join(t,NULL)
+#define THREAD_JOIN2(t,ret)             xboxkrnl_thread_join(t,ret)
 #define THREAD_WAIT(t)                  xboxkrnl_thread_wait(t)
 #define THREAD_POST(t)                  xboxkrnl_thread_post(t)
+
+int
+xboxkrnl_thread_join(xboxkrnl_thread *t, void **retval) {
+    return pthread_join(t->id, retval);
+}
 
 void
 xboxkrnl_thread_wait(xboxkrnl_thread *t) {
@@ -2707,29 +2705,31 @@ xboxkrnl_thread_push(void *(*routine)(void *), void *arg, void *context, const c
     for (t = xboxkrnl_thread_list, i = 0; i <= ARRAY_SIZE(xboxkrnl_thread_list); ++t, ++i) {
         if (i >= ARRAY_SIZE(xboxkrnl_thread_list)) INT3;
         if (!t->id) {
-            ++xboxkrnl_thread_count;
+            ++xboxkrnl_thread_list_sz;
             break;
         }
     }
 
     ZERO(*t);
-    pthread_attr_init(&t->attr);
-    if (xboxkrnl_de) {
-        if (!(sp = MEM_ALLOC_STACK())) INT3;
-        if (pthread_attr_setstack(&t->attr, sp, STACKSIZE)) INT3;
-    }
     if (sem_init(&t->sem, 0, 0)) INT3;
     t->routine = routine;
     t->arg     = arg;
     t->context = context;
 
+    pthread_attr_init(&t->attr);
+    if (!(sp = MEM_ALLOC_STACK())) INT3;
+    t->sp   = sp;
+    t->spsz = STACKSIZE;
+    if (pthread_attr_setstack(&t->attr, t->sp, t->spsz)) INT3;
     if ((err = pthread_create(&t->id, &t->attr, t->routine, t->arg))) {
         PRINTF(XEXEC_DBG_ERROR, "error: failed to create thread '%s': '%s'", name, strerror(err));
         INT3;
     }
     if (name && *name) xboxkrnl_strncpy(t->name, name, sizeof(t->name) - 1);
     else snprintf(t->name, sizeof(t->name) - 1, "0x%.08zx", (size_t)t->id);
-    if (pthread_setname_np(t->id, t->name)) INT3;
+    i = xboxkrnl_strlen(name);
+    i = (i >= 15) ? i - 15 : 0;
+    if (pthread_setname_np(t->id, &t->name[i])) INT3;
     if (pthread_getattr_np(t->id, &t->attr)) INT3;
     if (pthread_attr_getstack(&t->attr, &t->sp, &t->spsz)) INT3;
 
@@ -2761,7 +2761,7 @@ xboxkrnl_thread_pop(pthread_t id, int locked) {
         if (t->id == id) {
             thread = *t;
             ZERO(*t);
-            --xboxkrnl_thread_count;
+            --xboxkrnl_thread_list_sz;
             ret = 1;
             break;
         }
@@ -2772,9 +2772,9 @@ xboxkrnl_thread_pop(pthread_t id, int locked) {
             //TODO
         }
         THREAD_POST(&thread);
-        if (sem_destroy(&thread.sem)) INT3;
         MEM_FREE_STACK(&thread.sp);
         pthread_attr_destroy(&thread.attr);
+        if (sem_destroy(&thread.sem)) INT3;
     }
 
     if (!locked) THREAD_UNLOCK;
@@ -2825,7 +2825,7 @@ xboxkrnl_worker(void *arg) {
         ENTER;
 
 #define THREAD(x,y) \
-        t = THREAD_PUSH2(xboxkrnl_worker, x, x, #y); \
+        t = THREAD_PUSH3(xboxkrnl_worker, x, x, #y); \
         xboxkrnl_thread_##y = t
         THREAD(2, dpc);
         THREAD(3, event);//FIXME should be renamed for nv2a_pfifo_pusher()
@@ -3266,7 +3266,7 @@ xboxkrnl_read(uint32_t addr, void *val, size_t sz) {
     if (!phys) {
         do {
             if ((ret = nv2a->op->read(addr, val, sz))) {
-                //TODO: intercept NV_PFB_WBC spinlock read
+                //TODO: trampoline hook NV_PFB_WBC spinlock read
                 break;
             }
             if ((ret = usb0->op->read(addr, val, sz)))  break;
@@ -7503,8 +7503,8 @@ xboxkrnl_RtlEqualString( /* 279 (0x117) */
     STRDUMP(String2->Buffer);
     VARDUMP(VAR_IN, CaseInSensitive);
 
-    len1 = strlen(String1->Buffer) + 1;
-    len2 = strlen(String2->Buffer) + 1;
+    len1 = xboxkrnl_strlen(String1->Buffer) + 1;
+    len2 = xboxkrnl_strlen(String2->Buffer) + 1;
 
     if (len1 == len2 &&
         ((CaseInSensitive && !strncasecmp(String1->Buffer, String2->Buffer, len1)) ||
@@ -7607,7 +7607,7 @@ xboxkrnl_RtlInitAnsiString( /* 289 (0x121) */
     VARDUMP(VAR_IN,  SourceString);
     STRDUMP(SourceString);
 
-    DestinationString->Length        = strlen(SourceString);
+    DestinationString->Length        = xboxkrnl_strlen(SourceString);
     DestinationString->MaximumLength = DestinationString->Length + 1;
     DestinationString->Buffer        = SourceString;
 
